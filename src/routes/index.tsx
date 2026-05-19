@@ -1,0 +1,94 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AppLayout } from '@/layouts/AppLayout'
+
+import { LandingPage } from '@/features/landing/pages/LandingPage'
+import { LoginPage, RegisterPage } from '@/features/auth/pages/AuthPages'
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
+import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
+import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
+import { TransactionsListPage } from '@/features/transactions/pages/TransactionsListPage'
+import { AddTransactionPage } from '@/features/transactions/pages/AddTransactionPage'
+import { TransactionDetailPage } from '@/features/transactions/pages/TransactionDetailPage'
+import { TargetsPage } from '@/features/targets/pages/TargetsPage'
+import { AILogsPage } from '@/features/ai/pages/AILogsPage'
+import { ScanReceiptPage } from '@/features/ai/pages/ScanReceiptPage'
+import { FreeTextPage } from '@/features/ai/pages/FreeTextPage'
+import { AdminUsersPage } from '@/features/adminUsers/pages/AdminUsersPage'
+import { ProfilePage } from '@/features/account/pages/ProfilePage'
+import { SettingsPage } from '@/features/account/pages/SettingsPage'
+import { PlansPage } from '@/features/subscription/pages/PlansPage'
+import { ThanksPage } from '@/features/subscription/pages/ThanksPage'
+import { SubscribersPage } from '@/features/subscription/pages/SubscribersPage'
+import { SplitBillsListPage } from '@/features/split/pages/SplitBillsListPage'
+import { SplitBillFormPage } from '@/features/split/pages/SplitBillFormPage'
+import { SplitBillDetailPage } from '@/features/split/pages/SplitBillDetailPage'
+import { NotFoundPage } from '@/features/misc/pages/NotFoundPage'
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Authenticated workspace */}
+      <Route
+        path="/app"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="wallets" element={<WalletsPage />} />
+        <Route path="transactions" element={<TransactionsListPage />} />
+        <Route path="transactions/add" element={<AddTransactionPage />} />
+        <Route path="transactions/:id" element={<TransactionDetailPage />} />
+        <Route path="scan-receipt" element={<ScanReceiptPage />} />
+        <Route path="free-text" element={<FreeTextPage />} />
+        <Route path="targets" element={<TargetsPage />} />
+        <Route path="split-bills" element={<SplitBillsListPage />} />
+        <Route path="split-bills/new" element={<SplitBillFormPage />} />
+        <Route path="split-bills/:id" element={<SplitBillDetailPage />} />
+        <Route path="split-bills/:id/edit" element={<SplitBillFormPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="subscription" element={<PlansPage />} />
+        <Route path="subscription/thanks" element={<ThanksPage />} />
+      </Route>
+
+      {/* Admin only */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/admin/users" replace />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="categories" element={<CategoriesPage />} />
+        <Route path="subscriptions" element={<SubscribersPage />} />
+      </Route>
+
+      {/* Super Admin only */}
+      <Route
+        path="/super-admin"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/super-admin/ai-logs" replace />} />
+        <Route path="ai-logs" element={<AILogsPage />} />
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
+}

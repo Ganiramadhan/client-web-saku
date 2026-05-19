@@ -1,0 +1,150 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50:  #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+  border: 2px solid #f8fafc;
+}
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Subtle off-white surfaces for sectioning (no gradients, single accent) */
+.bg-hero { background: #ffffff; }
+.surface-muted { background: #f8fafc; }
+.surface-soft  { background: #fbfcfd; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Shimmer loader (used by <Shimmer />) */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+/* Subtle floating animation for hero preview */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-delay { animation: float 6s ease-in-out infinite; animation-delay: 1.5s; }
+
+/* Modal animations */
+@keyframes overlay-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98) }
+  to   { opacity: 1; transform: translateY(0) scale(1) }
+}
+.animate-overlay-in { animation: overlay-in 140ms ease-out both; }
+.animate-panel-in  { animation: panel-in  180ms cubic-bezier(.2,.8,.2,1) both; }
+
+/* react-datepicker brand overrides */
+.react-datepicker {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.18);
+  font-family: inherit;
+  overflow: hidden;
+}
+.react-datepicker__triangle { display: none !important; }
+.react-datepicker__header {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+.react-datepicker__current-month,
+.react-datepicker-time__header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.react-datepicker__day-name {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.react-datepicker__day {
+  color: #334155;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  margin: 2px;
+  width: 2rem;
+  line-height: 2rem;
+  transition: background 120ms;
+}
+.react-datepicker__day:hover {
+  background: #ecfdf5;
+  color: #047857;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: #10b981 !important;
+  color: white !important;
+  font-weight: 600;
+}
+.react-datepicker__day--today {
+  font-weight: 700;
+  color: #047857;
+}
+.react-datepicker__day--outside-month { color: #cbd5e1; }
+.react-datepicker__navigation { top: 14px; }
+.react-datepicker__navigation-icon::before {
+  border-color: #64748b;
+  border-width: 2px 2px 0 0;
+}
+.react-datepicker__time-container { border-left: 1px solid #e2e8f0; }
+.react-datepicker__time-list-item {
+  font-size: 0.8rem !important;
+  height: auto !important;
+  padding: 6px 10px !important;
+  color: #334155;
+}
+.react-datepicker__time-list-item--selected {
+  background: #10b981 !important;
+  color: white !important;
+  font-weight: 600;
+}
