@@ -126,10 +126,17 @@ export function ScanReceiptPage() {
         const rawType = typeof raw.type === 'string' ? (raw.type as string) : 'expense'
         const rawDate = typeof raw.date === 'string' ? (raw.date as string) : ''
         const rawOcr = typeof raw.ocr_text === 'string' ? (raw.ocr_text as string) : undefined
+        const imagePreview =
+          typeof r.image_url === 'string' && r.image_url
+            ? r.image_url
+            : typeof raw.image_url === 'string' && raw.image_url
+            ? raw.image_url
+            : ''
+
         return {
           id: r.id,
           timestamp: new Date(r.created_at).getTime(),
-          imagePreview: r.image_url ?? '',
+          imagePreview,
           amount: r.extracted_amount ?? 0,
           type: (rawType === 'income' ? 'income' : 'expense') as TransactionType,
           merchant: r.extracted_merchant ?? '',
@@ -203,6 +210,20 @@ export function ScanReceiptPage() {
     onError: (e) => {
       toast.error(toErrorMessage(e))
       resetForm()
+    },
+  })
+
+  const deleteScanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await aiLogApi.delete(id)
+    },
+    onSuccess: () => {
+      toast.success('Riwayat scan berhasil dihapus')
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan_receipt'] })
+      setViewing(null)
+    },
+    onError: (e) => {
+      toast.error(toErrorMessage(e))
     },
   })
 
@@ -606,7 +627,7 @@ export function ScanReceiptPage() {
                       onClick={() => setViewing(entry)}
                       className="group relative flex gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-brand-300 hover:shadow-sm"
                     >
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dashed border-slate-200 bg-slate-100">
                         {entry.imagePreview ? (
                           <img
                             src={entry.imagePreview}
@@ -614,8 +635,9 @@ export function ScanReceiptPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-400">
                             <HiOutlinePhoto className="h-6 w-6" />
+                            <span className="text-[10px]">No image</span>
                           </div>
                         )}
                       </div>
@@ -656,9 +678,20 @@ export function ScanReceiptPage() {
         onClose={() => setViewing(null)}
         title="Detail Scan"
         footer={
-          <Button variant="outline" onClick={() => setViewing(null)}>
-            Tutup
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (viewing) deleteScanMutation.mutate(viewing.id)
+              }}
+              loading={deleteScanMutation.isPending}
+            >
+              Hapus Riwayat
+            </Button>
+            <Button variant="outline" onClick={() => setViewing(null)}>
+              Tutup
+            </Button>
+          </div>
         }
       >
         {viewing ? (
@@ -671,7 +704,13 @@ export function ScanReceiptPage() {
                   className="mx-auto max-h-96 object-contain"
                 />
               </div>
-            ) : null}
+            ) : (
+              <div className="grid place-items-center rounded-xl border border-dashed border-slate-200 bg-slate-100 p-8 text-center text-sm text-slate-500">
+                <HiOutlinePhoto className="h-8 w-8" />
+                <p className="mt-3 font-semibold text-slate-900">Tidak ada foto struk</p>
+                <p className="mt-1 text-xs text-slate-500">Hanya data AI yang tersedia untuk scan ini.</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-xs text-slate-400">Tipe</p>

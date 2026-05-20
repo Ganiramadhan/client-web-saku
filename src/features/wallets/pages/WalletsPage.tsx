@@ -286,8 +286,6 @@ function WalletsSummary({
   totalBalance,
   totalIncome30d,
   totalExpense30d,
-  byType,
-  walletStats,
 }: {
   wallets: Wallet[]
   totalBalance: number
@@ -300,74 +298,61 @@ function WalletsSummary({
   const savingRate =
     totalIncome30d > 0 ? Math.max(0, Math.min(100, Math.round((net30d / totalIncome30d) * 100))) : 0
 
-  const topWallet = useMemo(() => {
-    let result: { wallet: Wallet; activity: number } | null = null
 
-    for (const wallet of wallets) {
-      const stat = walletStats.get(wallet.id)
-      const activity = (stat?.income ?? 0) + (stat?.expense ?? 0)
-
-      if (!result || activity > result.activity) {
-        result = { wallet, activity }
-      }
-    }
-
-    return result
-  }, [wallets, walletStats])
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <HiOutlineBanknotes className="h-4 w-4" />
-            Total Saldo
-          </div>
+   <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-slate-100 blur-3xl" />
 
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-950">
-            {formatCurrency(totalBalance)}
-          </p>
-
-          <p className="mt-2 text-sm text-slate-500">
-            {wallets.length} dompet aktif terhubung.
-          </p>
-
-          <div className="mt-5 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-            Net 30 hari: {net30d >= 0 ? '+' : ''}
-            {formatCurrency(net30d)}
-          </div>
+    <div className="relative grid gap-6 lg:grid-cols-[1.2fr_2fr] lg:items-end">
+      <div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <HiOutlineBanknotes className="h-4 w-4 text-slate-700" />
+          Total Saldo
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3 lg:col-span-2">
-          <SummaryMetric label="Pemasukan 30d" value={formatCurrency(totalIncome30d)} tone="emerald" />
-          <SummaryMetric label="Pengeluaran 30d" value={formatCurrency(totalExpense30d)} tone="rose" />
-          <SummaryMetric label="Saving Rate" value={`${savingRate}%`} tone="slate" />
+        <p className="mt-5 text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">
+          {formatCurrency(totalBalance)}
+        </p>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Ringkasan Dompet
-              </p>
+        <p className="mt-3 text-sm text-slate-500">
+          Total saldo dari {wallets.length} dompet aktif.
+        </p>
 
-              {topWallet && topWallet.activity > 0 ? (
-                <p className="text-xs text-slate-500">
-                  Paling aktif:{' '}
-                  <span className="font-semibold text-slate-800">
-                    {topWallet.wallet.name}
-                  </span>
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <WalletTypeSummary label="Personal" count={byType.personal} />
-              <WalletTypeSummary label="Business" count={byType.business} />
-              <WalletTypeSummary label="Shared" count={byType.shared} />
-            </div>
-          </div>
+        <div
+          className={[
+            'mt-5 inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold',
+            net30d >= 0
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-rose-200 bg-rose-50 text-rose-700',
+          ].join(' ')}
+        >
+          Net 30 hari: {net30d >= 0 ? '+' : ''}
+          {formatCurrency(net30d)}
         </div>
       </div>
-    </section>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <SummaryMetric
+          label="Pemasukan 30d"
+          value={formatCurrency(totalIncome30d)}
+          tone="emerald"
+        />
+
+        <SummaryMetric
+          label="Pengeluaran 30d"
+          value={formatCurrency(totalExpense30d)}
+          tone="rose"
+        />
+
+        <SummaryMetric
+          label="Saving Rate"
+          value={`${savingRate}%`}
+          tone="slate"
+        />
+      </div>
+    </div>
+  </section>
   )
 }
 
@@ -397,14 +382,7 @@ function SummaryMetric({
   )
 }
 
-function WalletTypeSummary({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-bold text-slate-950">{count}</p>
-    </div>
-  )
-}
+
 
 function FilterTabs({
   tabs,
@@ -512,7 +490,7 @@ function WalletCard({
           </p>
         </div>
 
-        {targetProgress ? (
+        {targetProgress !== null ? (
           <TargetProgress wallet={wallet} progress={targetProgress} />
         ) : null}
 
@@ -579,6 +557,9 @@ function TargetProgress({
   wallet: Wallet
   progress: number
 }) {
+  const targetAmount = Number(wallet.target_amount ?? 0)
+  const hasTargetAmount = targetAmount > 0
+
   return (
     <div className="mt-5 rounded-2xl border border-brand-100 bg-brand-50 p-4">
       <div className="flex items-center justify-between gap-3 text-xs">
@@ -589,27 +570,35 @@ function TargetProgress({
         <p className="font-bold tabular-nums text-brand-700">{progress}%</p>
       </div>
 
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-        <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress}%` }} />
-      </div>
+      {hasTargetAmount ? (
+        <>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress}%` }} />
+          </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-        <span>
-          {formatCurrency(Number(wallet.balance ?? 0), wallet.currency)} /{' '}
-          {formatCurrency(Number(wallet.target_amount ?? 0), wallet.currency)}
-        </span>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+            <span>
+              {formatCurrency(Number(wallet.balance ?? 0), wallet.currency)} /{' '}
+              {formatCurrency(targetAmount, wallet.currency)}
+            </span>
 
-        {wallet.target_deadline ? (
-          <span>
-            s/d{' '}
-            {new Date(wallet.target_deadline).toLocaleDateString('id-ID', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}
-          </span>
-        ) : null}
-      </div>
+            {wallet.target_deadline ? (
+              <span>
+                s/d{' '}
+                {new Date(wallet.target_deadline).toLocaleDateString('id-ID', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <p className="mt-3 text-sm text-slate-600">
+          Target nominal belum ditetapkan.
+        </p>
+      )}
     </div>
   )
 }
@@ -809,11 +798,16 @@ function labelForType(type: WalletType): string {
 }
 
 function getTargetProgress(wallet: Wallet): number | null {
-  if (!wallet.target_amount || Number(wallet.target_amount) <= 0) return null
+  const targetAmount = Number(wallet.target_amount ?? 0)
+  if (!wallet.target_name && targetAmount <= 0) return null
+
+  if (targetAmount <= 0) {
+    return 0
+  }
 
   return Math.min(
     100,
-    Math.round((Number(wallet.balance ?? 0) / Number(wallet.target_amount)) * 100),
+    Math.round((Number(wallet.balance ?? 0) / targetAmount) * 100),
   )
 }
 

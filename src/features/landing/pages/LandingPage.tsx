@@ -1,321 +1,645 @@
 import { Link } from 'react-router-dom'
-import { useState, type ComponentType } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
-  HiOutlineArrowRight,
   HiOutlineBars3,
-  HiOutlineChartBar,
-  HiOutlineCheck,
   HiOutlineChevronDown,
-  HiOutlineCreditCard,
-  HiOutlineDocumentText,
-  HiOutlineLockClosed,
-  HiOutlineSparkles,
-  HiOutlineWallet,
   HiOutlineXMark,
+  HiOutlineArrowTrendingUp,
+  HiOutlineArrowUpTray,
+  HiOutlineCheckCircle,
+  HiOutlineDocumentCheck,
+  HiOutlineEye,
+  HiOutlinePencilSquare,
 } from 'react-icons/hi2'
-import { FaGithub, FaInstagram, FaLinkedin } from 'react-icons/fa6'
+import {
+  RiBarChartGroupedFill,
+  RiPieChart2Line,
+  RiMoneyDollarCircleLine,
+  RiShieldCheckLine,
+  RiSparklingLine,
+  RiBankLine,
+  RiInstagramLine,
+  RiLinkedinLine,
+  RiGithubLine,
+  RiArrowRightLine,
+  RiCheckLine,
+  RiScales3Line,
+  RiTimeLine,
+  RiBrainLine,
+  RiScanLine,
+  RiReceiptLine,
+  RiWalletLine,
+  RiLineChartLine,
+  RiCalendarEventLine,
+  RiLockLine,
+  RiChatSmile3Line,
+  RiSendPlaneLine,
+  RiFlashlightLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+} from 'react-icons/ri'
 import { Logo } from '@/components/Logo'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
-import { Button } from '@/components/ui'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
-type Icon = ComponentType<{ className?: string }>
+function smoothScrollTo(id: string) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
+/* ─── Language Switcher ─────────────────────────────────────── */
+const LANGUAGES = [
+  { code: 'id', label: 'Indonesia', flag: '🇮🇩' },
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'zh', label: '中文', flag: '🇨🇳' },
+  { code: 'ja', label: '日本語', flag: '🇯🇵' },
+]
+
+function LanguageSwitcher() {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(LANGUAGES[0])
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 transition-all hover:bg-white/60"
+        style={{ background: 'rgba(255,255,255,0.40)', border: '1px solid rgba(255,255,255,0.60)', backdropFilter: 'blur(12px)' }}
+      >
+        <span>{active.flag}</span>
+        <span>{active.code.toUpperCase()}</span>
+        <HiOutlineChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-2xl shadow-2xl shadow-slate-200/80 z-50"
+          style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}
+        >
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => { setActive(lang); setOpen(false) }}
+              className={cn('flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors', active.code === lang.code ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50')}
+            >
+              <span className="text-base">{lang.flag}</span>
+              <span>{lang.label}</span>
+              {active.code === lang.code && <RiCheckLine className="ml-auto h-3.5 w-3.5 text-blue-500" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Main Page ─────────────────────────────────────────────── */
 export function LandingPage() {
   const isAuthed = useAuthStore((s) => Boolean(s.token))
   const [navOpen, setNavOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('home')
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 60)
+      const sections = ['home', 'features', 'how-it-works', 'pricing', 'faq']
+      for (const id of [...sections].reverse()) {
+        const el = document.getElementById(id)
+        if (el && window.scrollY >= el.offsetTop - 140) { setActiveSection(id); break }
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const navLinks = [
-    { href: '#home', label: 'Home' },
-    { href: '#features', label: 'Features' },
-    { href: '#pricing', label: 'Pricing' },
-    { href: '#faq', label: 'FAQ' },
+    { href: 'home', label: 'Home' },
+    { href: 'features', label: 'Features' },
+    { href: 'how-it-works', label: 'How It Works' },
+    { href: 'pricing', label: 'Pricing' },
+    { href: 'faq', label: 'FAQ' },
   ]
 
   return (
-    <div className="min-h-screen bg-white text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Logo />
+    <div className="min-h-screen font-sans antialiased overflow-x-hidden" style={{ background: 'linear-gradient(135deg, #e8f4ff 0%, #f0f4ff 30%, #f5f0ff 60%, #e8fff5 100%)' }}>
+      {/* Animated ambient blobs */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-40 -left-20 h-[700px] w-[700px] rounded-full animate-[pulse_8s_ease-in-out_infinite]" style={{ background: 'radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 65%)' }} />
+        <div className="absolute top-1/3 -right-40 h-[600px] w-[600px] rounded-full animate-[pulse_10s_ease-in-out_infinite_2s]" style={{ background: 'radial-gradient(circle, rgba(196,181,253,0.28) 0%, transparent 65%)' }} />
+        <div className="absolute bottom-1/4 left-1/4 h-[500px] w-[500px] rounded-full animate-[pulse_9s_ease-in-out_infinite_1s]" style={{ background: 'radial-gradient(circle, rgba(167,243,208,0.22) 0%, transparent 65%)' }} />
+        <div className="absolute bottom-0 right-1/3 h-[400px] w-[400px] rounded-full animate-[pulse_11s_ease-in-out_infinite_3s]" style={{ background: 'radial-gradient(circle, rgba(253,230,138,0.18) 0%, transparent 65%)' }} />
+        {/* Dot grid */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+      </div>
 
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 lg:flex">
-            {navLinks.map((item) => (
-              <a key={item.href} href={item.href} className="hover:text-slate-950">
+   {/* ── Floating Pill Navbar ── */}
+<header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 py-4">
+  <div className={cn('w-full transition-all duration-500', scrolled ? 'max-w-4xl' : 'max-w-5xl')}>
+    <div
+      className="flex items-center justify-between rounded-3xl px-4 py-2.5 transition-all duration-500"
+      style={{
+        background: scrolled ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.68)',
+        backdropFilter: 'blur(36px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.88)',
+        boxShadow: scrolled
+          ? '0 16px 48px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
+          : '0 8px 28px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
+      }}
+    >
+      <Logo />
+
+      <nav className="hidden items-center gap-1 lg:flex">
+        {navLinks.map((item) => {
+          const isActive = activeSection === item.href
+
+          return (
+            <button
+              key={item.href}
+              type="button"
+              onClick={() => smoothScrollTo(item.href)}
+              className={cn(
+                'group relative cursor-pointer rounded-2xl px-4 py-2 text-sm font-semibold transition-all duration-300',
+                isActive
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
+                  : 'text-slate-500 hover:bg-white/80 hover:text-blue-700'
+              )}
+            >
+              {item.label}
+
+              {!isActive && (
+                <span className="absolute inset-x-4 -bottom-0.5 h-px scale-x-0 rounded-full bg-blue-500 transition-transform duration-300 group-hover:scale-x-100" />
+              )}
+            </button>
+          )
+        })}
+      </nav>
+
+      <div className="hidden items-center gap-2 lg:flex">
+        <LanguageSwitcher />
+
+        {isAuthed ? (
+          <Link to="/app" className="cursor-pointer">
+            <PrimaryBtn>
+              Dashboard <RiArrowRightLine className="h-3.5 w-3.5" />
+            </PrimaryBtn>
+          </Link>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              className="cursor-pointer rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition-all duration-300 hover:bg-white/80 hover:text-blue-700"
+            >
+              Login
+            </Link>
+
+            <Link to="/register" className="cursor-pointer">
+              <PrimaryBtn>
+                Get Started <RiArrowRightLine className="h-3.5 w-3.5" />
+              </PrimaryBtn>
+            </Link>
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setNavOpen((v) => !v)}
+        className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 lg:hidden"
+        style={{ border: '1px solid rgba(226,232,240,0.80)' }}
+      >
+        {navOpen ? <HiOutlineXMark className="h-5 w-5" /> : <HiOutlineBars3 className="h-5 w-5" />}
+      </button>
+    </div>
+
+    {navOpen && (
+      <div
+        className="mt-2 overflow-hidden rounded-3xl p-3 lg:hidden"
+        style={{
+          background: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(36px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.92)',
+          boxShadow: '0 20px 60px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.95)',
+        }}
+      >
+        <div className="space-y-1">
+          {navLinks.map((item) => {
+            const isActive = activeSection === item.href
+
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => {
+                  smoothScrollTo(item.href)
+                  setNavOpen(false)
+                }}
+                className={cn(
+                  'flex w-full cursor-pointer items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300',
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
+                    : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                )}
+              >
                 {item.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-3 lg:flex">
-            <LanguageSwitcher />
-
-            {isAuthed ? (
-              <Link to="/app">
-                <Button>Dashboard</Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className="text-sm font-semibold text-slate-600 hover:text-slate-950">
-                  Login
-                </Link>
-                <Link to="/register">
-                  <Button>Get Started</Button>
-                </Link>
-              </>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setNavOpen((value) => !value)}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-700 lg:hidden"
-            aria-label="Toggle navigation"
-          >
-            {navOpen ? <HiOutlineXMark className="h-5 w-5" /> : <HiOutlineBars3 className="h-5 w-5" />}
-          </button>
+              </button>
+            )
+          })}
         </div>
 
-        {navOpen ? (
-          <div className="border-t border-slate-200 bg-white px-4 py-4 lg:hidden">
-            <div className="space-y-1">
-              {navLinks.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setNavOpen(false)}
-                  className="block rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <div className="mt-3 grid gap-2 border-t border-slate-200/70 pt-3">
+          {isAuthed ? (
+            <Link to="/app" className="cursor-pointer">
+              <PrimaryBtn className="w-full justify-center">Dashboard</PrimaryBtn>
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="cursor-pointer">
+                <button
+                  type="button"
+                  className="w-full cursor-pointer rounded-2xl py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
+                  style={{
+                    border: '1px solid rgba(226,232,240,0.80)',
+                    background: 'rgba(255,255,255,0.80)',
+                  }}
                 >
-                  {item.label}
-                </a>
-              ))}
-            </div>
+                  Login
+                </button>
+              </Link>
 
-            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4">
-              {isAuthed ? (
-                <Link to="/app">
-                  <Button className="w-full">Dashboard</Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/login">
-                    <Button variant="outline" className="w-full">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/register">
-                    <Button className="w-full">Get Started</Button>
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        ) : null}
-      </header>
+              <Link to="/register" className="cursor-pointer">
+                <PrimaryBtn className="w-full justify-center">Get Started</PrimaryBtn>
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+</header>
 
-      <main>
+      <main className="relative z-10 pt-24">
         <Hero isAuthed={isAuthed} />
         <Features />
+        <HowItWorks />
         <Pricing isAuthed={isAuthed} />
         <FAQ />
       </main>
-
-      <Footer />
+      <Footer onNavClick={smoothScrollTo} />
     </div>
   )
 }
 
+// /* ─── Primitives ────────────────────────────────────────────── */
+// function GlassCard({ className, children, style }: { className?: string; children: React.ReactNode; style?: React.CSSProperties }) {
+//   return (
+//     <div className={cn('rounded-2xl', className)} style={{ background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid rgba(255,255,255,0.90)', boxShadow: '0 4px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)', ...style }}>
+//       {children}
+//     </div>
+//   )
+// }
+
+function PrimaryBtn({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className={cn('group inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-sm font-bold text-white transition-all duration-200 shadow-md shadow-blue-200/60 hover:shadow-lg hover:shadow-blue-300/50 hover:-translate-y-px active:translate-y-0', className)}>
+      {children}
+    </button>
+  )
+}
+
+/* ─── Hero ─────────────────────────────────────────────────── */
 function Hero({ isAuthed }: { isAuthed: boolean }) {
   return (
-    <section id="home" className="overflow-hidden border-b border-slate-100 bg-slate-50/70 py-20 sm:py-28">
-      <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-            <HiOutlineSparkles className="h-4 w-4 text-brand-600" />
-            AI-powered personal finance
+    <section id="home" className="relative py-16 sm:py-24 overflow-hidden">
+      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-10 lg:px-8">
+        <div className="animate-[fadeInUp_0.7s_ease_forwards]">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-blue-700" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.70)', boxShadow: '0 2px 12px rgba(59,130,246,0.10)' }}>
+            <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
+            AI-Powered Personal Finance
           </div>
-
-          <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-            Track your money with less effort.
+          <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-[3.8rem] leading-[1.06]">
+            Smarter way to<br />
+            <span className="relative inline-block">
+              <span className="text-blue-600">manage money.</span>
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 280 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2 7.5C50 3 100 1.5 140 3C180 4.5 230 6 278 4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.5"/>
+              </svg>
+            </span>
           </h1>
-
-          <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-            SAKU helps you record transactions, scan receipts, manage budgets, and understand your spending from one simple dashboard.
+          <p className="mt-7 max-w-md text-base leading-7 text-slate-500 sm:text-[17px]">
+            SAKU combines AI chat recording, receipt scanning, split bills, budget tracking, and spending insights — all in one beautifully designed dashboard.
           </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-10 flex flex-wrap gap-3">
             <Link to={isAuthed ? '/app' : '/register'}>
-              <Button className="h-12 px-6" rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}>
-                Start for Free
-              </Button>
+              <button className="group inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-7 py-3.5 text-sm font-bold text-white transition-all duration-200 shadow-xl shadow-blue-200/60 hover:-translate-y-0.5">
+                Start for Free <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
             </Link>
-
-            <a href="#features">
-              <Button variant="outline" className="h-12 px-6 bg-white">
-                See Features
-              </Button>
-            </a>
+            <button onClick={() => smoothScrollTo('how-it-works')} className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all duration-200" style={{ background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(16px)', border: '1px solid rgba(226,232,240,0.80)' }}>
+              See How It Works
+            </button>
           </div>
-
-          <div className="mt-8 grid max-w-xl grid-cols-3 gap-3">
-            <HeroMetric value="3+" label="Core tools" />
-            <HeroMetric value="AI" label="Assisted tracking" />
-            <HeroMetric value="24/7" label="Data access" />
+          <div className="mt-10 flex flex-wrap gap-3">
+            {[
+              { Icon: RiChatSmile3Line, value: 'NLP', label: 'Chat to record', color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
+              { Icon: RiScanLine, value: 'AI OCR', label: 'Receipt scanner', color: 'text-violet-600', bg: 'rgba(245,243,255,0.80)' },
+              { Icon: RiTimeLine, value: '24/7', label: 'Always available', color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-2.5 rounded-xl px-4 py-2.5" style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(226,232,240,0.70)' }}>
+                <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', s.color)} style={{ background: s.bg }}>
+                  <s.Icon className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <p className={cn('text-xs font-extrabold', s.color)}>{s.value}</p>
+                  <p className="text-[10px] text-slate-400">{s.label}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-
-        <HeroPreview />
+        <div className="animate-[fadeInUp_0.7s_ease_0.2s_forwards] opacity-0">
+          <HeroPreview />
+        </div>
       </div>
+      <style>{`
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes floatY { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-8px) } }
+        @keyframes shimmer { 0% { background-position:-200% center } 100% { background-position:200% center } }
+        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) } to { opacity:1; transform:translateX(0) } }
+        @keyframes scaleIn { from { opacity:0; transform:scale(0.95) } to { opacity:1; transform:scale(1) } }
+      `}</style>
     </section>
-  )
-}
-
-function HeroMetric({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xl font-bold text-slate-950">{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{label}</p>
-    </div>
   )
 }
 
 function HeroPreview() {
   return (
-    <div className="relative">
-      <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-200/80">
-        <div className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-5">
+    <div className="relative" style={{ animation: 'floatY 6s ease-in-out infinite' }}>
+      <div className="pointer-events-none absolute inset-[-40px] -z-10 rounded-[3rem] opacity-60 blur-3xl" style={{ background: 'radial-gradient(ellipse, #bfdbfe 0%, #e0e7ff 50%, transparent 75%)' }} />
+      <div className="rounded-3xl p-1.5" style={{ background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(0,0,0,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
+        <div className="rounded-[1.4rem] p-5" style={{ background: 'rgba(248,250,255,0.88)' }}>
+          {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Total Balance
-              </p>
-              <h2 className="mt-2 text-3xl font-bold text-slate-950">Rp 24.580.000</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Balance</p>
+              <h2 className="mt-1.5 text-3xl font-extrabold text-slate-900 tracking-tight">Rp 24.580.000</h2>
             </div>
-
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-              +12.4%
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold text-emerald-700" style={{ background: 'rgba(209,250,229,0.80)', border: '1px solid rgba(167,243,208,0.80)' }}>
+              <HiOutlineArrowTrendingUp className="h-3 w-3" />+12.4%
             </span>
           </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <SummaryCard label="Income" value="Rp 9.200.000" />
-            <SummaryCard label="Expense" value="Rp 3.800.000" />
+          {/* Stats */}
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            {[
+              { label: 'Income', value: 'Rp 9.200.000', color: 'text-emerald-600', bg: 'rgba(209,250,229,0.50)', border: 'rgba(167,243,208,0.60)', Icon: RiArrowUpLine },
+              { label: 'Expenses', value: 'Rp 3.800.000', color: 'text-rose-500', bg: 'rgba(255,228,230,0.50)', border: 'rgba(254,205,211,0.60)', Icon: RiArrowDownLine },
+            ].map((c) => (
+              <div key={c.label} className="rounded-xl p-3.5" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <c.Icon className={cn('h-3 w-3', c.color)} />
+                  <p className="text-[11px] text-slate-500">{c.label}</p>
+                </div>
+                <p className={cn('text-sm font-bold', c.color)}>{c.value}</p>
+              </div>
+            ))}
           </div>
-
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-950">Recent Activity</p>
-              <p className="text-xs text-slate-500">This week</p>
+          {/* Budget bar */}
+          <div className="mt-4">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-[11px] text-slate-400">Budget used this month</p>
+              <p className="text-[11px] font-bold text-slate-600">64%</p>
             </div>
-
-            <div className="space-y-3">
-              <TransactionRow title="Lunch" category="Food" amount="-Rp 38.000" />
-              <TransactionRow title="Transport" category="Travel" amount="-Rp 22.500" />
-              <TransactionRow title="Freelance Project" category="Income" amount="+Rp 5.500.000" positive />
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
+              <div className="h-full rounded-full transition-all duration-1000" style={{ width: '64%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
             </div>
           </div>
-
-          <div className="mt-4 rounded-2xl border border-brand-100 bg-brand-50 p-4">
-            <p className="text-sm font-semibold text-brand-800">AI Insight</p>
-            <p className="mt-1 text-xs leading-5 text-brand-700">
-              Your transport spending is higher than usual this week. Consider reviewing recurring trips.
-            </p>
+          {/* Recent */}
+          <div className="mt-4 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.80)', border: '1px solid rgba(241,245,249,1)' }}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-800">Recent Activity</p>
+              <p className="text-[11px] text-blue-500 font-medium cursor-pointer">See all</p>
+            </div>
+            <div className="space-y-2.5">
+              <TxRow icon="🍜" title="Lunch" cat="Food & Drink" amount="-Rp 38.000" />
+              <TxRow icon="🚌" title="Transport" cat="Travel" amount="-Rp 22.500" />
+              <TxRow icon="💻" title="Freelance" cat="Income" amount="+Rp 5.500.000" positive />
+            </div>
+          </div>
+          {/* AI insight */}
+          <div className="mt-3 rounded-xl p-3.5" style={{ background: 'rgba(239,246,255,0.85)', border: '1px solid rgba(191,219,254,0.60)' }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
+              <p className="text-[11px] font-bold text-blue-700">AI Insight</p>
+            </div>
+            <p className="text-[11px] leading-5 text-blue-600/80">Transport spending is 18% higher than last month. Consider reviewing recurring trips.</p>
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-bold text-slate-950">{value}</p>
-    </div>
-  )
-}
-
-function TransactionRow({
-  title,
-  category,
-  amount,
-  positive = false,
-}: {
-  title: string
-  category: string
-  amount: string
-  positive?: boolean
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
-        <p className="text-xs text-slate-500">{category}</p>
+      {/* Floating badges */}
+      <div className="absolute -bottom-4 -left-6 hidden rounded-xl px-4 py-3 sm:flex items-center gap-2.5" style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', animation: 'floatY 7s ease-in-out 1s infinite' }}>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600" style={{ border: '1px solid rgba(167,243,208,0.60)' }}>
+          <RiShieldCheckLine className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-slate-800">Secure & Private</p>
+          <p className="text-[10px] text-slate-400">Your data stays yours</p>
+        </div>
       </div>
-
-      <p className={cn('text-sm font-bold', positive ? 'text-emerald-600' : 'text-slate-900')}>
-        {amount}
-      </p>
+      <div className="absolute -top-4 -right-4 hidden rounded-xl px-4 py-2.5 sm:flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)', animation: 'floatY 5s ease-in-out 2s infinite' }}>
+        <RiSparklingLine className="h-4 w-4 text-amber-500" />
+        <p className="text-xs font-bold text-slate-700">AI-powered insights</p>
+      </div>
     </div>
   )
 }
 
+function TxRow({ icon, title, cat, amount, positive = false }: { icon: string; title: string; cat: string; amount: string; positive?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-800 truncate">{title}</p>
+        <p className="text-[11px] text-slate-400">{cat}</p>
+      </div>
+      <p className={cn('text-sm font-bold tabular-nums shrink-0', positive ? 'text-emerald-600' : 'text-slate-700')}>{amount}</p>
+    </div>
+  )
+}
+
+/* ─── Features ──────────────────────────────────────────────── */
 function Features() {
-  const features: { Icon: Icon; title: string; desc: string }[] = [
+  const features = [
     {
-      Icon: HiOutlineWallet,
-      title: 'Multi Wallet',
-      desc: 'Track cash, bank accounts, and e-wallets from one clean workspace.',
+      Icon: RiChatSmile3Line,
+      title: 'AI Transaction Assistant',
+      desc: 'Record transactions naturally with AI-powered chat automation.',
+      color: 'text-blue-600',
+      bg: 'rgba(239,246,255,0.90)',
+      border: 'rgba(191,219,254,0.70)',
+      hoverBorder: 'rgba(59,130,246,0.28)',
     },
     {
-      Icon: HiOutlineDocumentText,
-      title: 'Receipt Scanner',
-      desc: 'Upload receipts and let AI help extract transaction details faster.',
+      Icon: RiScanLine,
+      title: 'Smart Receipt Scanner',
+      desc: 'Scan receipts instantly and review extracted transaction data.',
+      color: 'text-violet-600',
+      bg: 'rgba(245,243,255,0.90)',
+      border: 'rgba(221,214,254,0.70)',
+      hoverBorder: 'rgba(139,92,246,0.28)',
     },
     {
-      Icon: HiOutlineSparkles,
-      title: 'AI Categorization',
-      desc: 'Automatically suggest categories so your records stay organized.',
+      Icon: RiBrainLine,
+      title: 'AI Financial Insights',
+      desc: 'Get personalized spending insights and smarter budgeting.',
+      color: 'text-indigo-600',
+      bg: 'rgba(238,242,255,0.90)',
+      border: 'rgba(199,210,254,0.70)',
+      hoverBorder: 'rgba(99,102,241,0.28)',
     },
     {
-      Icon: HiOutlineChartBar,
-      title: 'Budget Tracking',
-      desc: 'Set monthly limits and monitor spending before it gets out of control.',
+      Icon: RiScales3Line,
+      title: 'Split Bills',
+      desc: 'Split expenses fairly and track shared payments easily.',
+      color: 'text-pink-600',
+      bg: 'rgba(255,241,246,0.90)',
+      border: 'rgba(251,207,232,0.70)',
+      hoverBorder: 'rgba(236,72,153,0.28)',
     },
     {
-      Icon: HiOutlineCreditCard,
-      title: 'Transaction History',
-      desc: 'Review income and expenses with simple filters and summaries.',
+      Icon: RiCalendarEventLine,
+      title: 'Bill Reminders',
+      desc: 'Stay ahead of subscriptions and recurring payments.',
+      color: 'text-amber-600',
+      bg: 'rgba(255,251,235,0.90)',
+      border: 'rgba(253,230,138,0.70)',
+      hoverBorder: 'rgba(245,158,11,0.28)',
     },
     {
-      Icon: HiOutlineLockClosed,
-      title: 'Secure by Design',
-      desc: 'Your financial records are managed with privacy and security in mind.',
+      Icon: RiLockLine,
+      title: 'Privacy First',
+      desc: 'Secure infrastructure and encrypted financial data protection.',
+      color: 'text-rose-500',
+      bg: 'rgba(255,241,242,0.90)',
+      border: 'rgba(254,205,211,0.70)',
+      hoverBorder: 'rgba(244,63,94,0.28)',
     },
   ]
 
   return (
-    <section id="features" className="bg-white py-20 sm:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="features" className="relative overflow-hidden py-20 sm:py-28">
+      {/* Background SVG */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <svg
+          className="absolute left-1/2 top-0 -translate-x-1/2 opacity-40"
+          width="1200"
+          height="800"
+          viewBox="0 0 1200 800"
+          fill="none"
+        >
+          <circle cx="200" cy="180" r="180" fill="url(#blueGradient)" />
+          <circle cx="980" cy="260" r="220" fill="url(#purpleGradient)" />
+          <circle cx="600" cy="700" r="260" fill="url(#pinkGradient)" />
+
+          <defs>
+            <radialGradient id="blueGradient">
+              <stop stopColor="#3B82F6" stopOpacity="0.18" />
+              <stop offset="1" stopColor="#3B82F6" stopOpacity="0" />
+            </radialGradient>
+
+            <radialGradient id="purpleGradient">
+              <stop stopColor="#8B5CF6" stopOpacity="0.16" />
+              <stop offset="1" stopColor="#8B5CF6" stopOpacity="0" />
+            </radialGradient>
+
+            <radialGradient id="pinkGradient">
+              <stop stopColor="#EC4899" stopOpacity="0.14" />
+              <stop offset="1" stopColor="#EC4899" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label="Features"
-          title="A simpler way to understand your money"
-          description="SAKU focuses on the essential tools you need to record, monitor, and improve your financial habits."
+          title="Everything you need"
+          description="Modern AI tools designed to simplify your financial management experience."
         />
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((item) => (
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((item, i) => (
             <div
               key={item.title}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/70"
+              className="group relative overflow-hidden rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2"
+              style={{
+                background: 'rgba(255,255,255,0.68)',
+                backdropFilter: 'blur(32px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                boxShadow:
+                  '0 6px 24px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.95)',
+                animationDelay: `${i * 0.05}s`,
+              }}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-900">
-                <item.Icon className="h-6 w-6" />
+              {/* Hover Border */}
+              <div
+                className="absolute inset-0 rounded-3xl opacity-0 transition-all duration-500 group-hover:opacity-100"
+                style={{
+                  border: `1px solid ${item.hoverBorder}`,
+                  boxShadow:
+                    '0 24px 60px rgba(15,23,42,0.10)',
+                }}
+              />
+
+              {/* Animated SVG Glow */}
+              <svg
+                className="absolute -right-10 -top-10 h-32 w-32 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-110"
+                viewBox="0 0 200 200"
+                fill="none"
+              >
+                <path
+                  d="M42.7,-73.5C56.4,-66.4,69.1,-56.5,76.2,-43.2C83.2,-29.9,84.5,-13.2,82.1,2.3C79.8,17.9,73.8,32.3,64.5,44.6C55.2,56.9,42.7,67,28.4,73.2C14.2,79.4,-1.8,81.7,-17.2,78.7C-32.5,75.7,-47.3,67.5,-59.1,56.2C-70.8,44.9,-79.5,30.5,-82.4,14.6C-85.3,-1.2,-82.4,-18.5,-74.4,-32.8C-66.3,-47.2,-53.1,-58.5,-39,-65.7C-24.9,-72.8,-10,-75.8,4.7,-83.1C19.4,-90.4,38.9,-102.1,42.7,-73.5Z"
+                  transform="translate(100 100)"
+                  fill={item.hoverBorder}
+                />
+              </svg>
+
+              <div
+                className={cn(
+                  'relative inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3',
+                  item.color
+                )}
+                style={{
+                  background: item.bg,
+                  border: `1px solid ${item.border}`,
+                }}
+              >
+                <item.Icon className="h-5 w-5" />
               </div>
 
-              <h3 className="mt-5 text-lg font-bold text-slate-950">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{item.desc}</p>
+              <h3 className="relative mt-5 text-lg font-semibold tracking-tight text-slate-900">
+                {item.title}
+              </h3>
+
+              <p className="relative mt-3 text-sm leading-6 text-slate-600">
+                {item.desc}
+              </p>
+
+              <div className="relative mt-6 flex items-center gap-2 text-sm font-medium text-slate-400 transition-all duration-300 group-hover:text-slate-700">
+                Explore feature
+                <RiArrowRightLine className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </div>
             </div>
           ))}
         </div>
@@ -324,141 +648,1024 @@ function Features() {
   )
 }
 
+/* ─── How It Works ──────────────────────────────────────────── */
+function HowItWorks() {
+  const [activeTab, setActiveTab] = useState<'nlp' | 'chat' | 'receipt'>('nlp')
+
+  const tabs = [
+    { id: 'nlp' as const, label: 'Record via Chat', Icon: RiChatSmile3Line },
+    { id: 'chat' as const, label: 'Ask AI Insights', Icon: RiBrainLine },
+    { id: 'receipt' as const, label: 'Scan Receipt', Icon: RiReceiptLine },
+  ]
+
+  return (
+    <section id="how-it-works" className="relative overflow-hidden py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-10 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-200/25 blur-3xl" />
+        <div className="absolute -right-24 bottom-20 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeading
+          label="How It Works"
+          title="Track your money in smarter ways"
+          description="Use AI chat, financial insights, or receipt scanning to record and understand your spending faster."
+        />
+
+        <div className="mt-10 flex justify-center">
+          <div
+            className="inline-flex flex-wrap justify-center gap-1.5 rounded-3xl p-1.5"
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(32px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.88)',
+              boxShadow:
+                '0 8px 28px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
+            }}
+          >
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-300',
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
+                      : 'text-slate-500 hover:bg-white/80 hover:text-blue-700'
+                  )}
+                >
+                  <tab.Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-12">
+          {activeTab === 'nlp' && <NLPSection />}
+          {activeTab === 'chat' && <ChatbotSection />}
+          {activeTab === 'receipt' && <ReceiptSection />}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─── NLP Section ───────────────────────────────────────────── */
+function NLPSection() {
+  const steps = [
+    {
+      num: '01',
+      Icon: RiSendPlaneLine,
+      title: 'Type naturally',
+      desc: 'Write expenses like a normal chat message.',
+      example: '"lunch di warteg 35 ribu"',
+      color: 'text-blue-600',
+      bg: 'rgba(239,246,255,0.90)',
+      border: 'rgba(191,219,254,0.70)',
+    },
+    {
+      num: '02',
+      Icon: RiBrainLine,
+      title: 'AI understands',
+      desc: 'SAKU detects amount, merchant, category, and wallet.',
+      example: 'Warteg · Rp 35.000 · Food',
+      color: 'text-violet-600',
+      bg: 'rgba(245,243,255,0.90)',
+      border: 'rgba(221,214,254,0.70)',
+    },
+    {
+      num: '03',
+      Icon: HiOutlineEye,
+      title: 'Preview first',
+      desc: 'Review and edit the result before saving.',
+      example: 'Confirm or edit transaction',
+      color: 'text-amber-600',
+      bg: 'rgba(255,251,235,0.90)',
+      border: 'rgba(253,230,138,0.70)',
+    },
+    {
+      num: '04',
+      Icon: HiOutlineCheckCircle,
+      title: 'Save instantly',
+      desc: 'Confirmed transactions are saved to your wallet.',
+      example: 'Saved to Main Wallet',
+      color: 'text-emerald-600',
+      bg: 'rgba(236,253,245,0.90)',
+      border: 'rgba(167,243,208,0.70)',
+    },
+  ]
+
+  const chatMessages = [
+    {
+      sender: 'user',
+      text: 'bought coffee 25k',
+    },
+    {
+      sender: 'ai',
+      preview: {
+        merchant: 'Starbucks',
+        amount: 'Rp 25.000',
+        cat: 'Food & Drink',
+        wallet: 'Main Wallet',
+        emoji: '☕',
+      },
+    },
+    {
+      sender: 'user',
+      text: 'gojek 18k',
+    },
+    {
+      sender: 'ai',
+      preview: {
+        merchant: 'Gojek',
+        amount: 'Rp 18.000',
+        cat: 'Transportation',
+        wallet: 'Main Wallet',
+        emoji: '🛵',
+      },
+    },
+  ]
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
+          How NLP Recording Works
+        </p>
+
+        {steps.map((s) => (
+          <div
+            key={s.num}
+            className="group relative overflow-hidden rounded-3xl p-5 transition-all duration-500 hover:-translate-y-1"
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(36px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.88)',
+              boxShadow:
+                '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+            }}
+          >
+            <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+              <div className="absolute inset-0 rounded-3xl border border-blue-300/30" />
+              <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
+            </div>
+
+            <div className="relative flex items-start gap-4">
+              <div
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-105',
+                  s.color
+                )}
+                style={{
+                  background: s.bg,
+                  border: `1px solid ${s.border}`,
+                }}
+              >
+                <s.Icon className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-300">{s.num}</span>
+                  <h4 className="text-sm font-bold text-slate-950">{s.title}</h4>
+                </div>
+
+                <p className="text-sm leading-6 text-slate-500">{s.desc}</p>
+
+                <div className="mt-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2">
+                  <p className="text-xs font-medium text-slate-500">{s.example}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="sticky top-28 overflow-hidden rounded-3xl"
+        style={{
+          background: 'rgba(255,255,255,0.74)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.90)',
+          boxShadow:
+            '0 24px 70px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,1)',
+        }}
+      >
+        <div className="flex items-center gap-3 border-b border-slate-200/70 bg-white/60 px-5 py-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+            <RiChatSmile3Line className="h-5 w-5" />
+          </div>
+
+          <div>
+            <p className="text-sm font-bold text-slate-900">SAKU AI</p>
+            <p className="text-xs text-slate-400">Natural language recording</p>
+          </div>
+
+          <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Online
+          </span>
+        </div>
+
+        <div className="max-h-[420px] space-y-3 overflow-y-auto bg-slate-50/60 p-5">
+          {chatMessages.map((msg, i) => (
+            <div key={i}>
+              {msg.sender === 'user' ? (
+                <div className="flex justify-end">
+                  <div className="max-w-[78%] rounded-2xl rounded-br-md bg-blue-600 px-4 py-2.5 text-sm text-white shadow-md shadow-blue-200/70">
+                    {msg.text}
+                  </div>
+                </div>
+              ) : msg.preview ? (
+                <div className="flex justify-start">
+                  <div className="max-w-[88%] overflow-hidden rounded-3xl rounded-bl-md border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-200/50">
+                    <div className="px-4 pb-3 pt-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        <RiSparklingLine className="h-4 w-4 text-blue-500" />
+                        <p className="text-xs font-bold text-blue-600">
+                          Transaction Preview
+                        </p>
+                      </div>
+
+                      <div className="mb-3 flex items-center gap-3">
+                        <span className="text-2xl">{msg.preview.emoji}</span>
+
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">
+                            {msg.preview.merchant}
+                          </p>
+                          <p className="text-xs text-slate-400">{msg.preview.cat}</p>
+                        </div>
+
+                        <span className="ml-auto text-base font-extrabold text-rose-500">
+                          -{msg.preview.amount}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50 px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <RiWalletLine className="h-4 w-4 text-slate-400" />
+                          <span className="text-xs text-slate-500">
+                            {msg.preview.wallet}
+                          </span>
+                        </div>
+
+                        <span className="text-xs text-slate-400">Just now</span>
+                      </div>
+                    </div>
+
+                    <div className="flex border-t border-slate-200/70">
+                      <button className="flex-1 py-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50">
+                        Edit
+                      </button>
+                      <button className="flex-1 py-3 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-50">
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-slate-200/70 bg-white/60 px-4 py-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-2.5">
+            <input
+              readOnly
+              placeholder='Type like "dinner 80k" or "gojek 18 ribu"…'
+              className="flex-1 bg-transparent text-sm text-slate-400 placeholder-slate-300 outline-none"
+            />
+            <RiSendPlaneLine className="h-4 w-4 text-blue-500" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── AI Chatbot Section ────────────────────────────────────── */
+function ChatbotSection() {
+  const qaItems = [
+    {
+      Icon: RiBarChartGroupedFill,
+      color: 'text-blue-500',
+      bg: 'rgba(239,246,255,0.80)',
+      border: 'rgba(191,219,254,0.60)',
+      q: 'How much did I spend today?',
+      a: 'You spent Rp 83.000 across 3 transactions.',
+    },
+    {
+      Icon: RiPieChart2Line,
+      color: 'text-violet-500',
+      bg: 'rgba(245,243,255,0.80)',
+      border: 'rgba(221,214,254,0.60)',
+      q: 'What category is the highest?',
+      a: 'Food & Drink is your top category this month.',
+    },
+    {
+      Icon: RiLineChartLine,
+      color: 'text-emerald-500',
+      bg: 'rgba(236,253,245,0.80)',
+      border: 'rgba(167,243,208,0.60)',
+      q: 'Am I on track?',
+      a: 'You used 64% of your monthly budget.',
+    },
+    {
+      Icon: RiMoneyDollarCircleLine,
+      color: 'text-amber-500',
+      bg: 'rgba(255,251,235,0.80)',
+      border: 'rgba(253,230,138,0.60)',
+      q: 'Show my biggest expense',
+      a: 'Your largest expense is Rp 750.000.',
+    },
+  ]
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-violet-600">
+          What You Can Ask
+        </p>
+
+        {qaItems.map((item) => (
+          <div
+            key={item.q}
+            className="group relative overflow-hidden rounded-3xl p-5 transition-all duration-500 hover:-translate-y-1"
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(36px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.88)',
+              boxShadow:
+                '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+            }}
+          >
+            <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+              <div className="absolute inset-0 rounded-3xl border border-violet-300/30" />
+              <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-violet-300/20 blur-3xl" />
+            </div>
+
+            <div className="relative flex items-start gap-4">
+              <div
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+                  item.color
+                )}
+                style={{
+                  background: item.bg,
+                  border: `1px solid ${item.border}`,
+                }}
+              >
+                <item.Icon className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="mb-1 text-sm font-bold text-slate-900">"{item.q}"</p>
+                <p className="text-sm leading-6 text-slate-500">{item.a}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="sticky top-28 overflow-hidden rounded-3xl"
+        style={{
+          background: 'rgba(255,255,255,0.74)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.90)',
+          boxShadow:
+            '0 24px 70px rgba(124,58,237,0.10), inset 0 1px 0 rgba(255,255,255,1)',
+        }}
+      >
+        <div className="flex items-center gap-3 border-b border-slate-200/70 bg-white/60 px-5 py-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-200">
+            <RiBrainLine className="h-5 w-5" />
+          </div>
+
+          <div>
+            <p className="text-sm font-bold text-slate-900">Finance Assistant</p>
+            <p className="text-xs text-slate-400">Ask anything about money</p>
+          </div>
+
+          <div className="ml-auto rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-600">
+            AI Powered
+          </div>
+        </div>
+
+        <div className="space-y-3 bg-violet-50/40 p-5">
+          <ChatBubble
+            sender="ai"
+            text="Hi! Ask me about spending, budgets, or financial health."
+            accentColor="violet"
+          />
+          <ChatBubble
+            sender="user"
+            text="How much did I spend today?"
+            accentColor="violet"
+          />
+          <ChatBubble
+            sender="ai"
+            text="You spent Rp 83.000 today across Coffee, Transport, and Lunch."
+            accentColor="violet"
+          />
+
+          <div className="flex justify-start">
+            <div className="max-w-[90%] rounded-3xl rounded-bl-md border border-slate-200/80 bg-white/90 px-4 py-4 text-sm text-slate-700 shadow-lg shadow-slate-200/50">
+              <p className="mb-3 flex items-center gap-2 font-bold text-slate-900">
+                <RiPieChart2Line className="h-4 w-4 text-violet-500" />
+                Top categories
+              </p>
+
+              {[
+                { cat: 'Food & Drink', pct: 32 },
+                { cat: 'Transportation', pct: 21 },
+                { cat: 'Shopping', pct: 18 },
+              ].map((c) => (
+                <div key={c.cat} className="mb-3 last:mb-0">
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-slate-500">{c.cat}</span>
+                    <span className="font-bold text-slate-800">{c.pct}%</span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-violet-500 transition-all duration-700"
+                      style={{ width: `${c.pct}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200/70 bg-white/60 px-4 py-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-violet-100 bg-white/80 px-3 py-2.5">
+            <input
+              readOnly
+              placeholder="Ask anything about your finances…"
+              className="flex-1 bg-transparent text-sm text-slate-400 outline-none"
+            />
+            <RiSendPlaneLine className="h-4 w-4 text-violet-500" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChatBubble({
+  sender,
+  text,
+  accentColor = 'blue',
+}: {
+  sender: 'user' | 'ai'
+  text: string
+  accentColor?: 'blue' | 'violet'
+}) {
+  const isUser = sender === 'user'
+
+  return (
+    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+      <div
+        className={cn(
+          'max-w-[88%] rounded-2xl px-4 py-2.5 text-sm leading-6',
+          isUser
+            ? cn(
+                'rounded-br-md text-white shadow-md',
+                accentColor === 'violet'
+                  ? 'bg-violet-600 shadow-violet-200/70'
+                  : 'bg-blue-600 shadow-blue-200/70'
+              )
+            : 'rounded-bl-md border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm'
+        )}
+      >
+        {text}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Receipt Section ───────────────────────────────────────── */
+function ReceiptSection() {
+  const steps = [
+    {
+      num: '01',
+      Icon: HiOutlineArrowUpTray,
+      title: 'Upload receipt',
+      desc: 'Take a photo or upload your receipt.',
+      color: 'text-cyan-600',
+      bg: 'rgba(236,254,255,0.90)',
+      border: 'rgba(165,243,252,0.70)',
+    },
+    {
+      num: '02',
+      Icon: RiScanLine,
+      title: 'AI extracts data',
+      desc: 'SAKU reads merchant, date, items, and total.',
+      color: 'text-blue-600',
+      bg: 'rgba(239,246,255,0.90)',
+      border: 'rgba(191,219,254,0.70)',
+    },
+    {
+      num: '03',
+      Icon: HiOutlineDocumentCheck,
+      title: 'Review details',
+      desc: 'Check and edit extracted data before saving.',
+      color: 'text-violet-600',
+      bg: 'rgba(245,243,255,0.90)',
+      border: 'rgba(221,214,254,0.70)',
+    },
+    {
+      num: '04',
+      Icon: HiOutlineCheckCircle,
+      title: 'Confirm & save',
+      desc: 'Save it instantly as a transaction.',
+      color: 'text-emerald-600',
+      bg: 'rgba(236,253,245,0.90)',
+      border: 'rgba(167,243,208,0.70)',
+    },
+  ]
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+      <div className="space-y-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-600">
+          How Receipt Scanning Works
+        </p>
+
+        {steps.map((step) => (
+          <div
+            key={step.num}
+            className="group relative overflow-hidden rounded-3xl p-5 transition-all duration-500 hover:-translate-y-1"
+            style={{
+              background: 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(36px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.88)',
+              boxShadow:
+                '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+            }}
+          >
+            <div className="relative flex items-start gap-4">
+              <div
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
+                  step.color
+                )}
+                style={{
+                  background: step.bg,
+                  border: `1px solid ${step.border}`,
+                }}
+              >
+                <step.Icon className="h-5 w-5" />
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-300">{step.num}</span>
+                  <h4 className="text-sm font-bold text-slate-950">{step.title}</h4>
+                </div>
+
+                <p className="text-sm leading-6 text-slate-500">{step.desc}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="overflow-hidden rounded-3xl"
+        style={{
+          background: 'rgba(255,255,255,0.74)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.90)',
+          boxShadow:
+            '0 24px 70px rgba(6,182,212,0.10), inset 0 1px 0 rgba(255,255,255,1)',
+        }}
+      >
+        <div className="flex items-center gap-3 border-b border-slate-200/70 bg-white/60 px-5 py-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-lg shadow-cyan-200">
+            <RiReceiptLine className="h-5 w-5" />
+          </div>
+
+          <div>
+            <p className="text-sm font-bold text-slate-900">Receipt Preview</p>
+            <p className="text-xs text-slate-400">Review before saving</p>
+          </div>
+
+          <span className="ml-auto rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">
+            AI Extracted
+          </span>
+        </div>
+
+        <div className="space-y-4 bg-cyan-50/40 p-5">
+          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-3xl border border-dashed border-cyan-200 bg-cyan-50">
+            <div className="text-center">
+              <RiReceiptLine className="mx-auto mb-1 h-8 w-8 text-cyan-300" />
+              <p className="text-xs font-medium text-cyan-500">
+                Receipt image uploaded
+              </p>
+            </div>
+
+            <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-cyan-600 px-3 py-1 text-xs font-bold text-white">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-200" />
+              Scanning
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+              Extracted Data
+            </p>
+
+            {[
+              { label: 'Merchant', value: 'Starbucks Coffee', Icon: RiBankLine },
+              { label: 'Date', value: 'May 20, 2026', Icon: RiCalendarEventLine },
+              { label: 'Category', value: 'Food & Drink', Icon: RiPieChart2Line },
+              {
+                label: 'Total Amount',
+                value: 'Rp 65.000',
+                highlight: true,
+                Icon: RiMoneyDollarCircleLine,
+              },
+            ].map((row) => (
+              <div key={row.label} className="mb-2.5 flex items-center justify-between last:mb-0">
+                <div className="flex items-center gap-2">
+                  <row.Icon className="h-4 w-4 text-slate-300" />
+                  <span className="text-xs text-slate-400">{row.label}</span>
+                </div>
+
+                <div
+                  className={cn('rounded-xl px-3 py-1 text-xs font-bold')}
+                  style={
+                    row.highlight
+                      ? {
+                          background: 'rgba(209,250,229,0.70)',
+                          border: '1px solid rgba(167,243,208,0.80)',
+                          color: '#059669',
+                        }
+                      : {
+                          background: '#f8fafc',
+                          border: '1px solid #f1f5f9',
+                          color: '#475569',
+                        }
+                  }
+                >
+                  {row.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+              Items Detected
+            </p>
+
+            {[
+              { name: 'Caramel Frappuccino', price: 'Rp 52.000' },
+              { name: 'Croissant', price: 'Rp 13.000' },
+            ].map((item) => (
+              <div key={item.name} className="mb-2 flex justify-between text-sm last:mb-0">
+                <span className="text-slate-500">{item.name}</span>
+                <span className="font-bold text-slate-800">{item.price}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2.5">
+            <button className="flex-1 rounded-2xl border border-slate-200 bg-white/80 py-3 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50">
+              Edit Details
+            </button>
+
+            <button className="flex-1 rounded-2xl bg-cyan-600 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-200/70 transition-all hover:bg-cyan-500">
+              Confirm & Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Pricing ───────────────────────────────────────────────── */
 function Pricing({ isAuthed }: { isAuthed: boolean }) {
   const plans = [
     {
       name: 'Free',
       price: 'Rp 0',
       period: '',
-      desc: 'For simple personal expense tracking.',
-      features: ['Manual transactions', 'Basic wallet tracking', 'Monthly summary'],
-      featured: false,
-      cta: 'Start Free',
+      badge: null,
+      desc: 'Basic tools to start tracking your money.',
+      features: [
+        'Manual transaction recording',
+        'Basic wallet management',
+        'Monthly spending summary',
+        'Web & mobile access',
+      ],
+      cta: 'Get Started Free',
+      tier: 'free',
     },
     {
       name: 'Pro',
       price: 'Rp 29.000',
       period: '/ month',
-      desc: 'For users who want AI assistance and deeper insights.',
-      features: ['AI categorization', 'Receipt scanner', 'Budget tracker', 'Advanced reports'],
-      featured: true,
+      badge: 'Most Popular',
+      desc: 'AI-powered finance tracking for daily use.',
+      features: [
+        'Everything in Free',
+        'AI chat recording',
+        'Receipt scanning',
+        'Auto-categorization',
+        'Budget alerts',
+        'Split bills',
+        'AI insights',
+        'Unlimited wallets',
+      ],
       cta: 'Start Pro',
+      tier: 'pro',
+    },
+    {
+      name: 'Premium',
+      price: 'Rp 99.000',
+      period: '/ month',
+      badge: null,
+      desc: 'Advanced tools for deeper financial control.',
+      features: [
+        'Everything in Pro',
+        'Family sharing',
+        'Advanced analytics',
+        'Custom reports',
+        'Tax export',
+        'Investment tracking',
+        'Priority support',
+        'Early access',
+      ],
+      cta: 'Start Premium',
+      tier: 'premium',
     },
   ]
 
   return (
-    <section id="pricing" className="bg-slate-50 py-20 sm:py-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+    <section id="pricing" className="relative overflow-hidden py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute right-10 top-40 h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label="Pricing"
-          title="Start simple. Upgrade when you need more."
-          description="Choose the plan that matches your financial workflow."
+          title="Pick the perfect plan for your financial journey"
+          description="Start free, upgrade anytime, and only pay when you need more power."
         />
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={cn(
-                'rounded-3xl border bg-white p-7 shadow-sm',
-                plan.featured ? 'border-slate-950 ring-1 ring-slate-950' : 'border-slate-200',
-              )}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-950">{plan.name}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{plan.desc}</p>
+        <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
+          {plans.map((plan) => {
+            const isPro = plan.tier === 'pro'
+
+            return (
+              <div
+                key={plan.name}
+                className={cn(
+                  'group relative flex flex-col overflow-hidden rounded-3xl p-8 transition-all duration-500 hover:-translate-y-2',
+                  isPro && 'md:scale-105'
+                )}
+                style={{
+                  background: isPro
+                    ? 'rgba(255,255,255,0.86)'
+                    : 'rgba(255,255,255,0.68)',
+                  backdropFilter: 'blur(36px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+                  border: isPro
+                    ? '1px solid rgba(59,130,246,0.34)'
+                    : '1px solid rgba(255,255,255,0.86)',
+                  boxShadow: isPro
+                    ? '0 24px 70px rgba(37,99,235,0.14), inset 0 1px 0 rgba(255,255,255,1)'
+                    : '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-3xl border border-blue-300/40" />
+                  <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-blue-300/20 blur-3xl" />
+                  <div className="absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-violet-300/20 blur-3xl" />
                 </div>
 
-                {plan.featured ? (
-                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
-                    Popular
+                {plan.badge && (
+                  <span className="absolute right-6 top-6 z-10 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-blue-200">
+                    <RiSparklingLine className="h-3.5 w-3.5" />
+                    {plan.badge}
                   </span>
-                ) : null}
-              </div>
+                )}
 
-              <div className="mt-8 flex items-end gap-1">
-                <span className="text-4xl font-bold tracking-tight text-slate-950">
-                  {plan.price}
-                </span>
-                <span className="pb-1 text-sm text-slate-500">{plan.period}</span>
-              </div>
+                <div className="relative">
+                  <h3 className="text-lg font-bold text-slate-950">{plan.name}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">{plan.desc}</p>
 
-              <ul className="mt-7 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
-                    <HiOutlineCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
+                  <div className="mt-6 flex items-end gap-1">
+                    <span
+                      className={cn(
+                        'text-4xl font-extrabold tracking-tight',
+                        isPro ? 'text-blue-700' : 'text-slate-950'
+                      )}
+                    >
+                      {plan.price}
+                    </span>
 
-              <Link to={isAuthed ? '/app/subscription' : '/register'} className="mt-8 block">
-                <Button variant={plan.featured ? 'primary' : 'outline'} className="h-11 w-full">
+                    {plan.period && (
+                      <span className="pb-1.5 text-sm font-medium text-slate-400">
+                        {plan.period}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <ul className="relative mt-7 flex-1 space-y-3">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3 text-sm text-slate-600">
+                      <span
+                        className={cn(
+                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
+                          isPro
+                            ? 'border-blue-200 bg-blue-50 text-blue-600'
+                            : 'border-slate-200 bg-slate-50 text-slate-500'
+                        )}
+                      >
+                        <RiCheckLine className="h-3.5 w-3.5" />
+                      </span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  to={isAuthed ? '/app/subscription' : '/register'}
+                  className={cn(
+                    'relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
+                    isPro
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-500 hover:shadow-blue-300'
+                      : 'border border-slate-200 bg-white/80 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                  )}
+                >
+                  {isPro && <RiFlashlightLine className="h-4 w-4" />}
                   {plan.cta}
-                </Button>
-              </Link>
-            </div>
+                </Link>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-10 flex flex-wrap justify-center gap-5 text-sm text-slate-500">
+          {['No credit card', 'Cancel anytime', 'Instant access'].map((item) => (
+            <span key={item} className="inline-flex items-center gap-2">
+              <RiCheckLine className="h-4 w-4 text-emerald-500" />
+              {item}
+            </span>
           ))}
         </div>
       </div>
     </section>
   )
 }
-
+/* ─── FAQ ───────────────────────────────────────────────────── */
 function FAQ() {
   const items = [
     {
-      q: 'Is SAKU free to use?',
-      a: 'Yes. You can start with the free plan and upgrade anytime when you need more automation and insights.',
+      q: 'Is SAKU free?',
+      a: 'Yes. You can use the Free plan to track transactions manually. Upgrade anytime for AI chat, receipt scanning, and deeper insights.',
     },
     {
-      q: 'What can AI help with?',
-      a: 'AI can help categorize transactions, extract receipt data, and provide simple financial insights based on your records.',
-    },
-    {
-      q: 'Can I cancel my subscription?',
-      a: 'Yes. You can cancel your subscription anytime from the subscription page.',
+      q: 'How does AI chat recording work?',
+      a: "Type naturally, like 'coffee 25k' or 'gojek 18 ribu'. SAKU extracts the details and shows a preview before saving.",
     },
     {
       q: 'Is my financial data secure?',
-      a: 'SAKU is designed with privacy in mind. Your financial data should only be used to support your own tracking and insights.',
+      a: 'Yes. SAKU is built with secure infrastructure, encrypted communication, and privacy-focused data protection.',
+    },
+    {
+      q: 'Can I manage multiple wallets?',
+      a: 'Yes. You can manage cash, bank accounts, e-wallets, and other wallets from one dashboard.',
+    },
+    {
+      q: 'How do split bills work?',
+      a: 'Add shared expenses, let SAKU calculate who owes what, and track each settlement clearly.',
+    },
+    {
+      q: 'Can I cancel anytime?',
+      a: 'Yes. You can stay on Free or upgrade when needed. There is no long-term lock-in.',
     },
   ]
 
-  const [open, setOpen] = useState(0)
+  const [open, setOpen] = useState<number | null>(0)
 
   return (
-    <section id="faq" className="bg-white py-20 sm:py-24">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <section id="faq" className="relative overflow-hidden py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/25 blur-3xl" />
+        <div className="absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-violet-200/25 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label="FAQ"
-          title="Common questions"
-          description="Quick answers before you start using SAKU."
+          title="Frequently asked questions"
+          description="Clear answers about SAKU features, pricing, security, and daily usage."
         />
 
-        <div className="mt-10 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          {items.map((item, index) => {
-            const isOpen = open === index
+        <div className="mt-10 space-y-4">
+          {items.map((item, i) => {
+            const isOpen = open === i
 
             return (
-              <div key={item.q} className="border-b border-slate-100 last:border-b-0">
+              <div
+                key={item.q}
+                className="group relative overflow-hidden rounded-3xl transition-all duration-300"
+                style={{
+                  background: isOpen
+                    ? 'rgba(255,255,255,0.82)'
+                    : 'rgba(255,255,255,0.68)',
+                  backdropFilter: 'blur(32px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+                  border: isOpen
+                    ? '1px solid rgba(59,130,246,0.35)'
+                    : '1px solid rgba(255,255,255,0.86)',
+                  boxShadow: isOpen
+                    ? '0 18px 48px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
+                    : '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-3xl border border-blue-300/30" />
+                  <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setOpen(isOpen ? -1 : index)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-slate-950 hover:bg-slate-50"
+                  onClick={() => setOpen(isOpen ? null : i)}
+                  className="relative flex w-full items-center justify-between gap-5 px-6 py-5 text-left"
                 >
-                  {item.q}
-                  <HiOutlineChevronDown
-                    className={cn('h-4 w-4 shrink-0 text-slate-500 transition', isOpen && 'rotate-180')}
-                  />
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={cn(
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-bold transition-all duration-300',
+                        isOpen
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                          : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600'
+                      )}
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+
+                    <span className="text-sm font-semibold text-slate-950 sm:text-base">
+                      {item.q}
+                    </span>
+                  </div>
+
+                  <span
+                    className={cn(
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300',
+                      isOpen
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'bg-white/70 text-slate-400 group-hover:text-blue-600'
+                    )}
+                  >
+                    <HiOutlineChevronDown
+                      className={cn(
+                        'h-4 w-4 transition-transform duration-300',
+                        isOpen && 'rotate-180'
+                      )}
+                    />
+                  </span>
                 </button>
 
-                {isOpen ? (
-                  <div className="px-5 pb-5 text-sm leading-6 text-slate-600">
-                    {item.a}
+                <div
+                  className={cn(
+                    'grid transition-all duration-300 ease-in-out',
+                    isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    <div className="mx-6 border-t border-slate-200/70 px-0 py-5">
+                      <p className="text-sm leading-7 text-slate-600">
+                        {item.a}
+                      </p>
+                    </div>
                   </div>
-                ) : null}
+                </div>
               </div>
             )
           })}
@@ -468,50 +1675,113 @@ function FAQ() {
   )
 }
 
-function Footer() {
+/* ─── Footer ────────────────────────────────────────────────── */
+function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
   const productLinks = [
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'FAQ', href: '#faq' },
+    { label: 'Features', id: 'features' },
+    { label: 'How It Works', id: 'how-it-works' },
+    { label: 'Pricing', id: 'pricing' },
+    { label: 'FAQ', id: 'faq' },
   ]
 
   const supportLinks = [
     { label: 'Help Center', href: '#' },
-    { label: 'Contact', href: 'mailto:hello@saku.app' },
-    { label: 'Status', href: '#' },
+    { label: 'Contact Us', href: 'mailto:hello@saku.app' },
+    { label: 'System Status', href: '#' },
+    { label: 'Changelog', href: '#' },
   ]
 
   const legalLinks = [
     { label: 'Privacy Policy', href: '#' },
     { label: 'Terms of Service', href: '#' },
     { label: 'Security', href: '#' },
+    { label: 'Cookie Policy', href: '#' },
   ]
 
   return (
-    <footer className="border-t border-slate-200 bg-slate-950 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+    <footer
+      className="relative overflow-hidden border-t"
+      style={{
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        borderColor: 'rgba(226,232,240,0.60)',
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-blue-200/25 blur-3xl" />
+        <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-violet-200/25 blur-3xl" />
+      </div>
+
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent" />
+
+      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Logo />
 
-            <p className="mt-4 max-w-sm text-sm leading-6 text-slate-400">
-              SAKU is a personal finance tracker built to help you record transactions,
-              monitor budgets, and understand your spending with less effort.
+            <p className="mt-4 max-w-md text-sm leading-7 text-slate-500">
+              SAKU helps you track transactions, scan receipts, monitor budgets,
+              split bills, and understand your spending with AI-powered insights.
             </p>
 
-            <div className="mt-6 flex items-center gap-3">
-              <SocialLink icon={FaInstagram} label="Instagram" />
-              <SocialLink icon={FaLinkedin} label="LinkedIn" />
-              <SocialLink icon={FaGithub} label="GitHub" />
+            <div className="mt-6 flex items-center gap-2">
+              {[RiInstagramLine, RiLinkedinLine, RiGithubLine].map((Icon, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl text-slate-400 transition-all duration-300 hover:-translate-y-1 hover:bg-blue-50 hover:text-blue-600"
+                  style={{
+                    background: 'rgba(255,255,255,0.78)',
+                    border: '1px solid rgba(226,232,240,0.80)',
+                    boxShadow: '0 8px 24px rgba(15,23,42,0.05)',
+                  }}
+                >
+                  <Icon className="h-4.5 w-4.5" />
+                </a>
+              ))}
             </div>
           </div>
 
-          <FooterColumn title="Product" links={productLinks} />
-          <FooterColumn title="Support" links={supportLinks} />
-          <FooterColumn title="Legal" links={legalLinks} />
+          <FooterColumn title="Product">
+            {productLinks.map((link) => (
+              <button
+                key={link.label}
+                type="button"
+                onClick={() => onNavClick(link.id)}
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+              >
+                {link.label}
+              </button>
+            ))}
+          </FooterColumn>
+
+          <FooterColumn title="Support">
+            {supportLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+              >
+                {link.label}
+              </a>
+            ))}
+          </FooterColumn>
+
+          <FooterColumn title="Legal">
+            {legalLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+              >
+                {link.label}
+              </a>
+            ))}
+          </FooterColumn>
         </div>
 
-        <div className="mt-12 flex flex-col justify-between gap-4 border-t border-white/10 pt-6 text-sm text-slate-400 md:flex-row">
+        <div className="mt-12 flex flex-col justify-between gap-4 border-t border-slate-200/70 pt-6 text-xs text-slate-400 md:flex-row">
           <p>© {new Date().getFullYear()} SAKU. All rights reserved.</p>
           <p>Built for smarter personal finance management.</p>
         </div>
@@ -522,65 +1792,31 @@ function Footer() {
 
 function FooterColumn({
   title,
-  links,
+  children,
 }: {
   title: string
-  links: { label: string; href: string }[]
+  children: React.ReactNode
 }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold text-white">{title}</h4>
-      <ul className="mt-4 space-y-3">
-        {links.map((link) => (
-          <li key={link.label}>
-            <a href={link.href} className="text-sm text-slate-400 hover:text-white">
-              {link.label}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+        {title}
+      </h4>
+
+      <div className="space-y-3">{children}</div>
     </div>
   )
 }
 
-function SocialLink({
-  icon: Icon,
-  label,
-}: {
-  icon: Icon
-  label: string
-}) {
-  return (
-    <a
-      href="#"
-      aria-label={label}
-      className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/30 hover:text-white"
-    >
-      <Icon className="h-4 w-4" />
-    </a>
-  )
-}
-
-function SectionHeading({
-  label,
-  title,
-  description,
-}: {
-  label: string
-  title: string
-  description?: string
-}) {
+/* ─── Section Heading ───────────────────────────────────────── */
+function SectionHeading({ label, title, description }: { label: string; title: string; description?: string }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">
-        {label}
-      </p>
-      <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-3 text-base leading-7 text-slate-600">{description}</p>
-      ) : null}
+      <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-600" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.60)', boxShadow: '0 2px 12px rgba(59,130,246,0.08)' }}>
+        <RiFlashlightLine className="h-3 w-3" />{label}
+      </span>
+      <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl leading-tight">{title}</h2>
+      {description && <p className="mt-4 text-base leading-7 text-slate-500">{description}</p>}
     </div>
   )
 }

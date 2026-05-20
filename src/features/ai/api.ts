@@ -25,6 +25,9 @@ export const aiLogApi = {
     unwrapList<AIProcessingLog>(
       await api.get('/admin/ai-logs', { params: { page, limit } }),
     ),
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/ai-logs/${id}`)
+  },
 }
 
 
