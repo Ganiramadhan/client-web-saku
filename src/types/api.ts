@@ -1,4 +1,10 @@
-export type WalletType = 'personal' | 'business' | 'shared'
+export type WalletType =
+  | 'e_wallet'
+  | 'bank_account'
+  | 'cash'
+  | 'credit_card'
+  | 'investment'
+  | 'savings'
 export type TransactionType = 'income' | 'expense'
 export type TransactionSource = 'manual' | 'ai_ocr' | 'import' | 'api'
 export type AIStatus = 'pending' | 'success' | 'failed'
@@ -135,6 +141,7 @@ export interface AICategorizeResponse {
 export interface AIScanReceiptResponse extends AICategorizeResponse {
   currency: string
   date: string
+  description?: string
   ocr_text?: string
   line_items?: string[]
 }

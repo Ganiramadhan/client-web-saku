@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   HiOutlineBanknotes,
   HiOutlineBuildingOffice2,
+  HiOutlineBuildingLibrary,
   HiOutlineClock,
+  HiOutlineCreditCard,
   HiOutlinePencilSquare,
   HiOutlinePlus,
   HiOutlineSquares2X2,
@@ -34,6 +36,7 @@ import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 
+type LegacyWalletType = 'personal' | 'business' | 'shared'
 type FilterTab = 'all' | WalletType
 
 type WalletStat = {
@@ -46,7 +49,7 @@ type WalletStat = {
 function initialWalletForm(editing: Wallet | null): WalletPayload {
   return {
     name: editing?.name ?? '',
-    type: editing?.type ?? 'personal',
+    type: normalizeWalletType(editing?.type),
     currency: editing?.currency ?? 'IDR',
     balance: editing ? Number(editing.balance) : 0,
     is_default: editing?.is_default ?? false,
@@ -66,27 +69,72 @@ const TYPE_THEME: Record<
     border: string
   }
 > = {
-  personal: {
+  cash: {
+    Icon: HiOutlineBanknotes,
+    iconBg: 'bg-emerald-50',
+    iconText: 'text-emerald-700',
+    dot: 'bg-emerald-500',
+    border: 'border-emerald-100',
+  },
+  bank_account: {
+    Icon: HiOutlineBuildingLibrary,
+    iconBg: 'bg-sky-50',
+    iconText: 'text-sky-700',
+    dot: 'bg-sky-500',
+    border: 'border-sky-100',
+  },
+  e_wallet: {
     Icon: HiOutlineWallet,
     iconBg: 'bg-brand-50',
     iconText: 'text-brand-700',
     dot: 'bg-brand-500',
     border: 'border-brand-100',
   },
-  business: {
+  credit_card: {
+    Icon: HiOutlineCreditCard,
+    iconBg: 'bg-rose-50',
+    iconText: 'text-rose-700',
+    dot: 'bg-rose-500',
+    border: 'border-rose-100',
+  },
+  investment: {
     Icon: HiOutlineBuildingOffice2,
     iconBg: 'bg-violet-50',
     iconText: 'text-violet-700',
     dot: 'bg-violet-500',
     border: 'border-violet-100',
   },
-  shared: {
+  savings: {
     Icon: HiOutlineUserGroup,
-    iconBg: 'bg-sky-50',
-    iconText: 'text-sky-700',
-    dot: 'bg-sky-500',
-    border: 'border-sky-100',
+    iconBg: 'bg-amber-50',
+    iconText: 'text-amber-700',
+    dot: 'bg-amber-500',
+    border: 'border-amber-100',
   },
+}
+
+const WALLET_TYPE_OPTIONS: { value: WalletType; label: string; description: string }[] = [
+  { value: 'cash', label: 'Uang Cash', description: 'Tunai di dompet fisik.' },
+  { value: 'bank_account', label: 'Rekening Bank', description: 'BCA, Mandiri, BRI, Jago, dan bank lain.' },
+  { value: 'e_wallet', label: 'E-Wallet', description: 'GoPay, OVO, DANA, ShopeePay, dan sejenisnya.' },
+  { value: 'credit_card', label: 'Kartu Kredit', description: 'Limit kartu kredit atau paylater.' },
+  { value: 'savings', label: 'Tabungan', description: 'Kantong tabungan atau rekening khusus tujuan.' },
+  { value: 'investment', label: 'Investasi', description: 'Reksa dana, saham, deposito, dan aset investasi.' },
+]
+
+function labelForType(type?: string): string {
+  const normalized = normalizeWalletType(type)
+  return WALLET_TYPE_OPTIONS.find((option) => option.value === normalized)?.label ?? 'Dompet'
+}
+
+function normalizeWalletType(type?: string | null): WalletType {
+  const legacyMap: Record<LegacyWalletType, WalletType> = {
+    personal: 'cash',
+    business: 'bank_account',
+    shared: 'e_wallet',
+  }
+  if (type === 'personal' || type === 'business' || type === 'shared') return legacyMap[type]
+  return WALLET_TYPE_OPTIONS.some((option) => option.value === type) ? (type as WalletType) : 'cash'
 }
 
 export function WalletsPage() {
@@ -135,7 +183,7 @@ export function WalletsPage() {
   const wallets = useMemo(() => walletsQ.data ?? [], [walletsQ.data])
 
   const filteredWallets = useMemo(
-    () => (tab === 'all' ? wallets : wallets.filter((wallet) => wallet.type === tab)),
+    () => (tab === 'all' ? wallets : wallets.filter((wallet) => normalizeWalletType(wallet.type) === tab)),
     [wallets, tab],
   )
 
@@ -145,11 +193,14 @@ export function WalletsPage() {
   )
 
   const walletCountByType = useMemo(
-    () => ({
-      personal: wallets.filter((wallet) => wallet.type === 'personal').length,
-      business: wallets.filter((wallet) => wallet.type === 'business').length,
-      shared: wallets.filter((wallet) => wallet.type === 'shared').length,
-    }),
+    () =>
+      WALLET_TYPE_OPTIONS.reduce(
+        (acc, option) => ({
+          ...acc,
+          [option.value]: wallets.filter((wallet) => normalizeWalletType(wallet.type) === option.value).length,
+        }),
+        {} as Record<WalletType, number>,
+      ),
     [wallets],
   )
 
@@ -192,9 +243,11 @@ export function WalletsPage() {
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
     { key: 'all', label: 'Semua', count: wallets.length },
-    { key: 'personal', label: t.wallets.typePersonal, count: walletCountByType.personal },
-    { key: 'business', label: t.wallets.typeBusiness, count: walletCountByType.business },
-    { key: 'shared', label: t.wallets.typeShared, count: walletCountByType.shared },
+    ...WALLET_TYPE_OPTIONS.map((option) => ({
+      key: option.value,
+      label: option.label,
+      count: walletCountByType[option.value] ?? 0,
+    })),
   ]
 
   return (
@@ -304,7 +357,7 @@ function WalletsSummary({
   totalBalance: number
   totalIncome30d: number
   totalExpense30d: number
-  byType: { personal: number; business: number; shared: number }
+  byType: Record<WalletType, number>
   walletStats: Map<string, WalletStat>
 }) {
   const net30d = totalIncome30d - totalExpense30d
@@ -408,7 +461,7 @@ function FilterTabs({
     <div className="flex flex-wrap items-center gap-2">
       {tabs.map((tab) => {
         const isAll = tab.key === 'all'
-        const dot = !isAll ? TYPE_THEME[tab.key as WalletType].dot : ''
+        const dot = !isAll ? TYPE_THEME[normalizeWalletType(tab.key)].dot : ''
 
         return (
           <button
@@ -460,7 +513,8 @@ function WalletCard({
   onSetDefault: () => void
   setDefaultLoading?: boolean
 }) {
-  const theme = TYPE_THEME[wallet.type]
+  const type = normalizeWalletType(wallet.type)
+  const theme = TYPE_THEME[type]
   const Icon = theme.Icon
   const income = stat?.income ?? 0
   const expense = stat?.expense ?? 0
@@ -719,12 +773,8 @@ function WalletFormModal({
         <RSelect
           label={t.wallets.type}
           value={form.type}
-          options={[
-            { value: 'personal', label: t.wallets.typePersonal },
-            { value: 'business', label: t.wallets.typeBusiness },
-            { value: 'shared', label: t.wallets.typeShared },
-          ] as SelectOption[]}
-          onChange={(value) => setForm({ ...form, type: (value ?? 'personal') as WalletType })}
+          options={WALLET_TYPE_OPTIONS as SelectOption[]}
+          onChange={(value) => setForm({ ...form, type: (value ?? 'cash') as WalletType })}
         />
 
         <CurrencyInput
@@ -851,12 +901,6 @@ function FormCheckbox({
       </span>
     </label>
   )
-}
-
-function labelForType(type: WalletType): string {
-  if (type === 'personal') return 'Personal'
-  if (type === 'business') return 'Business'
-  return 'Shared'
 }
 
 function getTargetProgress(wallet: Wallet): number | null {

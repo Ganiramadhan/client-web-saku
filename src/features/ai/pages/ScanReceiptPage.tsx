@@ -42,6 +42,7 @@ interface ExtractedReceipt {
   type?: TransactionType
   category?: string
   merchant_name?: string
+  description?: string
   ocr_text?: string
   date?: string
   confidence?: number
@@ -70,7 +71,21 @@ function extractReceiptItems(ocrText?: string, lineItems?: string[]): string[] {
 
 function buildScanDescription(d: { merchant_name?: string; ocr_text?: string; line_items?: string[] }): string {
   const merchant = cleanMerchant(d.merchant_name)
+  const text = `${d.ocr_text ?? ''} ${(d.line_items ?? []).join(' ')}`.toLowerCase()
+  const isTransfer = /(transfer|mutasi|rekening|sumber dana|sumber akun|penerima|tujuan|ref(erensi)?|admin bank|bi-fast|qris|top ?up|dana masuk|transfer masuk)/i.test(text)
   const items = extractReceiptItems(d.ocr_text, d.line_items)
+  if (isTransfer) {
+    if (/dana masuk|transfer masuk|received|credited|mutasi masuk/i.test(text)) {
+      return merchant ? `Transfer masuk dari ${merchant}` : 'Transfer masuk'
+    }
+    if (/top ?up/i.test(text)) {
+      return merchant ? `Top up ${merchant}` : 'Top up e-wallet'
+    }
+    if (/qris/i.test(text)) {
+      return merchant ? `Pembayaran QRIS ke ${merchant}` : 'Pembayaran QRIS'
+    }
+    return merchant ? `Transfer ke ${merchant}` : 'Transfer bank'
+  }
   if (items.length > 0) {
     const prefix = merchant ? `Belanja di ${merchant}` : 'Belanja'
     return `${prefix}: ${items.join(', ')}`
@@ -145,7 +160,7 @@ function scanLogToHistory(log: NonNullable<Awaited<ReturnType<typeof aiLogApi.li
     amount,
     type: rawType(raw),
     merchant: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
-    description: rawDescription && !rawDescription.toLowerCase().startsWith('scan struk')
+    description: rawDescription && !/^scan struk|belanja$/i.test(rawDescription.trim())
       ? rawDescription
       : fallbackDescription,
     transactionDate: rawString(raw, 'date'),
@@ -281,13 +296,14 @@ export function ScanReceiptPage() {
     onSuccess: (data) => {
       const d = { ...(data as ExtractedReceipt), merchant_name: cleanMerchant((data as ExtractedReceipt).merchant_name) }
       const nextType = (d.type as TransactionType) || 'expense'
+      const description = d.description?.trim() || buildScanDescription(d)
       setExtractedData(d)
       setForm((prev) => ({
         ...prev,
         amount: d.amount || 0,
         merchant_name: cleanMerchant(d.merchant_name),
         category_id: findCategoryId(d.category, nextType) || '',
-        description: buildScanDescription(d),
+        description,
         type: nextType,
         transaction_date: parseScannedDate(d.date),
       }))
@@ -384,8 +400,6 @@ export function ScanReceiptPage() {
     value: c.id,
     label: c.name,
   }))
-
-  const conf = extractedData?.confidence ?? 0
 
   const selectedCount = selectedHistory.size
   const allHistorySelected = history.length > 0 && selectedCount === history.length
@@ -610,17 +624,8 @@ export function ScanReceiptPage() {
                 <p className="mt-0.5 text-xs text-slate-500">Hasil jepretan atau file yang diupload</p>
               </div>
               {extractedData ? (
-                <span
-                  className={cn(
-                    'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                    conf >= 0.8
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : conf >= 0.5
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200',
-                  )}
-                >
-                  {(conf * 100).toFixed(0)}% akurat
+                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  Data terbaca
                 </span>
               ) : null}
             </div>
@@ -1071,12 +1076,6 @@ export function ScanReceiptPage() {
                   })}
                 </p>
               </div>
-              {viewing.confidence != null ? (
-                <div>
-                  <p className="text-xs text-slate-400">Confidence</p>
-                  <p className="text-slate-800">{(viewing.confidence * 100).toFixed(0)}%</p>
-                </div>
-              ) : null}
             </div>
             {viewing.description ? (
               <div>
@@ -1087,14 +1086,14 @@ export function ScanReceiptPage() {
             {viewing.lineItems?.length ? (
               <div>
                 <p className="mb-2 text-xs text-slate-400">Item Struk</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60">
                   {viewing.lineItems.map((item, index) => (
-                    <span
+                    <div
                       key={`${item}-${index}`}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+                      className="flex items-start justify-between gap-3 px-3 py-2 text-xs text-slate-700"
                     >
-                      {item}
-                    </span>
+                      <span className="font-medium">{item}</span>
+                    </div>
                   ))}
                 </div>
               </div>

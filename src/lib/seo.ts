@@ -5,6 +5,7 @@ export interface SEOOptions {
   description?: string
   canonical?: string
   image?: string
+  keywords?: string
   noIndex?: boolean
 }
 
@@ -30,29 +31,41 @@ function upsertLink(rel: string, href: string) {
   el.href = href
 }
 
+function absoluteUrl(value: string): string {
+  if (/^https?:\/\//i.test(value)) return value
+  return new URL(value, window.location.origin).toString()
+}
+
 export function useSEO({
   title,
   description = DEFAULT_DESCRIPTION,
   canonical,
   image = '/logo.png',
+  keywords = 'SAKU, aplikasi keuangan pribadi, catat transaksi, scan struk, budget, dompet digital',
   noIndex,
 }: SEOOptions) {
   useEffect(() => {
     const fullTitle = title.includes('SAKU') ? title : `${title} | SAKU`
+    const currentUrl = canonical ?? window.location.href
+    const imageUrl = absoluteUrl(image)
     document.title = fullTitle
 
     upsertMeta('meta[name="description"]', { name: 'description', content: description })
+    upsertMeta('meta[name="keywords"]', { name: 'keywords', content: keywords })
     upsertMeta('meta[property="og:title"]', { property: 'og:title', content: fullTitle })
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: description })
     upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' })
-    upsertMeta('meta[property="og:image"]', { property: 'og:image', content: image })
+    upsertMeta('meta[property="og:url"]', { property: 'og:url', content: currentUrl })
+    upsertMeta('meta[property="og:image"]', { property: 'og:image', content: imageUrl })
+    upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'SAKU' })
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: fullTitle })
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: description })
+    upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: imageUrl })
     upsertMeta('meta[name="robots"]', {
       name: 'robots',
-      content: noIndex ? 'noindex,nofollow' : 'index,follow',
+      content: noIndex ? 'noindex,nofollow,noarchive' : 'index,follow,max-image-preview:large',
     })
-    if (canonical) upsertLink('canonical', canonical)
-  }, [canonical, description, image, noIndex, title])
+    upsertLink('canonical', currentUrl)
+  }, [canonical, description, image, keywords, noIndex, title])
 }

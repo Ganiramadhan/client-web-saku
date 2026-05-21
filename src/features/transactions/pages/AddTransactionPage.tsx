@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { HiChevronDown, HiChevronUp } from 'react-icons/hi2'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   IoFastFoodOutline,
@@ -45,7 +44,6 @@ export function AddTransactionPage() {
     searchParams.get('type') === 'income' ? 'income' : 'expense'
   const initialWallet = searchParams.get('wallet') ?? ''
   const [activeTab, setActiveTab] = useState<TransactionType>(initialType)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [form, setForm] = useState<TransactionPayload>({
     wallet_id: initialWallet,
     category_id: '',
@@ -342,26 +340,19 @@ export function AddTransactionPage() {
             )}
           </div>
 
-          {/* Advanced Options Toggle */}
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-white"
-          >
-            <span>Deskripsi (Opsional)</span>
-            {showAdvanced ? <HiChevronUp className="h-5 w-5" /> : <HiChevronDown className="h-5 w-5" />}
-          </button>
-
-          {showAdvanced && (
-            <div className="mb-6">
-              <Textarea
-                value={form.description ?? ''}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Catatan tambahan (opsional)"
-                rows={3}
-                className="rounded-xl"
-              />
-            </div>
-          )}
+          <div className="mb-6">
+            <Textarea
+              label="Deskripsi"
+              value={form.description ?? ''}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Contoh: makan siang di Warteg Bahari, transfer ke Budi, gaji freelance Mei"
+              rows={3}
+              className="rounded-xl"
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Wajib diisi agar laporan dan pencarian transaksi lebih jelas.
+            </p>
+          </div>
 
           {/* Submit Buttons */}
           <div className="flex gap-3">
@@ -375,7 +366,7 @@ export function AddTransactionPage() {
             <Button
               onClick={() => m.mutate()}
               loading={m.isPending}
-              disabled={!form.wallet_id || !form.category_id || form.amount <= 0 || !form.transaction_date}
+              disabled={!form.wallet_id || !form.category_id || form.amount <= 0 || !form.transaction_date || !form.description?.trim()}
               className={cn(
                 'flex-1 rounded-xl py-3.5 text-sm font-bold shadow-sm sm:py-4 sm:text-base transition-all duration-200',
                 activeTab === 'income'
@@ -406,6 +397,7 @@ export function AddTransactionPage() {
               value={filteredCats.find((c) => c.id === form.category_id)?.name ?? 'Belum dipilih'}
             />
             <SummaryRow label="Tanggal" value={form.transaction_date || 'Belum dipilih'} />
+            <SummaryRow label="Deskripsi" value={form.description?.trim() || 'Wajib diisi'} />
           </dl>
           <p className="mt-5 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-slate-500">
             Pastikan dompet, kategori, nominal, dan tanggal sudah benar sebelum menyimpan transaksi.

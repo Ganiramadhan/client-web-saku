@@ -245,6 +245,11 @@ function nlpSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['da
   })
 }
 
+function logIdFromReviewMessage(messageId: string): string | null {
+  const match = messageId.match(/^(.+)-review-\d+-\d+$/)
+  return match?.[1] ?? null
+}
+
 function groupSessionsByDate(sessions: ChatSession[]) {
   // Today → "Hari ini". Older days → "Senin, 17 Mei 2026".
   const map = new Map<number, { label: string; items: ChatSession[] }>()
@@ -461,7 +466,6 @@ function TransactionReviewCard({
   const t = useT()
   const form = message.form as TxForm
   const filteredCats = categoryOptions(form.type)
-  const conf = message.extractedData?.confidence ?? 0
   const isBatch = !!message.batchId
   const saved = !!message.saved
   const selected = message.selected !== false
@@ -490,17 +494,8 @@ function TransactionReviewCard({
               Pratinjau Transaksi
             </p>
             {!saved ? (
-              <span
-                className={cn(
-                  'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                  conf >= 0.8
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : conf >= 0.5
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-rose-50 text-rose-700 border border-rose-200',
-                )}
-              >
-                {(conf * 100).toFixed(0)}% akurat
+              <span className="ml-auto inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                Siap dicek
               </span>
             ) : null}
           </div>
@@ -612,17 +607,8 @@ function TransactionReviewCard({
             )}
           </div>
           {!saved ? (
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                conf >= 0.8
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : conf >= 0.5
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'bg-rose-50 text-rose-700',
-              )}
-            >
-              {(conf * 100).toFixed(0)}% confidence
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+              Siap dicek
             </span>
           ) : null}
         </div>
@@ -1437,6 +1423,14 @@ export function FreeTextPage() {
       updateActive((prev) =>
         prev.map((m) => (m.id === vars.messageId ? { ...m, saved: true } : m)),
       )
+      const logId = logIdFromReviewMessage(vars.messageId)
+      if (logId && !vars.silent) {
+        aiLogApi.deleteMany([logId])
+          .then(() => {
+            qc.invalidateQueries({ queryKey: ['ai-logs', 'nlp-history', user?.id] })
+          })
+          .catch(() => undefined)
+      }
       if (!vars.silent) {
         toast.success('Transaksi tersimpan!')
         updateActive((prev) => [
@@ -1506,6 +1500,15 @@ export function FreeTextPage() {
       qc.invalidateQueries({ queryKey: ['wallets'] })
       if (ok > 0) toast.success(`${ok} transaksi tersimpan${fail > 0 ? `, ${fail} gagal` : ''}.`)
       else if (fail > 0) toast.error(`${fail} transaksi gagal disimpan.`)
+      if (ok > 0 && fail === 0) {
+        const logIds = Array.from(
+          new Set(targets.map((msg) => logIdFromReviewMessage(msg.id)).filter(Boolean)),
+        ) as string[]
+        if (logIds.length > 0) {
+          await aiLogApi.deleteMany(logIds).catch(() => undefined)
+          qc.invalidateQueries({ queryKey: ['ai-logs', 'nlp-history', user?.id] })
+        }
+      }
       updateActive((prev) => [
         ...prev,
         {
