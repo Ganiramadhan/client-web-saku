@@ -130,6 +130,7 @@ export function TransactionsListPage() {
   // filters
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [monthFilter, setMonthFilter] = useState<Date | null>(null)
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -172,6 +173,15 @@ export function TransactionsListPage() {
     return all.filter((tx) => {
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
       if (categoryFilter && tx.category_id !== categoryFilter) return false
+      if (monthFilter) {
+        const txDate = new Date(tx.transaction_date)
+        if (
+          txDate.getFullYear() !== monthFilter.getFullYear() ||
+          txDate.getMonth() !== monthFilter.getMonth()
+        ) {
+          return false
+        }
+      }
       if (dateFrom) {
         const txTs = new Date(tx.transaction_date).getTime()
         const fromTs = new Date(dateFrom)
@@ -186,7 +196,13 @@ export function TransactionsListPage() {
       }
       return true
     })
-  }, [q.data, typeFilter, categoryFilter, dateFrom, dateTo])
+  }, [q.data, typeFilter, categoryFilter, monthFilter, dateFrom, dateTo])
+
+  useEffect(() => {
+    if (dateFrom && dateTo && dateTo < dateFrom) {
+      setDateTo(null)
+    }
+  }, [dateFrom, dateTo])
 
   useEffect(() => {
     const available = new Set(filteredTx.map((tx) => tx.id))
@@ -299,12 +315,13 @@ export function TransactionsListPage() {
   const resetFilters = () => {
     setTypeFilter('all')
     setCategoryFilter('')
+    setMonthFilter(null)
     setDateFrom(null)
     setDateTo(null)
   }
 
   const hasActiveFilter =
-    typeFilter !== 'all' || categoryFilter !== '' || dateFrom !== null || dateTo !== null
+    typeFilter !== 'all' || categoryFilter !== '' || monthFilter !== null || dateFrom !== null || dateTo !== null
 
   const columns = useMemo<ColumnDef<Transaction>[]>(
     () => [
@@ -507,7 +524,7 @@ export function TransactionsListPage() {
             ) : null}
           </div>
 
-          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-4'}>
+          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-5'}>
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">Jenis</label>
               <RSelect
@@ -533,9 +550,21 @@ export function TransactionsListPage() {
             </div>
             <div>
               <DateInput
+                label="Bulan"
+                value={monthFilter}
+                onChange={(d) => setMonthFilter(d)}
+                picker="month"
+                placeholderText="Semua bulan"
+              />
+            </div>
+            <div>
+              <DateInput
                 label="Dari Tanggal"
                 value={dateFrom}
-                onChange={(d) => setDateFrom(d)}
+                onChange={(d) => {
+                  setDateFrom(d)
+                  if (d && dateTo && dateTo < d) setDateTo(null)
+                }}
                 placeholderText="Pilih tanggal"
                 maxDate={dateTo ?? undefined}
               />
@@ -545,8 +574,9 @@ export function TransactionsListPage() {
                 label="Sampai Tanggal"
                 value={dateTo}
                 onChange={(d) => setDateTo(d)}
-                placeholderText="Pilih tanggal"
+                placeholderText={dateFrom ? 'Pilih tanggal' : 'Pilih tanggal mulai dulu'}
                 minDate={dateFrom ?? undefined}
+                disabled={!dateFrom}
               />
             </div>
           </div>
@@ -1257,8 +1287,17 @@ function ExportModal({
   const [typeF, setTypeF] = useState<TypeFilter>('all')
   const [catF, setCatF] = useState<string>('')
   const [busy, setBusy] = useState(false)
+  const invalidRange = mode === 'range' && !!from && !!to && to < from
+
+  useEffect(() => {
+    if (from && to && to < from) setTo(null)
+  }, [from, to])
 
   const onExport = async () => {
+    if (invalidRange) {
+      toast.error('Tanggal selesai tidak boleh lebih kecil dari tanggal mulai.')
+      return
+    }
     setBusy(true)
     try {
       const params: Record<string, string> = {}
@@ -1306,7 +1345,7 @@ function ExportModal({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>Batal</Button>
-          <Button onClick={onExport} loading={busy}>
+          <Button onClick={onExport} loading={busy} disabled={invalidRange}>
             <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
             Download .xlsx
           </Button>
@@ -1351,8 +1390,24 @@ function ExportModal({
           />
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <DateInput label="Dari" value={from} onChange={setFrom} placeholderText="Pilih tanggal" maxDate={to ?? undefined} />
-            <DateInput label="Sampai" value={to} onChange={setTo} placeholderText="Pilih tanggal" minDate={from ?? undefined} />
+            <DateInput
+              label="Dari"
+              value={from}
+              onChange={(date) => {
+                setFrom(date)
+                if (date && to && to < date) setTo(null)
+              }}
+              placeholderText="Pilih tanggal"
+              maxDate={to ?? undefined}
+            />
+            <DateInput
+              label="Sampai"
+              value={to}
+              onChange={setTo}
+              placeholderText={from ? 'Pilih tanggal' : 'Pilih tanggal mulai dulu'}
+              minDate={from ?? undefined}
+              disabled={!from}
+            />
           </div>
         )}
 

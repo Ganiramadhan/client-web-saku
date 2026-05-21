@@ -133,7 +133,7 @@ export function PlansPage() {
           navigate(`/app/subscription/thanks${qs}`)
         },
         onPending: () => {
-          toast.info('Menunggu pembayaran')
+          toast.info('Pembayaran belum selesai')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
         },
         onError: () => toast.error('Pembayaran gagal'),

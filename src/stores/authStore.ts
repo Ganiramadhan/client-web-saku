@@ -9,6 +9,8 @@ export interface AuthUser {
   phone?: string
   status?: string
   photo_url?: string
+  referral_code?: string
+  referral_reward?: number
 }
 
 interface AuthState {

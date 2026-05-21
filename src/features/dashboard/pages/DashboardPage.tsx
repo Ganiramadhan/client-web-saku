@@ -1,6 +1,6 @@
 import { useMemo, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   HiOutlineArrowRight,
   HiOutlineArrowTrendingDown,
@@ -9,6 +9,7 @@ import {
   HiOutlineCalendarDays,
   HiOutlineLightBulb,
   HiOutlinePlus,
+  HiOutlineSparkles,
   HiOutlineWallet,
 } from 'react-icons/hi2'
 import {
@@ -26,11 +27,15 @@ import { transactionApi } from '@/features/transactions/api'
 import { categoryApi } from '@/features/categories/api'
 import { subscriptionApi, type Subscription } from '@/features/subscription/api'
 import { upcomingBillingApi, type UpcomingBilling } from '@/features/billing/api'
+import { budgetApi } from '@/features/budgets/api'
+import { savingsGoalApi } from '@/features/targets/api'
 import { Card, PageHeader, Shimmer, EmptyState, Button } from '@/components/ui'
 import { useT } from '@/i18n'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import type { Category, Transaction } from '@/types/api'
+import { toast } from '@/lib/toast'
+import { toErrorMessage } from '@/lib/api'
+import type { Budget, Category, SavingsGoal, Transaction } from '@/types/api'
 
 type TrendRange = 'today' | '7d' | '30d' | '6mo'
 
@@ -78,6 +83,7 @@ const TONE = {
 
 export function DashboardPage() {
   const t = useT()
+  const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
 
@@ -134,6 +140,25 @@ export function DashboardPage() {
   const upcomingBillings = useQuery({
     queryKey: ['upcoming-billings'],
     queryFn: upcomingBillingApi.list,
+  })
+
+  const budgets = useQuery({
+    queryKey: ['budgets'],
+    queryFn: budgetApi.list,
+  })
+
+  const goals = useQuery({
+    queryKey: ['savings-goals'],
+    queryFn: savingsGoalApi.list,
+  })
+
+  const createBudget = useMutation({
+    mutationFn: budgetApi.create,
+    onSuccess: () => {
+      toast.success('Budget harian berhasil dibuat.')
+      qc.invalidateQueries({ queryKey: ['budgets'] })
+    },
+    onError: (error) => toast.error(toErrorMessage(error)),
   })
 
   const totalBalance = useMemo(
@@ -226,6 +251,17 @@ export function DashboardPage() {
           loading={monthTxns.isLoading || categories.isLoading}
           insights={categoryInsights}
           expense={monthSummary.expense}
+          budgets={budgets.data ?? []}
+          walletId={(wallets.data ?? []).find((wallet) => wallet.is_default)?.id ?? wallets.data?.[0]?.id ?? ''}
+          onCreateDailyBudget={(categoryId, limitAmount) =>
+            createBudget.mutate({
+              wallet_id: (wallets.data ?? []).find((wallet) => wallet.is_default)?.id ?? wallets.data?.[0]?.id ?? '',
+              category_id: categoryId,
+              limit_amount: limitAmount,
+              period: 'daily',
+            })
+          }
+          creatingBudget={createBudget.isPending}
         />
 
         <UpcomingBillingCard
@@ -234,6 +270,14 @@ export function DashboardPage() {
           billings={upcomingBillings.data ?? []}
         />
       </section>
+
+      <FinancialActionEngine
+        loading={monthTxns.isLoading || upcomingBillings.isLoading || goals.isLoading}
+        insights={categoryInsights}
+        expense={monthSummary.expense}
+        billings={upcomingBillings.data ?? []}
+        goals={goals.data ?? []}
+      />
 
       <section className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
@@ -539,17 +583,202 @@ function InsightRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function AiCategoryInsight({
+function FinancialActionEngine({
   loading,
   insights,
   expense,
+  billings,
+  goals,
 }: {
   loading?: boolean
   insights: CategoryInsight[]
   expense: number
+  billings: UpcomingBilling[]
+  goals: SavingsGoal[]
 }) {
   const top = insights[0]
   const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
+  const monthlyBills = billings
+    .filter((item) => item.status === 'active')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+  const activeGoal = goals
+    .filter((goal) => Number(goal.remaining ?? 0) > 0)
+    .sort((a, b) => Number(a.days_left ?? 9999) - Number(b.days_left ?? 9999))[0]
+  const dailyCut = 20_000
+  const monthlyExtra = dailyCut * 30
+  const daysAdvanced = activeGoal ? Math.max(7, Math.round(monthlyExtra / Math.max(1, Number(activeGoal.remaining)) * Number(activeGoal.days_left ?? 180))) : 0
+
+  return (
+    <section className="grid gap-4 xl:grid-cols-3">
+      <Card className="xl:col-span-2">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Financial Action Engine
+            </p>
+            <h2 className="mt-1 text-base font-bold text-slate-950">
+              Insight yang bisa langsung ditindaklanjuti
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              SAKU mengubah pola transaksi menjadi rekomendasi operasional, bukan sekadar laporan.
+            </p>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+            <HiOutlineSparkles className="h-5 w-5" />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Shimmer key={index} className="h-32 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <ActionCard
+              tone="blue"
+              title={top ? `${top.name} dominan bulan ini` : 'Budget harian'}
+              description={
+                top
+                  ? `${top.name} menyerap ${topPct}% pengeluaran. Ubah jadi batas harian agar lebih terkendali.`
+                  : 'Mulai dari transaksi rutin, lalu aktifkan budget harian untuk kategori yang paling sering dipakai.'
+              }
+              actionLabel={top ? 'Buka transaksi' : 'Tambah transaksi'}
+              to="/app/transactions"
+            />
+            <ActionCard
+              tone="violet"
+              title="Recurring detector"
+              description={
+                billings.length > 0
+                  ? `${billings.length} tagihan rutin sudah dipantau. Cek tagihan yang perlu dibayar bulan ini.`
+                  : 'Kalau kamu membayar layanan yang sama beberapa bulan berturut-turut, jadikan recurring agar tidak terlewat.'
+              }
+              actionLabel="Atur tagihan"
+              to="/app/upcoming-billings"
+            />
+            <ActionCard
+              tone="emerald"
+              title="Tagihan bulan depan"
+              description={
+                monthlyBills > 0
+                  ? `Estimasi tagihan rutin: ${formatCurrency(monthlyBills)}. Sisihkan lebih awal dari dompet utama.`
+                  : 'Tambahkan tagihan rutin untuk melihat estimasi pengeluaran bulan depan.'
+              }
+              actionLabel="Pantau billing"
+              to="/app/upcoming-billings"
+            />
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+          Goal → Daily Recommendation
+        </p>
+        {loading ? (
+          <div className="mt-5 space-y-3">
+            <Shimmer className="h-8 w-36 rounded-xl" />
+            <Shimmer className="h-20 rounded-2xl" />
+          </div>
+        ) : activeGoal ? (
+          <>
+            <h2 className="mt-2 text-base font-bold text-slate-950">{activeGoal.name}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Kalau kurangi jajan {formatCurrency(dailyCut)}/hari, kamu bisa menambah tabungan sekitar {formatCurrency(monthlyExtra)}/bulan dan target berpotensi maju sekitar {daysAdvanced} hari.
+            </p>
+            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
+              <p className="text-xs font-semibold text-emerald-800">Sisa target</p>
+              <p className="mt-1 text-xl font-extrabold text-emerald-950">
+                {formatCurrency(Number(activeGoal.remaining ?? 0))}
+              </p>
+            </div>
+            <Link
+              to="/app/targets"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+            >
+              Lihat target
+            </Link>
+          </>
+        ) : (
+          <>
+            <h2 className="mt-2 text-base font-bold text-slate-950">Belum ada target aktif</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Buat target seperti DP rumah, dana darurat, atau liburan. SAKU akan ubah target menjadi rekomendasi harian.
+            </p>
+            <Link
+              to="/app/targets"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+            >
+              Buat target
+            </Link>
+          </>
+        )}
+      </Card>
+    </section>
+  )
+}
+
+function ActionCard({
+  title,
+  description,
+  actionLabel,
+  to,
+  tone,
+}: {
+  title: string
+  description: string
+  actionLabel: string
+  to: string
+  tone: 'blue' | 'violet' | 'emerald'
+}) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50/60 text-emerald-700'
+      : tone === 'violet'
+        ? 'border-violet-100 bg-violet-50/60 text-violet-700'
+        : 'border-blue-100 bg-blue-50/60 text-blue-700'
+
+  return (
+    <div className="rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm">
+      <div className={cn('mb-3 inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider', toneClass)}>
+        Action
+      </div>
+      <h3 className="text-sm font-extrabold text-slate-950">{title}</h3>
+      <p className="mt-2 min-h-16 text-xs leading-5 text-slate-600">{description}</p>
+      <Link
+        to={to}
+        className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:underline"
+      >
+        {actionLabel}
+        <HiOutlineArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  )
+}
+
+function AiCategoryInsight({
+  loading,
+  insights,
+  expense,
+  budgets,
+  walletId,
+  onCreateDailyBudget,
+  creatingBudget,
+}: {
+  loading?: boolean
+  insights: CategoryInsight[]
+  expense: number
+  budgets: Budget[]
+  walletId: string
+  onCreateDailyBudget: (categoryId: string, limitAmount: number) => void
+  creatingBudget?: boolean
+}) {
+  const top = insights[0]
+  const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
+  const hasDailyBudget = top ? budgets.some((budget) => budget.category_id === top.id && budget.period === 'daily') : false
+  const suggestedDailyLimit = top ? Math.max(50_000, Math.ceil((top.amount / 30) / 10_000) * 10_000) : 50_000
 
   return (
     <Card className="xl:col-span-2">
@@ -588,8 +817,24 @@ function AiCategoryInsight({
               {top.name} menyerap {topPct}% dari pengeluaran bulan ini.
             </p>
             <p className="mt-1 text-sm leading-6 text-blue-800">
-              Cek transaksi di kategori ini sebelum menambah pengeluaran baru, terutama jika nominalnya mulai melewati pola bulanan kamu.
+              Cek transaksi di kategori ini sebelum menambah pengeluaran baru. Kamu juga bisa mengubah insight ini jadi batas harian.
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                disabled={!walletId || hasDailyBudget}
+                loading={creatingBudget}
+                onClick={() => top && onCreateDailyBudget(top.id, suggestedDailyLimit)}
+              >
+                {hasDailyBudget ? 'Budget sudah aktif' : `Aktifkan limit ${formatCurrency(suggestedDailyLimit)}/hari`}
+              </Button>
+              <Link
+                to="/app/transactions"
+                className="inline-flex rounded-xl border border-blue-100 bg-white/70 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-white"
+              >
+                Review transaksi
+              </Link>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">

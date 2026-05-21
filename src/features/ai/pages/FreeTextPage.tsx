@@ -28,6 +28,7 @@ import type { TransactionType } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { confirm } from '@/lib/confirm'
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
@@ -40,6 +41,8 @@ interface ExtractedTx {
   merchant_name?: string
   confidence?: number
   description?: string
+  date?: string
+  transaction_date?: string
 }
 
 interface TxForm {
@@ -182,6 +185,11 @@ function nlpSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['da
         const merchant = cleanMerchant(typeof item.merchant_name === 'string' ? item.merchant_name : '')
         const category = typeof item.category === 'string' ? item.category : ''
         const description = typeof item.description === 'string' ? item.description : input
+        const date = typeof item.date === 'string'
+          ? item.date
+          : typeof item.transaction_date === 'string'
+            ? item.transaction_date
+            : undefined
         const confidence = typeof item.confidence === 'number' ? item.confidence : undefined
         out.push({
           id: `${log.id}-review-${index}-${createdAt}`,
@@ -195,6 +203,8 @@ function nlpSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['da
             type,
             confidence,
             description,
+            date,
+            transaction_date: date,
           },
           form: {
             wallet_id: '',
@@ -203,7 +213,7 @@ function nlpSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['da
             type,
             merchant_name: merchant,
             description,
-            transaction_date: new Date(log.created_at).toISOString().slice(0, 10),
+            transaction_date: inferTransactionDate(input, date),
           },
           batchId,
           selected: items.length > 1 ? true : undefined,
@@ -261,6 +271,21 @@ function groupSessionsByDate(sessions: ChatSession[]) {
     .map(([, v]) => v)
 }
 
+async function fetchAllChatLogIds(): Promise<string[]> {
+  const ids = new Set<string>()
+  const fetchers = [aiLogApi.chatHistory, aiLogApi.nlpHistory]
+  for (const fetchHistory of fetchers) {
+    let page = 1
+    while (page <= 20) {
+      const res = await fetchHistory(page, 200)
+      res.data.forEach((log) => ids.add(log.id))
+      if (!res.meta?.has_next) break
+      page += 1
+    }
+  }
+  return Array.from(ids)
+}
+
 /** Sanitise model output: strip code fences, parse JSON wrappers, return prose. */
 function cleanReply(reply: string): string {
   let t = (reply ?? '').trim()
@@ -307,6 +332,27 @@ function categoryTokens(value?: string): string[] {
     ['gaji', 'salary', 'payroll', 'bonus', 'freelance'],
   ]
   return groups.find((group) => group.some((token) => n.includes(token))) ?? []
+}
+
+function toISODateOnly(raw?: string): string | undefined {
+  if (!raw) return undefined
+  const value = raw.trim()
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
+  const dmy = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/)
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString().slice(0, 10)
+}
+
+function inferTransactionDate(text: string, explicit?: string): string {
+  const direct = toISODateOnly(explicit)
+  if (direct) return direct
+  const d = new Date()
+  const lowered = text.toLowerCase()
+  if (/\b(kemarin|yesterday)\b/.test(lowered)) d.setDate(d.getDate() - 1)
+  else if (/\b(besok|tomorrow)\b/.test(lowered)) d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
 }
 
 const NLP_EXAMPLES = [
@@ -780,6 +826,7 @@ function ChatSidebar({
   onNew,
   onSwitchMode,
   onDelete,
+  onDeleteAll,
   onClose,
   mobileOpen,
 }: {
@@ -790,6 +837,7 @@ function ChatSidebar({
   onNew: (mode: AIMode) => void
   onSwitchMode: (mode: AIMode) => void
   onDelete: (id: string) => void
+  onDeleteAll: () => void
   onClose: () => void
   mobileOpen: boolean
 }) {
@@ -852,6 +900,13 @@ function ChatSidebar({
               <HiOutlineChatBubbleLeftRight className="h-4 w-4" /> Chatbot
             </button>
           </div>
+          <button
+            onClick={onDeleteAll}
+            disabled={sessions.length === 0}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-100 bg-white px-2 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <HiOutlineTrash className="h-4 w-4" /> Hapus semua riwayat
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-4">
@@ -1131,6 +1186,43 @@ export function FreeTextPage() {
     })
   }
 
+  const handleDeleteAll = async () => {
+    const hasMessages = sessions.some((session) => session.messages.length > 0)
+    const localLogIds = sessions.flatMap((session) => session.logIds ?? [])
+    if (!hasMessages && localLogIds.length === 0) return
+
+    const ok = await confirm({
+      title: 'Hapus semua riwayat chat?',
+      description: 'Semua riwayat Chatbot dan NLP akan dihapus. Transaksi yang sudah disimpan tetap aman.',
+      tone: 'danger',
+      confirmLabel: 'Hapus Semua',
+    })
+    if (!ok) return
+
+    try {
+      const logIds = await fetchAllChatLogIds()
+      if (logIds.length > 0) await aiLogApi.deleteMany(logIds)
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'chat-history', user?.id] })
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'nlp-history', user?.id] })
+    } catch (error) {
+      toast.error(toErrorMessage(error))
+      return
+    }
+
+    const fresh: ChatSession = {
+      id: uid(),
+      mode,
+      title: 'Chat baru',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    setSessions([fresh])
+    setActiveId(fresh.id)
+    setSidebarOpen(false)
+    toast.success('Semua riwayat chat berhasil dihapus')
+  }
+
   /* scroll */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1182,6 +1274,7 @@ export function FreeTextPage() {
                   type: data.type,
                   confidence: data.confidence,
                   description: inputText,
+                  date: data.date ?? data.transaction_date,
                 },
               ]
             : []
@@ -1199,7 +1292,6 @@ export function FreeTextPage() {
         return
       }
 
-      const today = new Date().toISOString().split('T')[0]
       const isBatch = items.length > 1
       const batchId = isBatch ? uid() : undefined
       const defaultWallet =
@@ -1214,6 +1306,7 @@ export function FreeTextPage() {
       }
       const reviewMsgs: Message[] = items.map((item) => {
         const type = (item.type as TransactionType) || 'expense'
+        const transactionDate = inferTransactionDate(inputText, item.date ?? item.transaction_date ?? data.date ?? data.transaction_date)
         const form: TxForm = {
           wallet_id: defaultWallet,
           category_id: findCategoryId(item.category, type, `${item.description ?? ''} ${item.merchant_name ?? ''} ${inputText}`) || '',
@@ -1221,7 +1314,7 @@ export function FreeTextPage() {
           type,
           merchant_name: cleanMerchant(item.merchant_name),
           description: item.description || inputText,
-          transaction_date: today,
+          transaction_date: transactionDate,
         }
         return {
           id: uid(),
@@ -1235,6 +1328,8 @@ export function FreeTextPage() {
             type: item.type,
             confidence: item.confidence,
             description: item.description,
+            date: transactionDate,
+            transaction_date: transactionDate,
           },
           form,
           batchId,
@@ -1645,6 +1740,7 @@ export function FreeTextPage() {
         onNew={handleNew}
         onSwitchMode={handleSwitchMode}
         onDelete={handleDelete}
+        onDeleteAll={handleDeleteAll}
         onClose={() => setSidebarOpen(false)}
         mobileOpen={sidebarOpen}
       />

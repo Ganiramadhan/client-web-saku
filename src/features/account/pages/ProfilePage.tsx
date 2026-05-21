@@ -10,13 +10,10 @@ import {
   HiOutlineShieldCheck,
   HiOutlineIdentification,
   HiOutlineStar,
-  HiOutlinePlus,
+  HiPlus,
   HiOutlineCalendarDays,
   HiOutlinePencilSquare,
-  HiOutlineCog6Tooth,
-  HiOutlineMoon,
-  HiOutlineInformationCircle,
-  HiOutlineArrowRightOnRectangle,
+  HiOutlineXMark,
 } from 'react-icons/hi2'
 import {
   Card,
@@ -49,7 +46,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 declare global {
   interface Window {
@@ -97,7 +94,6 @@ function loadSnap(clientKey: string, isProduction: boolean): Promise<void> {
 export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: 'profile' | 'billing' }) {
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
-  const clearSession = useAuthStore((s) => s.clear)
   const qc = useQueryClient()
   const me = useQuery({ queryKey: ['me'], queryFn: getMe })
   const sub = useQuery({ queryKey: ['subscription', 'active'], queryFn: subscriptionApi.active })
@@ -215,10 +211,10 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
     [subscriptions.data],
   )
 
-  const handleSubscribe = async (planCode: string) => {
+  const handleSubscribe = async (planCode: string, referralCode?: string) => {
     try {
       setBusyPlan(planCode)
-      const checkout = await subscriptionApi.checkout(planCode)
+      const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
         snapLoadedRef.current = true
@@ -240,7 +236,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
           navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
         },
         onPending: () => {
-          toast.info('Menunggu pembayaran')
+          toast.info('Pembayaran belum selesai')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
@@ -269,19 +265,27 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
   })
 
   if (defaultSection === 'billing') {
+    const openCreateBilling = () => {
+      setEditingBilling(null)
+      setBillingOpen(true)
+    }
+
     return (
       <div className="mx-auto max-w-5xl">
         <PageHeader
           title="Upcoming Billing"
           subtitle="Pantau tagihan rutin seperti VPS, domain, software, dan layanan berulang sebelum jatuh tempo."
+          action={
+            <Button onClick={openCreateBilling}>
+              <HiPlus className="mr-1 h-4 w-4" />
+              Tambah Billing
+            </Button>
+          }
         />
         <UpcomingBillingManager
           items={billings.data ?? []}
           loading={billings.isLoading}
-          onCreate={() => {
-            setEditingBilling(null)
-            setBillingOpen(true)
-          }}
+          onCreate={openCreateBilling}
           onEdit={(item) => {
             setEditingBilling(item)
             setBillingOpen(true)
@@ -301,7 +305,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Pengaturan Akun"
-        subtitle="Kelola profil, keamanan, langganan, dan preferensi aplikasi SAKU."
+        subtitle="Kelola profil, kode referal, dan langganan SAKU."
       />
 
       {me.isLoading ? (
@@ -490,6 +494,10 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
           </div>
 
           <div className="space-y-4">
+          <ReferralCard
+            code={me.data?.referral_code}
+            reward={me.data?.referral_reward ?? 0}
+          />
           <SubscriptionCard
             sub={sub.data ?? null}
             pendingSub={pendingSubscription}
@@ -515,13 +523,6 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
             }
           />
 
-          <AppSettingsCard />
-          <LogoutCard
-            onLogout={() => {
-              clearSession()
-              navigate('/login', { replace: true })
-            }}
-          />
           </div>
         </div>
       )}
@@ -533,6 +534,43 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
         onClose={() => setBillingOpen(false)}
       />
     </div>
+  )
+}
+
+function ReferralCard({ code, reward }: { code?: string; reward: number }) {
+  const rows = [
+    { label: 'Kode referal', value: code || 'Login ulang untuk membuat kode' },
+    { label: 'Reward', value: formatCurrency(reward, 'IDR') },
+  ]
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2">
+        <HiOutlineStar className="h-5 w-5 text-amber-500" />
+        <h3 className="text-sm font-bold text-slate-900">Kode Referal</h3>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        Bagikan kode ini. Reward masuk saat pengguna lain membayar langganan dengan kode kamu.
+      </p>
+      <div className="mt-4 overflow-hidden rounded-xl border border-white/80 bg-white/60 shadow-sm">
+        <table className="w-full text-left text-xs">
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <th className="w-36 bg-slate-50/70 px-3 py-2 font-semibold text-slate-500">
+                  {row.label}
+                </th>
+                <td className="px-3 py-2 font-semibold text-slate-900">
+                  <span className={row.label === 'Kode referal' ? 'font-mono tracking-wide' : undefined}>
+                    {row.value}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   )
 }
 
@@ -555,10 +593,13 @@ function SubscriptionCard({
   plans: import('@/features/subscription/api').Plan[]
   plansLoading: boolean
   busyPlan: string | null
-  onSubscribe: (planCode: string) => void
+  onSubscribe: (planCode: string, referralCode?: string) => void
   onCancel: (id: string) => void
   cancelLoading: boolean
 }) {
+  const [referralCode, setReferralCode] = useState('')
+  const cleanReferralCode = sanitizeReferralCode(referralCode)
+
   if (loading) {
     return (
       <Card>
@@ -577,9 +618,9 @@ function SubscriptionCard({
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-extrabold text-amber-900">Pembayaran Menunggu</p>
+                <p className="text-sm font-extrabold text-amber-900">Pembayaran Belum Selesai</p>
                 <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Paket {pendingSub.plan_name} belum aktif karena pembayaran belum selesai.
+                  Selesaikan pembayaran untuk mengaktifkan paket {pendingSub.plan_name}.
                 </p>
                 <p className="mt-1 text-xs font-semibold text-amber-900">
                   {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
@@ -591,7 +632,7 @@ function SubscriptionCard({
               size="sm"
               className="mt-3 w-full"
               loading={busyPlan === pendingSub.plan_code}
-              onClick={() => onSubscribe(pendingSub.plan_code)}
+              onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode)}
             >
               Lanjutkan Pembayaran
             </Button>
@@ -608,6 +649,15 @@ function SubscriptionCard({
             </p>
           </div>
           <Badge tone="gray">Free</Badge>
+        </div>
+        <div className="mt-4">
+          <Input
+            label="Kode Referal"
+            placeholder="Opsional saat pembayaran"
+            value={referralCode}
+            onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
+            maxLength={32}
+          />
         </div>
         <div className="mt-4 space-y-2">
           {plansLoading ? (
@@ -637,7 +687,7 @@ function SubscriptionCard({
                     size="sm"
                     disabled={disabled}
                     loading={busyPlan === plan.code}
-                    onClick={() => onSubscribe(plan.code)}
+                    onClick={() => onSubscribe(plan.code, cleanReferralCode)}
                   >
                     {disabled ? 'Segera' : 'Pilih'}
                   </Button>
@@ -722,86 +772,15 @@ function SubscriptionCard({
       </div>
       <div className="mt-3 flex justify-end">
         <Button
-          variant="outline"
+          variant="danger"
           size="sm"
-          className="border-slate-200 !bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-rose-50 hover:text-rose-700 hover:shadow-md"
+          className="shadow-rose-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
           loading={cancelLoading}
           onClick={() => onCancel(sub.id)}
         >
-          Cancel langganan
+          Batalkan Langganan
         </Button>
       </div>
-    </Card>
-  )
-}
-
-function AppSettingsCard() {
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'))
-
-  const toggleDarkMode = () => {
-    setDarkMode((value) => {
-      const next = !value
-      document.documentElement.classList.toggle('dark', next)
-      localStorage.setItem('saku_theme', next ? 'dark' : 'light')
-      return next
-    })
-  }
-
-  return (
-    <Card>
-      <div className="flex items-center gap-2">
-        <HiOutlineCog6Tooth className="h-5 w-5 text-blue-600" />
-        <h3 className="text-sm font-bold text-slate-900">Informasi Aplikasi</h3>
-      </div>
-      <div className="mt-3 divide-y divide-slate-100 rounded-2xl border border-white/70 bg-white/50">
-        <button
-          type="button"
-          onClick={toggleDarkMode}
-          className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition hover:bg-white/70"
-        >
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-            <HiOutlineMoon className="h-4 w-4 text-slate-500" />
-            Dark / Light mode
-          </span>
-          <span className={cn('h-5 w-9 rounded-full p-0.5 transition', darkMode ? 'bg-brand-600' : 'bg-slate-300')}>
-            <span className={cn('block h-4 w-4 rounded-full bg-white shadow transition', darkMode && 'translate-x-4')} />
-          </span>
-        </button>
-        <div className="flex items-center justify-between gap-3 px-3 py-3">
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-            <HiOutlineInformationCircle className="h-4 w-4 text-slate-500" />
-            Tentang SAKU
-          </span>
-          <span className="text-xs font-bold text-slate-400">v1.0</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 px-3 py-3">
-          <span className="text-xs font-semibold text-slate-700">Versi aplikasi</span>
-          <span className="text-xs font-bold text-slate-400">2026.05</span>
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function LogoutCard({ onLogout }: { onLogout: () => void }) {
-  return (
-    <Card>
-      <div className="flex items-center gap-2">
-        <HiOutlineArrowRightOnRectangle className="h-5 w-5 text-rose-600" />
-        <h3 className="text-sm font-bold text-slate-900">Sesi Login</h3>
-      </div>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        Keluar dari perangkat ini jika akun digunakan di komputer bersama.
-      </p>
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-4 w-full border-rose-100 !bg-white text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-rose-50 hover:shadow-md"
-        leftIcon={<HiOutlineArrowRightOnRectangle className="h-4 w-4" />}
-        onClick={onLogout}
-      >
-        Logout
-      </Button>
     </Card>
   )
 }
@@ -829,6 +808,18 @@ function UpcomingBillingManager({
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
+  const markPaid = useMutation({
+    mutationFn: (item: UpcomingBilling) =>
+      upcomingBillingApi.update(item.id, {
+        due_date: nextBillingDate(item).toISOString(),
+        status: 'active',
+      }),
+    onSuccess: () => {
+      toast.success('Tagihan ditandai sudah dibayar. Jatuh tempo berikutnya diperbarui.')
+      qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
 
   const onDelete = async (item: UpcomingBilling) => {
     const ok = await confirm({
@@ -838,6 +829,16 @@ function UpcomingBillingManager({
       confirmLabel: 'Hapus',
     })
     if (ok) remove.mutate(item.id)
+  }
+
+  const onMarkPaid = async (item: UpcomingBilling) => {
+    const ok = await confirm({
+      title: 'Tandai tagihan sudah dibayar?',
+      description: `${item.name} akan dipindahkan ke jatuh tempo berikutnya sesuai siklus ${billingCycleLabel(item.cycle).toLowerCase()}.`,
+      tone: 'primary',
+      confirmLabel: 'Sudah Dibayar',
+    })
+    if (ok) markPaid.mutate(item)
   }
 
   const filteredItems = useMemo(() => {
@@ -855,10 +856,10 @@ function UpcomingBillingManager({
   }, [items, search, statusFilter, cycleFilter])
 
   return (
-    <Card>
+    <Card className="overflow-hidden bg-white/60">
       <div className="flex flex-col gap-3 border-b border-white/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700">
             <HiOutlineCalendarDays className="h-5 w-5" />
           </div>
           <div>
@@ -866,17 +867,28 @@ function UpcomingBillingManager({
             <p className="mt-0.5 text-xs text-slate-500">Catat tagihan rutin agar tidak terlewat saat jatuh tempo.</p>
           </div>
         </div>
-        <Button size="sm" className="shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" leftIcon={<HiOutlinePlus className="h-4 w-4" />} onClick={onCreate}>
-          Tambah
-        </Button>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_160px]">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Cari nama, provider, atau catatan..."
-        />
+      <div className="mt-4 grid gap-3 rounded-xl border border-white/80 bg-white/55 p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_160px_160px]">
+        <div className="relative">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cari nama, provider, atau catatan..."
+            className="pr-10"
+          />
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-white hover:text-slate-700"
+              aria-label="Bersihkan pencarian"
+              title="Bersihkan pencarian"
+            >
+              <HiOutlineXMark className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
         <RSelect
           value={statusFilter}
           options={[
@@ -904,11 +916,17 @@ function UpcomingBillingManager({
             Memuat tagihan...
           </p>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-5 text-sm text-slate-500">
-            Belum ada tagihan rutin. Tambahkan VPS, domain, software, atau layanan berulang agar cashflow mendatang lebih mudah dipantau.
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-6 text-center">
+            <p className="text-sm text-slate-500">
+              Belum ada tagihan rutin. Tambahkan VPS, domain, software, atau layanan berulang agar cashflow mendatang lebih mudah dipantau.
+            </p>
+            <Button className="mt-4" onClick={onCreate}>
+              <HiPlus className="mr-1 h-4 w-4" />
+              Tambah Billing
+            </Button>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-5 text-sm text-slate-500">
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-5 text-sm text-slate-500">
             Tidak ada tagihan rutin yang cocok dengan filter.
           </div>
         ) : (
@@ -919,28 +937,47 @@ function UpcomingBillingManager({
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl border border-white/75 bg-white/60 p-3 shadow-sm transition hover:-translate-y-0.5 hover:bg-white/80 hover:shadow-md"
+              className="rounded-xl border border-white/80 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-slate-950">{item.name}</p>
                   <p className="mt-0.5 truncate text-xs text-slate-500">
-                    {item.provider || 'Tanpa provider'} · {formatDate(item.due_date)}
+                    {item.provider || 'Tanpa provider'} · {billingCycleLabel(item.cycle)}
                   </p>
                 </div>
                 <Badge tone={item.status === 'active' ? 'green' : 'amber'}>
                   {item.status === 'active' ? 'Aktif' : 'Paused'}
                 </Badge>
               </div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <p className="text-sm font-extrabold text-slate-950">
-                  {formatCurrency(Number(item.amount), item.currency)}
-                </p>
-                <div className="flex items-center gap-1">
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nominal</p>
+                    <p className="mt-1 text-sm font-extrabold text-slate-950">
+                      {formatCurrency(Number(item.amount), item.currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-blue-50 px-3 py-2 ring-1 ring-blue-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Jatuh Tempo</p>
+                    <p className="mt-1 text-sm font-extrabold text-blue-800">{formatDate(item.due_date)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    size="sm"
+                    className="!bg-emerald-600 shadow-emerald-200/60 hover:!bg-emerald-700 focus:ring-emerald-500/40"
+                    leftIcon={<HiOutlineCheckCircle className="h-4 w-4" />}
+                    onClick={() => onMarkPaid(item)}
+                    loading={markPaid.isPending}
+                    disabled={item.status !== 'active'}
+                  >
+                    Sudah Dibayar
+                  </Button>
                   <button
                     type="button"
                     onClick={() => onEdit(item)}
-                    className="rounded-lg p-1.5 text-slate-500 transition hover:-translate-y-0.5 hover:bg-white hover:text-brand-700"
+                    className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-700"
                     title="Edit"
                   >
                     <HiOutlinePencilSquare className="h-4 w-4" />
@@ -948,7 +985,7 @@ function UpcomingBillingManager({
                   <button
                     type="button"
                     onClick={() => onDelete(item)}
-                    className="rounded-lg p-1.5 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700"
+                    className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700"
                     title="Hapus"
                   >
                     <HiOutlineTrash className="h-4 w-4" />
@@ -962,6 +999,27 @@ function UpcomingBillingManager({
       </div>
     </Card>
   )
+}
+
+function billingCycleLabel(cycle: BillingCycle): string {
+  if (cycle === 'weekly') return 'Mingguan'
+  if (cycle === 'yearly') return 'Tahunan'
+  return 'Bulanan'
+}
+
+function nextBillingDate(item: UpcomingBilling): Date {
+  const date = new Date(item.due_date)
+  if (item.cycle === 'weekly') date.setDate(date.getDate() + 7)
+  else if (item.cycle === 'yearly') date.setFullYear(date.getFullYear() + 1)
+  else date.setMonth(date.getMonth() + 1)
+  return date
+}
+
+function sanitizeReferralCode(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
 }
 
 function BillingModal({

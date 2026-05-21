@@ -113,7 +113,7 @@ export function AppLayout() {
     { to: '/app/wallets', label: t.nav.wallets, icon: HiOutlineCreditCard },
     { to: '/app/targets', label: t.nav.targets, icon: HiOutlineTrophy, tier: 'pro' },
     { to: '/app/upcoming-billings', label: 'Upcoming Billing', icon: HiOutlineCalendarDays },
-    { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup },
+    { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup, tier: 'pro' },
   ]
 
   const adminItems: NavItem[] = [

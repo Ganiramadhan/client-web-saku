@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   HiOutlineCheckCircle,
-  HiOutlineArrowRight,
   HiOutlineShieldCheck,
 } from 'react-icons/hi2'
 import { Spinner } from '@/components/ui'
 import { subscriptionApi } from '@/features/subscription/api'
 
-type ProFeature = 'chat' | 'scan' | 'targets' | 'default'
+type ProFeature = 'chat' | 'scan' | 'targets' | 'splitbill' | 'default'
 
 const FEATURE_COPY: Record<ProFeature, {
   eyebrow: string
@@ -50,6 +49,17 @@ const FEATURE_COPY: Record<ProFeature, {
       ['Lebih mudah konsisten', 'Target membantu keputusan pengeluaran harian.'],
     ],
   },
+  splitbill: {
+    eyebrow: 'Split Bill',
+    title: 'Bagi biaya dengan teman lebih mudah dan transparan.',
+    description: 'Catat pengeluaran bersama, siapa yang bayar berapa, dan siapa yang punya hutang. SAKU bantu tracking dan reminder pembayaran.',
+    benefits: [
+      ['Tracking transparan', 'Semua peserta lihat siapa bayar berapa dan sisa hutang.'],
+      ['Share via WhatsApp', 'Kirim daftar pembayaran langsung ke teman via chat.'],
+      ['Tandai yang sudah bayar', 'Update progress pembayaran real-time.'],
+      ['Kelola peserta fleksibel', 'Tambah/ubah/hapus peserta sesuai kebutuhan.'],
+    ],
+  },
   default: {
     eyebrow: 'Pro Access',
     title: 'Fitur ini membutuhkan langganan Pro.',
@@ -69,13 +79,6 @@ export function ProRoute({ children, feature = 'default' }: { children: ReactNod
     queryFn: subscriptionApi.active,
     staleTime: 60 * 1000,
   })
-  const checkoutM = useMutation({
-    mutationFn: () => subscriptionApi.checkout('pro'),
-    onSuccess: (checkout) => {
-      window.location.href = checkout.redirect_url
-    },
-  })
-
   const sub = activeQ.data ?? null
   const hasPro = sub?.status === 'active' || sub?.status === 'trialing'
 

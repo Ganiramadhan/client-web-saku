@@ -9,6 +9,7 @@ import {
   HiOutlineEyeSlash,
   HiOutlineArrowRight,
   HiOutlineCheckCircle,
+  HiOutlineHome,
   HiOutlineShieldCheck,
   HiOutlineSparkles,
 } from 'react-icons/hi2'
@@ -20,13 +21,15 @@ import {
 } from 'react-icons/ri'
 import { Button } from '@/components/ui'
 import { useT, useLocale } from '@/i18n'
+import type { Dict } from '@/i18n/dictionaries'
 import { useAuthStore } from '@/stores/authStore'
 import { forgotPassword, login, register, loginWithGoogle, resetPassword } from '@/features/auth/api'
-import { toErrorMessage } from '@/lib/api'
+import { getErrorStatus, getRetryAfterSeconds, toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? ''
+const LOGIN_RETRY_KEY = 'saku-login-retry-until'
 
 
 export function LoginPage() {
@@ -39,22 +42,63 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [remember, setRemember] = useState(false)
+  const [retryUntil, setRetryUntil] = useState<number | null>(() => {
+    const saved = Number(window.localStorage.getItem(LOGIN_RETRY_KEY) || 0)
+    return saved > Date.now() ? saved : null
+  })
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (!retryUntil) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [retryUntil])
+
+  useEffect(() => {
+    if (!retryUntil) {
+      window.localStorage.removeItem(LOGIN_RETRY_KEY)
+      return
+    }
+    if (retryUntil <= now) {
+      setRetryUntil(null)
+      window.localStorage.removeItem(LOGIN_RETRY_KEY)
+    }
+  }, [now, retryUntil])
 
   const from = (location.state as { from?: string } | null)?.from ?? '/app'
   const redirect = (data: { token: string; user: { role: string } }) => {
+    setRetryUntil(null)
+    window.localStorage.removeItem(LOGIN_RETRY_KEY)
     setSession(data.token, data.user as never, remember)
+    toast.success('Selamat datang kembali.')
     navigate(from === '/login' ? '/app' : from, { replace: true })
   }
 
   const m = useMutation({
     mutationFn: login,
     onSuccess: redirect,
-    onError: () => toast.error(t.auth.loginFailedMessage, t.auth.loginFailedTitle),
+    onError: (error) => {
+      if (getErrorStatus(error) === 429) {
+        const retryAfter = getRetryAfterSeconds(error) ?? 60
+        const until = Date.now() + retryAfter * 1000
+        setRetryUntil(until)
+        window.localStorage.setItem(LOGIN_RETRY_KEY, String(until))
+        toast.error('Too many login attempts. Please wait.', 'Login temporarily blocked')
+        return
+      }
+      const message = toErrorMessage(error) || t.auth.loginFailedMessage
+      toast.error(message, t.auth.loginFailedTitle)
+    },
   })
+
+  const retryRemaining = retryUntil ? Math.max(0, Math.ceil((retryUntil - now) / 1000)) : 0
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-    m.mutate({ email, password })
+    if (retryRemaining > 0) return
+    const cleanEmail = sanitizeEmail(email)
+    setEmail(cleanEmail)
+    m.mutate({ email: cleanEmail, password })
   }
 
   return (
@@ -91,9 +135,10 @@ export function LoginPage() {
           type="submit"
           className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
           loading={m.isPending}
+          disabled={retryRemaining > 0}
           rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
         >
-          {t.auth.submitLogin}
+          {retryRemaining > 0 ? `Coba lagi dalam ${formatCountdown(retryRemaining)}` : t.auth.submitLogin}
         </Button>
       </form>
 
@@ -123,11 +168,19 @@ export function RegisterPage() {
 
   const redirect = (data: { token: string; user: { role: string } }) => {
     setSession(data.token, data.user as never)
+    toast.success('Akun siap digunakan.')
     navigate('/app', { replace: true })
   }
 
   const m = useMutation({
-    mutationFn: () => register({ name, email, password }),
+    mutationFn: () => {
+      const payload = {
+        name: sanitizeDisplayName(name),
+        email: sanitizeEmail(email),
+        password,
+      }
+      return register(payload)
+    },
     onSuccess: redirect,
   })
 
@@ -146,6 +199,8 @@ export function RegisterPage() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
+    setName(sanitizeDisplayName(name))
+    setEmail(sanitizeEmail(email))
     m.mutate()
   }
 
@@ -169,9 +224,8 @@ export function RegisterPage() {
           show={showPw}
           onToggle={() => setShowPw((v) => !v)}
           label={t.auth.password}
-          minLength={6}
+          minLength={8}
         />
-
         <Button
           type="submit"
           className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
@@ -353,7 +407,7 @@ export function ForgotPasswordPage() {
               onToggle={() => setShowConfirmPw((v) => !v)}
               label={t.auth.passwordConfirmLabel || 'Konfirmasi Password Baru'}
               minLength={8}
-              placeholder={t.auth.placeholders.password}
+              placeholder={t.auth.passwordMin.replace('{n}', '8')}
             />
           <PasswordPolicyPanel
             score={strength}
@@ -406,6 +460,17 @@ function generateStrongPassword(): string {
   const chars = groups.map((group) => group[Math.floor(Math.random() * group.length)])
   while (chars.length < 14) chars.push(all[Math.floor(Math.random() * all.length)])
   return chars.sort(() => Math.random() - 0.5).join('')
+}
+
+function sanitizeEmail(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function sanitizeDisplayName(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function scorePasswordStrength(pw: string): number {
@@ -593,6 +658,7 @@ function GoogleButton({
   )
 }
 
+
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -665,17 +731,19 @@ function AuthShell({
       <main className="relative z-10 flex flex-1 items-center px-4 py-8 sm:px-6">
         <div className="mx-auto grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_440px] lg:items-center">
           <section className="hidden lg:block">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-blue-700" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.70)', boxShadow: '0 2px 12px rgba(59,130,246,0.10)' }}>
-              <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
-              {copy.label}
+            <div className="relative max-w-xl">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-blue-700" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.70)', boxShadow: '0 2px 12px rgba(59,130,246,0.10)' }}>
+                <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
+                {copy.label}
+              </div>
+              <h2 className="text-5xl font-extrabold leading-[1.06] tracking-tight text-slate-900">
+                {copy.title}
+                <span className="block text-blue-600">{copy.accent}</span>
+              </h2>
+              <p className="mt-6 max-w-md text-[17px] leading-7 text-slate-500">
+                {copy.description}
+              </p>
             </div>
-            <h2 className="max-w-xl text-5xl font-extrabold leading-[1.06] tracking-tight text-slate-900">
-              {copy.title}
-              <span className="block text-blue-600">{copy.accent}</span>
-            </h2>
-            <p className="mt-6 max-w-md text-[17px] leading-7 text-slate-500">
-              {copy.description}
-            </p>
             <div className="mt-8 flex flex-wrap gap-3">
               {copy.stats.map((item) => (
                 <div key={item.label} className="flex items-center gap-2.5 rounded-xl px-4 py-2.5" style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(226,232,240,0.70)' }}>

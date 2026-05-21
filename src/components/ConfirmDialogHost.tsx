@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HiOutlineExclamationTriangle, HiOutlineXMark } from 'react-icons/hi2'
+import { HiOutlineCheckCircle, HiOutlineExclamationTriangle, HiOutlineXMark } from 'react-icons/hi2'
 import { Button } from '@/components/ui'
 import {
   registerConfirmListener,
@@ -32,13 +32,13 @@ export function ConfirmDialogHost() {
   const isAlert = opts.mode === 'alert'
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-6">
       <div
-        className="absolute inset-0 bg-slate-950/35 backdrop-blur-md"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
         onClick={() => finish(false)}
         aria-hidden
       />
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/90 bg-white/86 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl ring-1 ring-slate-900/5">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/90 bg-white shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5">
         <button
           type="button"
           onClick={() => finish(false)}
@@ -47,27 +47,32 @@ export function ConfirmDialogHost() {
         >
           <HiOutlineXMark className="h-4 w-4" />
         </button>
+        <div className={cn('h-1.5', isDanger ? 'bg-rose-600' : 'bg-brand-600')} />
         <div className="flex gap-4 p-6">
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1',
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ring-1',
               isDanger
                 ? 'bg-rose-50 text-rose-600 ring-rose-100'
-                : 'bg-blue-50 text-blue-600 ring-blue-100',
+                : 'bg-brand-50 text-brand-700 ring-brand-100',
             )}
           >
-            <HiOutlineExclamationTriangle className="h-5 w-5" />
+            {isDanger ? (
+              <HiOutlineExclamationTriangle className="h-5 w-5" />
+            ) : (
+              <HiOutlineCheckCircle className="h-5 w-5" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-slate-900">{opts.title}</h3>
+            <h3 className="pr-6 text-base font-extrabold text-slate-950">{opts.title}</h3>
             {opts.description ? (
-              <p className="mt-1 text-sm text-slate-600">{opts.description}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{opts.description}</p>
             ) : null}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/80 px-6 py-3">
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/90 px-6 py-4 sm:flex-row sm:justify-end">
           {!isAlert ? (
-            <Button variant="outline" onClick={() => finish(false)}>
+            <Button variant="outline" className="border-slate-200 !bg-white text-slate-700" onClick={() => finish(false)}>
               {opts.cancelLabel ?? 'Batal'}
             </Button>
           ) : null}

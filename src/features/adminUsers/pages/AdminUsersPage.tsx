@@ -69,6 +69,23 @@ export function AdminUsersPage() {
     if (ok) remove.mutate(u.id)
   }
 
+  const onToggleStatus = async (u: AdminUser) => {
+    const isSuspended = u.status === 'suspended'
+    if (!isSuspended) {
+      const ok = await confirm({
+        title: 'Suspend user?',
+        description: `${u.name} (${u.email}) tidak akan bisa login sampai statusnya diaktifkan kembali.`,
+        tone: 'danger',
+        confirmLabel: 'Suspend User',
+      })
+      if (!ok) return
+    }
+    statusMutation.mutate({
+      id: u.id,
+      status: isSuspended ? 'active' : 'suspended',
+    })
+  }
+
   const filteredUsers = useMemo(() => {
     const all = q.data?.data ?? []
     return all
@@ -109,7 +126,12 @@ export function AdminUsersPage() {
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
               {row.original.photo_url ? (
-                <img src={row.original.photo_url} alt={row.original.name} className="h-full w-full rounded-full object-cover" />
+                <img
+                  src={row.original.photo_url}
+                  alt={row.original.name}
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full rounded-full object-cover ring-2 ring-white"
+                />
               ) : (
                 <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
                   {(row.original.name?.trim()?.[0] ?? '?').toUpperCase()}
@@ -162,12 +184,9 @@ export function AdminUsersPage() {
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <button
-              onClick={() => statusMutation.mutate({
-                id: row.original.id,
-                status: row.original.status === 'suspended' ? 'active' : 'suspended',
-              })}
+              onClick={() => onToggleStatus(row.original)}
               className={cn(
-                'rounded-md p-1.5 text-slate-500',
+                'rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5',
                 row.original.status === 'suspended'
                   ? 'hover:bg-emerald-50 hover:text-emerald-700'
                   : 'hover:bg-amber-50 hover:text-amber-700',
@@ -182,14 +201,14 @@ export function AdminUsersPage() {
             </button>
             <button
               onClick={() => { setEditing(row.original); setOpen(true) }}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+              className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-700"
               title={t.common.edit}
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(row.original)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+              className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700"
               title={t.common.delete}
             >
               <HiOutlineTrash className="h-4 w-4" />
@@ -208,7 +227,11 @@ export function AdminUsersPage() {
         title={t.adminUsers.title}
         subtitle={t.adminUsers.subtitle}
         action={
-          <Button onClick={() => { setEditing(null); setOpen(true) }} leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}>
+          <Button
+            className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
+            onClick={() => { setEditing(null); setOpen(true) }}
+            leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}
+          >
             {t.common.create}
           </Button>
         }
@@ -297,13 +320,13 @@ function UserStatCard({
     violet: 'border-violet-100 bg-violet-50/55 text-violet-700',
   }
   return (
-    <div className="rounded-2xl border border-white/80 bg-white/58 p-4 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+    <div className="group rounded-2xl border border-white/80 bg-white/68 p-4 shadow-lg shadow-slate-200/30 backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-slate-500">{label}</p>
           <p className="mt-1 text-2xl font-extrabold text-slate-950">{value}</p>
         </div>
-        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl border', styles[tone])}>
+        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl border transition group-hover:scale-105', styles[tone])}>
           <Icon className="h-5 w-5" />
         </div>
       </div>

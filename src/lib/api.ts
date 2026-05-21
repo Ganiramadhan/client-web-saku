@@ -71,3 +71,15 @@ export function toErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
   return 'Unknown error'
 }
+
+export function getErrorStatus(err: unknown): number | undefined {
+  return axios.isAxiosError(err) ? err.response?.status : undefined
+}
+
+export function getRetryAfterSeconds(err: unknown): number | undefined {
+  if (!axios.isAxiosError(err)) return undefined
+  const raw = err.response?.headers?.['retry-after']
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const seconds = Number(value)
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined
+}

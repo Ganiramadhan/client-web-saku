@@ -115,6 +115,8 @@ export interface AICategorizeItem {
   type: TransactionType
   confidence: number
   description?: string
+  date?: string
+  transaction_date?: string
 }
 
 export interface AICategorizeResponse {
@@ -123,6 +125,8 @@ export interface AICategorizeResponse {
   category: string
   type: TransactionType
   confidence: number
+  date?: string
+  transaction_date?: string
   needs_review: boolean
   raw_response?: Record<string, unknown>
   transactions?: AICategorizeItem[]
@@ -132,6 +136,7 @@ export interface AIScanReceiptResponse extends AICategorizeResponse {
   currency: string
   date: string
   ocr_text?: string
+  line_items?: string[]
 }
 
 export interface AIInsightsResponse {

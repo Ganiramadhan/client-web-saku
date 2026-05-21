@@ -52,10 +52,10 @@ export function AppRoutes() {
         <Route path="free-text" element={<ProRoute feature="chat"><FreeTextPage /></ProRoute>} />
         <Route path="targets" element={<ProRoute feature="targets"><TargetsPage /></ProRoute>} />
         <Route path="upcoming-billings" element={<ProfilePage defaultSection="billing" />} />
-        <Route path="split-bills" element={<SplitBillsListPage />} />
-        <Route path="split-bills/new" element={<SplitBillFormPage />} />
-        <Route path="split-bills/:id" element={<SplitBillDetailPage />} />
-        <Route path="split-bills/:id/edit" element={<SplitBillFormPage />} />
+        <Route path="split-bills" element={<ProRoute feature="splitbill"><SplitBillsListPage /></ProRoute>} />
+        <Route path="split-bills/new" element={<ProRoute feature="splitbill"><SplitBillFormPage /></ProRoute>} />
+        <Route path="split-bills/:id" element={<ProRoute feature="splitbill"><SplitBillDetailPage /></ProRoute>} />
+        <Route path="split-bills/:id/edit" element={<ProRoute feature="splitbill"><SplitBillFormPage /></ProRoute>} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="subscription" element={<Navigate to="/app/profile" replace />} />

@@ -45,6 +45,7 @@ interface ExtractedReceipt {
   ocr_text?: string
   date?: string
   confidence?: number
+  line_items?: string[]
 }
 
 function cleanMerchant(value?: string | null): string {
@@ -52,14 +53,29 @@ function cleanMerchant(value?: string | null): string {
   return merchant === '-' ? '' : merchant
 }
 
-function buildScanDescription(d: { merchant_name?: string; ocr_text?: string }): string {
-  const merchant = cleanMerchant(d.merchant_name)
-  if (merchant) return `Scan struk - ${merchant}`
-  const firstLine = (d.ocr_text || '')
+function extractReceiptItems(ocrText?: string, lineItems?: string[]): string[] {
+  if (lineItems?.length) {
+    return lineItems.map((item) => item.trim()).filter(Boolean).slice(0, 8)
+  }
+  const ignored = /(alfamart|indomaret|total|subtotal|tunai|kembali|pajak|ppn|struk|receipt|telp|npwp|tanggal|jam|kasir|member|rp\b|qty|harga|diskon|terima kasih|www\.|http)/i
+  return (ocrText || '')
     .split(/\r?\n/)
-    .map((l) => l.trim())
-    .find((l) => l.length > 0)
-  if (firstLine) return firstLine.slice(0, 120)
+    .map((line) => line.trim().replace(/\s{2,}/g, ' '))
+    .filter((line) => line.length >= 3 && !ignored.test(line))
+    .filter((line) => /[a-zA-Z]/.test(line))
+    .map((line) => line.replace(/\s+[xX]?\d+([.,]\d+)?\s*$/, '').trim())
+    .filter(Boolean)
+    .slice(0, 8)
+}
+
+function buildScanDescription(d: { merchant_name?: string; ocr_text?: string; line_items?: string[] }): string {
+  const merchant = cleanMerchant(d.merchant_name)
+  const items = extractReceiptItems(d.ocr_text, d.line_items)
+  if (items.length > 0) {
+    const prefix = merchant ? `Belanja di ${merchant}` : 'Belanja'
+    return `${prefix}: ${items.join(', ')}`
+  }
+  if (merchant) return `Belanja di ${merchant}`
   return 'Scan struk'
 }
 
@@ -94,6 +110,7 @@ interface ScanHistoryEntry {
   transactionDate: string
   categoryName?: string
   ocrText?: string
+  lineItems?: string[]
   confidence?: number
 }
 
@@ -114,6 +131,12 @@ function scanLogToHistory(log: NonNullable<Awaited<ReturnType<typeof aiLogApi.li
     typeof log.extracted_amount === 'number'
       ? log.extracted_amount
       : Number(raw?.amount ?? 0)
+  const rawDescription = rawString(raw, 'description')
+  const fallbackDescription = buildScanDescription({
+    merchant_name: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
+    ocr_text: rawString(raw, 'ocr_text'),
+    line_items: Array.isArray(raw?.line_items) ? raw.line_items.filter((item): item is string => typeof item === 'string') : undefined,
+  })
 
   return {
     id: log.id,
@@ -122,13 +145,15 @@ function scanLogToHistory(log: NonNullable<Awaited<ReturnType<typeof aiLogApi.li
     amount,
     type: rawType(raw),
     merchant: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
-    description: rawString(raw, 'description') || buildScanDescription({
-      merchant_name: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
-      ocr_text: rawString(raw, 'ocr_text'),
-    }),
+    description: rawDescription && !rawDescription.toLowerCase().startsWith('scan struk')
+      ? rawDescription
+      : fallbackDescription,
     transactionDate: rawString(raw, 'date'),
     categoryName: log.extracted_category || rawString(raw, 'category'),
     ocrText: rawString(raw, 'ocr_text'),
+    lineItems: Array.isArray(raw?.line_items)
+      ? raw.line_items.filter((item): item is string => typeof item === 'string')
+      : extractReceiptItems(rawString(raw, 'ocr_text')),
     confidence:
       typeof log.confidence_score === 'number'
         ? log.confidence_score
@@ -1059,12 +1084,19 @@ export function ScanReceiptPage() {
                 <p className="text-sm text-slate-800">{viewing.description}</p>
               </div>
             ) : null}
-            {viewing.ocrText ? (
+            {viewing.lineItems?.length ? (
               <div>
-                <p className="mb-1 text-xs text-slate-400">Hasil OCR</p>
-                <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                  {viewing.ocrText}
-                </pre>
+                <p className="mb-2 text-xs text-slate-400">Item Struk</p>
+                <div className="flex flex-wrap gap-2">
+                  {viewing.lineItems.map((item, index) => (
+                    <span
+                      key={`${item}-${index}`}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>

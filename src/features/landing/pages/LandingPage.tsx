@@ -254,12 +254,7 @@ export function LandingPage() {
 
       {/* ── Floating Pill Navbar ── */}
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 py-4">
-        <div
-          className={cn(
-            'mx-auto w-full transition-all duration-500',
-            scrolled ? 'max-w-4xl' : 'max-w-5xl'
-          )}
-        >
+        <div className="mx-auto w-full max-w-5xl transition-all duration-500">
           <div
             className="flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-500"
             style={{

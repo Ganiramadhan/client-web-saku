@@ -23,6 +23,7 @@ export interface Subscription {
   currency: string
   order_id: string
   payment_type?: string
+  referral_code?: string
   starts_at?: string | null
   ends_at?: string | null
   paid_at?: string | null
@@ -37,6 +38,7 @@ export interface AdminSubscription extends Subscription {
   user_id: string
   user_name: string
   user_email: string
+  user_photo_url?: string
 }
 
 export interface CheckoutResponse {
@@ -57,8 +59,8 @@ export const subscriptionApi = {
     const res = await api.get('/subscriptions/me/active')
     return (res.data?.data ?? null) as Subscription | null
   },
-  checkout: async (plan_code: string, with_trial = false): Promise<CheckoutResponse> =>
-    unwrap<CheckoutResponse>(await api.post('/subscriptions/checkout', { plan_code, with_trial })),
+  checkout: async (plan_code: string, with_trial = false, referral_code?: string): Promise<CheckoutResponse> =>
+    unwrap<CheckoutResponse>(await api.post('/subscriptions/checkout', { plan_code, with_trial, referral_code })),
   confirm: async (order_id: string): Promise<Subscription> =>
     unwrap<Subscription>(await api.post('/subscriptions/confirm', { order_id })),
   cancel: async (id: string): Promise<void> => {

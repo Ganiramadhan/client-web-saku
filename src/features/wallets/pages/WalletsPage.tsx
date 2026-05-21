@@ -654,6 +654,12 @@ function WalletFormModal({
     Boolean(editing?.target_amount && editing.target_amount > 0),
   )
   const [targetOpen, setTargetOpen] = useState(false)
+  const currentBalance = Number(form.balance ?? 0)
+  const targetAmount = Number(form.target_amount ?? 0)
+  const targetError =
+    isPocket && targetAmount > 0 && targetAmount < currentBalance
+      ? `Target tidak boleh lebih kecil dari saldo sekarang (${formatCurrency(currentBalance)}).`
+      : ''
 
   useEffect(() => {
     if (!open) return
@@ -664,6 +670,7 @@ function WalletFormModal({
 
   const save = useMutation({
     mutationFn: () => {
+      if (targetError) throw new Error(targetError)
       const payload: WalletPayload = {
         ...form,
         target_name: isPocket ? form.target_name || null : null,
@@ -695,7 +702,7 @@ function WalletFormModal({
             <Button variant="outline" onClick={onClose}>
               {t.common.cancel}
             </Button>
-            <Button loading={save.isPending} onClick={() => save.mutate()}>
+            <Button loading={save.isPending} onClick={() => save.mutate()} disabled={!!targetError}>
               {t.common.save}
             </Button>
           </>
@@ -754,6 +761,9 @@ function WalletFormModal({
                 <p className="mt-0.5 text-xs text-emerald-700">
                   Target {formatCurrency(Number(form.target_amount ?? 0)) || 'Rp 0'}
                 </p>
+                {targetError ? (
+                  <p className="mt-1 text-xs font-semibold text-rose-600">{targetError}</p>
+                ) : null}
               </div>
               <Button variant="outline" size="sm" onClick={() => setTargetOpen(true)}>
                 Atur Target
@@ -773,7 +783,7 @@ function WalletFormModal({
             <Button variant="outline" onClick={() => setTargetOpen(false)}>
               Tutup
             </Button>
-            <Button onClick={() => setTargetOpen(false)}>
+            <Button onClick={() => setTargetOpen(false)} disabled={!!targetError}>
               Simpan Target
             </Button>
           </>
@@ -792,6 +802,7 @@ function WalletFormModal({
             value={Number(form.target_amount) || 0}
             onChange={(value) => setForm({ ...form, target_amount: value })}
             placeholder="0"
+            error={targetError}
           />
 
           <DateInput

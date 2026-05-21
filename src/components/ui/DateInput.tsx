@@ -26,12 +26,12 @@ export const DateInput = forwardRef<HTMLDivElement, DateInputProps>(function Dat
 ) {
   const selected = value ? (typeof value === 'string' ? new Date(value) : value) : null
   return (
-    <div ref={ref} className={cn('w-full', className)}>
+    <div ref={ref} className={cn('w-full', disabled && 'opacity-70', className)}>
       {label ? (
         <label className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</label>
       ) : null}
       <div className="relative">
-        <HiOutlineCalendar className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <HiOutlineCalendar className={cn('pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2', disabled ? 'text-slate-300' : 'text-slate-400')} />
         <ReactDatePicker
           selected={selected}
           onChange={(d: Date | null) => onChange(d)}
@@ -47,12 +47,13 @@ export const DateInput = forwardRef<HTMLDivElement, DateInputProps>(function Dat
           maxDate={maxDate}
           disabled={disabled}
           wrapperClassName="block w-full"
+          calendarClassName={picker === 'month' ? 'saku-datepicker saku-month-picker' : 'saku-datepicker'}
           className={cn(
             'w-full rounded-xl border bg-white/72 py-2.5 pl-9 pr-3 text-sm shadow-sm backdrop-blur-xl transition focus:outline-none focus:ring-2',
             error
               ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
               : 'border-white/80 focus:border-brand-300 focus:ring-brand-500/20',
-            disabled && 'cursor-not-allowed bg-slate-50 text-slate-400',
+            disabled && 'pointer-events-none cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 shadow-none',
           )}
           popperClassName="!z-[9999]"
           popperProps={{ strategy: 'fixed' }}
