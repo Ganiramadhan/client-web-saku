@@ -1,7 +1,6 @@
 import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
 
-/* Tiny inline SVG flags — avoids extra deps and stays crisp at any size. */
 
 function FlagID({ className }: { className?: string }) {
   return (

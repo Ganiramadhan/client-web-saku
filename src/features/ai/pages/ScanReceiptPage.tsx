@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type DragEvent, useRef } from 'react'
+import { useCallback, useEffect, useState, type ChangeEvent, type DragEvent, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   HiOutlineArrowPath,
@@ -8,6 +8,8 @@ import {
   HiOutlineDocumentText,
   HiOutlineCloudArrowUp,
   HiOutlineClock,
+  HiOutlineEye,
+  HiOutlineTrash,
 } from 'react-icons/hi2'
 
 import { aiApi, aiLogApi } from '@/features/ai/api'
@@ -18,7 +20,6 @@ import { walletApi } from '@/features/wallets/api'
 import {
   Badge,
   Button,
-  Card,
   CurrencyInput,
   DateInput,
   Modal,
@@ -33,8 +34,8 @@ import type { TransactionType } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/authStore'
 import { formatRelativeDayLabel, formatTimeLabel } from '@/lib/dateLabel'
+import { confirm } from '@/lib/confirm'
 
 interface ExtractedReceipt {
   amount?: number
@@ -46,8 +47,13 @@ interface ExtractedReceipt {
   confidence?: number
 }
 
+function cleanMerchant(value?: string | null): string {
+  const merchant = (value ?? '').trim()
+  return merchant === '-' ? '' : merchant
+}
+
 function buildScanDescription(d: { merchant_name?: string; ocr_text?: string }): string {
-  const merchant = (d.merchant_name || '').trim()
+  const merchant = cleanMerchant(d.merchant_name)
   if (merchant) return `Scan struk - ${merchant}`
   const firstLine = (d.ocr_text || '')
     .split(/\r?\n/)
@@ -62,13 +68,20 @@ function parseScannedDate(raw?: string): string {
   // Accept YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY
   const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
-  const dmy = raw.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/)
+  const dmy = raw.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/)
   if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`
   const d = new Date(raw)
   if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
   return new Date().toISOString().split('T')[0]
 }
 
+function normalizeCategoryName(value?: string): string {
+  return (value ?? '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
 
 interface ScanHistoryEntry {
   id: string
@@ -82,6 +95,47 @@ interface ScanHistoryEntry {
   categoryName?: string
   ocrText?: string
   confidence?: number
+}
+
+function rawString(raw: Record<string, unknown> | undefined, key: string): string {
+  const value = raw?.[key]
+  return typeof value === 'string' ? value : ''
+}
+
+function rawType(raw: Record<string, unknown> | undefined): TransactionType {
+  return rawString(raw, 'type') === 'income' ? 'income' : 'expense'
+}
+
+function scanLogToHistory(log: NonNullable<Awaited<ReturnType<typeof aiLogApi.list>>['data']>[number]): ScanHistoryEntry {
+  const raw = log.raw_response
+  const created = new Date(log.created_at)
+  const timestamp = Number.isNaN(created.getTime()) ? Date.now() : created.getTime()
+  const amount =
+    typeof log.extracted_amount === 'number'
+      ? log.extracted_amount
+      : Number(raw?.amount ?? 0)
+
+  return {
+    id: log.id,
+    timestamp,
+    imagePreview: log.image_url ?? '',
+    amount,
+    type: rawType(raw),
+    merchant: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
+    description: rawString(raw, 'description') || buildScanDescription({
+      merchant_name: cleanMerchant(log.extracted_merchant || rawString(raw, 'merchant_name')),
+      ocr_text: rawString(raw, 'ocr_text'),
+    }),
+    transactionDate: rawString(raw, 'date'),
+    categoryName: log.extracted_category || rawString(raw, 'category'),
+    ocrText: rawString(raw, 'ocr_text'),
+    confidence:
+      typeof log.confidence_score === 'number'
+        ? log.confidence_score
+        : typeof raw?.confidence === 'number'
+          ? raw.confidence
+          : undefined,
+  }
 }
 
 function groupHistoryByDay(entries: ScanHistoryEntry[]) {
@@ -99,56 +153,49 @@ function groupHistoryByDay(entries: ScanHistoryEntry[]) {
     .map(([, v]) => v)
 }
 
+function imageFileToOptimizedBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const maxSide = 1600
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+      const width = Math.max(1, Math.round(img.width * scale))
+      const height = Math.max(1, Math.round(img.height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        URL.revokeObjectURL(url)
+        reject(new Error('Canvas tidak tersedia'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, width, height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1])
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Gagal membaca gambar'))
+    }
+    img.src = url
+  })
+}
+
 export function ScanReceiptPage() {
   const t = useT()
   const qc = useQueryClient()
-  const user = useAuthStore((s) => s.user)
 
   const [imagePreview, setImagePreview] = useState<string>('')
+  const [isEditing, setIsEditing] = useState(false)
   const [extractedData, setExtractedData] = useState<ExtractedReceipt | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [history, setHistory] = useState<ScanHistoryEntry[]>([])
   const [viewing, setViewing] = useState<ScanHistoryEntry | null>(null)
-
-  const historyQ = useQuery({
-    queryKey: ['ai-logs', 'scan_receipt'],
-    queryFn: () => aiLogApi.list('scan_receipt', 1, 50),
-    enabled: !!user?.id,
-  })
-  useEffect(() => {
-    const rows = historyQ.data?.data ?? []
-    const mapped: ScanHistoryEntry[] = rows
-      .filter((r) => r.status === 'success')
-      .map((r) => {
-        const raw = (r.raw_response ?? {}) as Record<string, unknown>
-        const rawType = typeof raw.type === 'string' ? (raw.type as string) : 'expense'
-        const rawDate = typeof raw.date === 'string' ? (raw.date as string) : ''
-        const rawOcr = typeof raw.ocr_text === 'string' ? (raw.ocr_text as string) : undefined
-        const imagePreview =
-          typeof r.image_url === 'string' && r.image_url
-            ? r.image_url
-            : typeof raw.image_url === 'string' && raw.image_url
-            ? raw.image_url
-            : ''
-
-        return {
-          id: r.id,
-          timestamp: new Date(r.created_at).getTime(),
-          imagePreview,
-          amount: r.extracted_amount ?? 0,
-          type: (rawType === 'income' ? 'income' : 'expense') as TransactionType,
-          merchant: r.extracted_merchant ?? '',
-          description: r.extracted_merchant ? `Scan struk - ${r.extracted_merchant}` : 'Scan struk',
-          transactionDate: rawDate || r.created_at.split('T')[0],
-          categoryName: r.extracted_category,
-          ocrText: rawOcr,
-          confidence: r.confidence_score,
-        }
-      })
-    setHistory(mapped)
-  }, [historyQ.data])
+  const [selectedHistory, setSelectedHistory] = useState<Set<string>>(() => new Set())
 
   const [form, setForm] = useState({
     wallet_id: '',
@@ -165,65 +212,66 @@ export function ScanReceiptPage() {
     queryKey: ['categories', 'all'],
     queryFn: () => categoryApi.list(),
   })
+  const scanLogsQ = useQuery({
+    queryKey: ['ai-logs', 'scan-receipt-history'],
+    queryFn: () => aiLogApi.scanReceiptHistory(1, 100),
+  })
 
   useEffect(() => {
     if (form.wallet_id) return
     const list = wallets.data
     if (!list || list.length === 0) return
     const def = list.find((w) => w.is_default) ?? list[0]
-    setForm((prev) => (prev.wallet_id ? prev : { ...prev, wallet_id: def.id }))
-  }, [wallets.data])
+    const timer = window.setTimeout(() => {
+      setForm((prev) => (prev.wallet_id ? prev : { ...prev, wallet_id: def.id }))
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [wallets.data, form.wallet_id])
 
-  const findCategoryId = (categoryName?: string): string | undefined => {
+  useEffect(() => {
+    const logs = scanLogsQ.data?.data
+    if (!logs) return
+    const nextHistory = logs.map(scanLogToHistory).sort((a, b) => b.timestamp - a.timestamp)
+    const timer = window.setTimeout(() => setHistory(nextHistory), 0)
+    return () => window.clearTimeout(timer)
+  }, [scanLogsQ.data])
+
+  const findCategoryId = useCallback((categoryName?: string, type?: TransactionType): string | undefined => {
     if (!categoryName) return undefined
-    return categories.data?.find(
-      (c) =>
-        c.name.toLowerCase().includes(categoryName.toLowerCase()) ||
-        categoryName.toLowerCase().includes(c.name.toLowerCase()),
-    )?.id
-  }
+    const wanted = normalizeCategoryName(categoryName)
+    if (!wanted) return undefined
+    return (categories.data ?? [])
+      .filter((c) => !type || c.type === type)
+      .find((c) => {
+        const current = normalizeCategoryName(c.name)
+        return current === wanted || current.includes(wanted) || wanted.includes(current)
+      })?.id
+  }, [categories.data])
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
-      const reader = new FileReader()
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1])
-        reader.readAsDataURL(file)
-      })
+      const base64 = await imageFileToOptimizedBase64(file)
       return aiApi.scanReceipt({ image_base64: base64 })
     },
     onSuccess: (data) => {
-      const d = data as ExtractedReceipt
+      const d = { ...(data as ExtractedReceipt), merchant_name: cleanMerchant((data as ExtractedReceipt).merchant_name) }
+      const nextType = (d.type as TransactionType) || 'expense'
       setExtractedData(d)
       setForm((prev) => ({
         ...prev,
         amount: d.amount || 0,
-        merchant_name: d.merchant_name || '',
-        category_id: findCategoryId(d.category) || prev.category_id,
+        merchant_name: cleanMerchant(d.merchant_name),
+        category_id: findCategoryId(d.category, nextType) || '',
         description: buildScanDescription(d),
-        type: (d.type as TransactionType) || 'expense',
+        type: nextType,
         transaction_date: parseScannedDate(d.date),
       }))
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] })
       toast.success('Struk berhasil di-scan!')
-      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan_receipt'] })
     },
     onError: (e) => {
       toast.error(toErrorMessage(e))
       resetForm()
-    },
-  })
-
-  const deleteScanMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await aiLogApi.delete(id)
-    },
-    onSuccess: () => {
-      toast.success('Riwayat scan berhasil dihapus')
-      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan_receipt'] })
-      setViewing(null)
-    },
-    onError: (e) => {
-      toast.error(toErrorMessage(e))
     },
   })
 
@@ -237,12 +285,13 @@ export function ScanReceiptPage() {
         confidence_score: extractedData?.confidence,
       })
     },
-    onSuccess: () => {
+    onSuccess: (savedTx) => {
+      void savedTx
       toast.success('Transaksi berhasil disimpan!')
       qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
-      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan_receipt'] })
       resetForm()
     },
     onError: (e) => toast.error(toErrorMessage(e)),
@@ -277,6 +326,7 @@ export function ScanReceiptPage() {
 
   const resetForm = () => {
     setImagePreview('')
+    setIsEditing(false)
     setExtractedData(null)
     const def = wallets.data?.find((w) => w.is_default) ?? wallets.data?.[0]
     setForm({
@@ -290,6 +340,16 @@ export function ScanReceiptPage() {
     })
   }
 
+  useEffect(() => {
+    if (form.category_id || !extractedData?.category || !categories.data?.length) return
+    const categoryId = findCategoryId(extractedData.category, form.type)
+    if (!categoryId) return
+    const timer = window.setTimeout(() => {
+      setForm((prev) => (prev.category_id ? prev : { ...prev, category_id: categoryId }))
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [categories.data, extractedData?.category, findCategoryId, form.category_id, form.type])
+
   const filteredCats = categories.data?.filter((c) => c.type === form.type) ?? []
   const walletOptions: SelectOption[] = (wallets.data ?? []).map((w) => ({
     value: w.id,
@@ -301,16 +361,97 @@ export function ScanReceiptPage() {
   }))
 
   const conf = extractedData?.confidence ?? 0
-  const confTone: 'green' | 'amber' | 'red' =
-    conf >= 0.8 ? 'green' : conf >= 0.5 ? 'amber' : 'red'
+
+  const selectedCount = selectedHistory.size
+  const allHistorySelected = history.length > 0 && selectedCount === history.length
+  const deleteHistoryItems = async (ids: string[]) => {
+    if (ids.length === 0) return
+    const ok = await confirm({
+      title: ids.length > 1 ? 'Hapus riwayat terpilih?' : 'Hapus riwayat scan?',
+      description:
+        ids.length > 1
+          ? `${ids.length} riwayat scan akan dihapus dari database. Transaksi yang sudah disimpan tetap aman.`
+          : 'Riwayat scan akan dihapus dari database. Transaksi yang sudah disimpan tetap aman.',
+      tone: 'danger',
+      confirmLabel: 'Hapus',
+    })
+    if (!ok) return
+    try {
+      await aiLogApi.deleteMany(ids)
+      const next = history.filter((item) => !ids.includes(item.id))
+      setHistory(next)
+      setSelectedHistory((prev) => {
+        const copy = new Set(prev)
+        ids.forEach((id) => copy.delete(id))
+        return copy
+      })
+      setViewing((current) => (current && ids.includes(current.id) ? null : current))
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] })
+      toast.success('Riwayat scan berhasil dihapus')
+    } catch (error) {
+      toast.error(toErrorMessage(error))
+    }
+  }
+  const receiptSteps = [
+    {
+      num: '01',
+      Icon: HiOutlineCloudArrowUp,
+      title: 'Upload Struk',
+      desc: 'Ambil foto struk belanja Anda atau pilih file gambar dari perangkat.',
+      color: 'text-cyan-600',
+      bg: 'rgba(236,254,255,0.90)',
+      border: 'rgba(165,243,252,0.70)',
+    },
+    {
+      num: '02',
+      Icon: HiOutlineSparkles,
+      title: 'AI Ekstraksi Data',
+      desc: 'Sistem cerdas AI akan membaca otomatis nominal, nama toko/merchant, tanggal, dan kategori.',
+      color: 'text-blue-600',
+      bg: 'rgba(239,246,255,0.90)',
+      border: 'rgba(191,219,254,0.70)',
+    },
+    {
+      num: '03',
+      Icon: HiOutlineDocumentText,
+      title: 'Review Detail',
+      desc: 'Periksa kembali data transaksi hasil ekstraksi sebelum disimpan.',
+      color: 'text-violet-600',
+      bg: 'rgba(245,243,255,0.90)',
+      border: 'rgba(221,214,254,0.70)',
+    },
+    {
+      num: '04',
+      Icon: HiOutlineCheckCircle,
+      title: 'Konfirmasi & Simpan',
+      desc: 'Simpan data ke dompet Anda seketika sebagai transaksi baru.',
+      color: 'text-emerald-600',
+      bg: 'rgba(236,253,245,0.90)',
+      border: 'rgba(167,243,208,0.70)',
+    },
+  ]
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="relative mx-auto max-w-6xl">
+      {/* Background ambient glows */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute right-0 bottom-10 h-[420px] w-[420px] rounded-full bg-brand-200/10 blur-3xl" />
+      </div>
+
       <PageHeader title={t.scanReceipt.title} subtitle={t.scanReceipt.subtitle} />
 
       {!imagePreview ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div
+            className="lg:col-span-2 rounded-3xl p-6 transition-all duration-300"
+            style={{
+              background: 'rgba(255,255,255,0.40)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.60)',
+              boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+            }}
+          >
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -322,10 +463,10 @@ export function ScanReceiptPage() {
               onDrop={onDrop}
               disabled={scanMutation.isPending}
               className={cn(
-                'flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all',
+                'flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
                 isDragging
-                  ? 'border-brand-500 bg-brand-50'
-                  : 'border-slate-300 bg-slate-50 hover:border-brand-400 hover:bg-brand-50/50',
+                  ? 'border-brand-500 bg-brand-50/50 scale-[0.99] shadow-inner'
+                  : 'border-slate-300 bg-white/50 hover:border-brand-400 hover:bg-white/80 hover:shadow-lg hover:shadow-brand-100/30',
                 scanMutation.isPending && 'cursor-wait opacity-80',
               )}
             >
@@ -341,7 +482,7 @@ export function ScanReceiptPage() {
               />
 
               <div className="relative mb-5">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
                   {scanMutation.isPending ? (
                     <HiOutlineArrowPath className="h-10 w-10 animate-spin text-brand-600" />
                   ) : (
@@ -349,7 +490,7 @@ export function ScanReceiptPage() {
                   )}
                 </div>
                 {!scanMutation.isPending && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white shadow ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white shadow ring-2 ring-white animate-bounce">
                     <HiOutlineSparkles className="h-3.5 w-3.5" />
                   </span>
                 )}
@@ -365,269 +506,416 @@ export function ScanReceiptPage() {
               </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600">
                   <HiOutlinePhoto className="h-3.5 w-3.5" /> JPG / PNG / WEBP
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600">
                   Maks. 5 MB
                 </span>
               </div>
             </button>
-          </Card>
+          </div>
 
-          {/* Tips card */}
-          <Card>
-            <div className="flex items-center gap-2">
-              <HiOutlineSparkles className="h-5 w-5 text-brand-600" />
-              <h3 className="text-sm font-semibold text-slate-900">
-                Tips Hasil Maksimal
-              </h3>
-            </div>
-            <ul className="mt-3 space-y-2.5 text-xs text-slate-600">
-              {[
-                'Foto struk dalam pencahayaan terang dan rata.',
-                'Pastikan teks pada struk fokus dan tidak buram.',
-                'Hindari bayangan atau lipatan pada struk.',
-                'Crop area struk saja, hilangkan latar belakang.',
-              ].map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
-                    {i + 1}
-                  </span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
+          {/* Steps card matching How it Works */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-600">
+              Cara Kerja Scan Struk
+            </h3>
+            {receiptSteps.map((step) => (
+              <div
+                key={step.num}
+                className="group relative overflow-hidden rounded-3xl p-5 transition-all duration-300 hover:-translate-y-1"
+                style={{
+                  background: 'rgba(255,255,255,0.72)',
+                  backdropFilter: 'blur(36px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(36px) saturate(180%)',
+                  border: '1px solid rgba(255,255,255,0.88)',
+                  boxShadow:
+                    '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-3xl border border-cyan-300/30" />
+                  <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
+                </div>
+
+                <div className="relative flex items-start gap-4">
+                  <div
+                    className={cn(
+                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-105',
+                      step.color,
+                    )}
+                    style={{
+                      background: step.bg,
+                      border: `1px solid ${step.border}`,
+                    }}
+                  >
+                    <step.Icon className="h-5 w-5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-300">{step.num}</span>
+                      <h4 className="text-sm font-bold text-slate-900">{step.title}</h4>
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-500">{step.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         /* ─── Result + Form ─── */
-        <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-          {/* LEFT — preview */}
-          <Card>
+        <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
+          {/* LEFT — photo preview */}
+          <div
+            className="rounded-3xl p-5"
+            style={{
+              background: 'rgba(255,255,255,0.50)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.60)',
+              boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+            }}
+          >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Foto Struk
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Pastikan hasil scan terlihat jelas
-                </p>
+                <h3 className="text-base font-bold text-slate-900">Foto Struk</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Hasil jepretan atau file yang diupload</p>
               </div>
               {extractedData ? (
-                <Badge tone={confTone}>{(conf * 100).toFixed(0)}% akurat</Badge>
+                <span
+                  className={cn(
+                    'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                    conf >= 0.8
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : conf >= 0.5
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200',
+                  )}
+                >
+                  {(conf * 100).toFixed(0)}% akurat
+                </span>
               ) : null}
             </div>
 
-            <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-              <img
-                src={imagePreview}
-                alt="Struk"
-                className="h-full w-full object-contain"
-              />
+            <div className="relative mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner">
+              <img src={imagePreview} alt="Struk" className="h-full w-full object-contain" />
               {scanMutation.isPending ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm">
                   <div className="flex flex-col items-center gap-2 rounded-xl bg-white px-4 py-3 shadow">
                     <HiOutlineArrowPath className="h-6 w-6 animate-spin text-brand-600" />
-                    <span className="text-xs font-semibold text-slate-700">
-                      AI memproses…
-                    </span>
+                    <span className="text-xs font-semibold text-slate-700">AI memproses…</span>
                   </div>
                 </div>
               ) : null}
             </div>
 
-            {extractedData ? (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-start gap-2">
-                  <div className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-slate-200">
-                    <HiOutlineSparkles className="h-4 w-4 text-brand-600" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-900">
-                      Hasil AI
-                    </h4>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
-                      Data terisi otomatis. Kamu masih bisa mengubah sebelum
-                      disimpan.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             <Button
               variant="ghost"
-              className="mt-3 w-full"
+              className="mt-4 w-full rounded-2xl"
               onClick={resetForm}
               leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
             >
-              Scan Struk Lain
+              Ulangi / Foto Lain
             </Button>
-          </Card>
+          </div>
 
-          {/* RIGHT — form */}
-          <Card>
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                <HiOutlineDocumentText className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Review Transaksi
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Periksa kembali data sebelum disimpan
-                </p>
-              </div>
-            </div>
-
+          {/* RIGHT — Preview Card & Collapsible Form */}
+          <div className="space-y-4">
             {scanMutation.isPending ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50">
+              <div
+                className="flex flex-col items-center justify-center py-24 rounded-3xl"
+                style={{
+                  background: 'rgba(255,255,255,0.50)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.60)',
+                }}
+              >
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 animate-bounce">
                   <HiOutlineArrowPath className="h-7 w-7 animate-spin text-brand-600" />
                 </div>
-                <h4 className="text-sm font-semibold text-slate-900">
-                  AI sedang memproses
-                </h4>
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Membaca nominal, merchant, dan kategori transaksi…
-                </p>
+                <h4 className="text-sm font-semibold text-slate-900">AI sedang memproses</h4>
+                <p className="mt-1.5 text-xs text-slate-500">Membaca nominal, merchant, dan kategori transaksi…</p>
                 <div className="mt-5 flex w-48 gap-1">
                   <div className="h-1.5 flex-1 animate-pulse rounded-full bg-brand-200 [animation-delay:0ms]" />
                   <div className="h-1.5 flex-1 animate-pulse rounded-full bg-brand-300 [animation-delay:200ms]" />
                   <div className="h-1.5 flex-1 animate-pulse rounded-full bg-brand-400 [animation-delay:400ms]" />
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4 pt-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <RSelect
-                    label="Tipe Transaksi"
-                    value={form.type}
-                    options={[
-                      { value: 'expense', label: t.transactions.expense },
-                      { value: 'income', label: t.transactions.income },
-                    ]}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        type: (v as TransactionType) ?? 'expense',
-                      })
-                    }
-                  />
+            ) : !isEditing ? (
+              <div className="rounded-2xl border border-white/80 bg-white/68 p-6 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+                <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <HiOutlineDocumentText className="h-5 w-5" />
+                  </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                      {t.common.amount}
-                    </label>
-                    <CurrencyInput
-                      value={form.amount}
-                      onChange={(val) => setForm({ ...form, amount: val })}
-                    />
+                    <h3 className="text-sm font-bold text-slate-900">Preview Detail Transaksi</h3>
+                    <p className="text-[11px] text-slate-500">Readonly hasil ekstraksi struk sebelum disimpan</p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                    {t.transactions.merchant}
-                  </label>
-                  <input
-                    type="text"
-                    value={form.merchant_name}
-                    onChange={(e) =>
-                      setForm({ ...form, merchant_name: e.target.value })
-                    }
-                    placeholder="Contoh: Alfamart"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                  />
-                </div>
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RSelect
+                      label="Tipe Transaksi"
+                      value={form.type}
+                      options={[
+                        { value: 'expense', label: t.transactions.expense },
+                        { value: 'income', label: t.transactions.income },
+                      ]}
+                      onChange={() => undefined}
+                      isDisabled
+                    />
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-700">Nominal</label>
+                      <CurrencyInput value={form.amount} onChange={() => undefined} disabled />
+                    </div>
+                  </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <RSelect
-                    label={t.transactions.wallet}
-                    value={form.wallet_id}
-                    options={walletOptions}
-                    onChange={(v) => setForm({ ...form, wallet_id: v ?? '' })}
-                  />
-                  <RSelect
-                    label={t.transactions.category}
-                    value={form.category_id}
-                    options={categoryOptions}
-                    onChange={(v) => setForm({ ...form, category_id: v ?? '' })}
-                  />
-                </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">Merchant</label>
+                    <input
+                      type="text"
+                      value={form.merchant_name}
+                      readOnly
+                      placeholder="Contoh: Alfamart"
+                      className="w-full rounded-xl border border-white/80 bg-white/72 px-3 py-2.5 text-sm text-slate-700 shadow-sm backdrop-blur-xl"
+                    />
+                  </div>
 
-                <div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RSelect label="Dompet" value={form.wallet_id} options={walletOptions} onChange={() => undefined} isDisabled />
+                    <RSelect label="Kategori" value={form.category_id} options={categoryOptions} onChange={() => undefined} isDisabled />
+                  </div>
+
                   <DateInput
                     label="Tanggal Transaksi"
                     value={form.transaction_date || null}
-                    onChange={(d) =>
-                      setForm({
-                        ...form,
-                        transaction_date: d ? d.toISOString().slice(0, 10) : '',
-                      })
-                    }
+                    onChange={() => undefined}
                     placeholderText="Pilih tanggal"
+                    disabled
                   />
+
+                  <Textarea
+                    label="Catatan"
+                    rows={3}
+                    value={form.description}
+                    onChange={() => undefined}
+                    placeholder="Tambahkan catatan transaksi…"
+                    readOnly
+                  />
+
+                  <div className="grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      Edit Detail
+                    </button>
+                    <Button
+                      className="rounded-xl"
+                      onClick={() => saveMutation.mutate()}
+                      loading={saveMutation.isPending}
+                      disabled={!form.wallet_id || !form.category_id || form.amount <= 0}
+                    >
+                      <HiOutlineCheckCircle className="mr-1 h-4 w-4" />
+                      Simpan Transaksi
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Expanded Edit Form */
+              <div className="rounded-2xl border border-white/80 bg-white/68 p-6 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+                <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <HiOutlineDocumentText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Edit Detail Transaksi</h3>
+                    <p className="text-[11px] text-slate-500">Sesuaikan data hasil ekstraksi struk</p>
+                  </div>
                 </div>
 
-                <Textarea
-                  label="Catatan"
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Tambahkan catatan transaksi…"
-                />
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RSelect
+                      label="Tipe Transaksi"
+                      value={form.type}
+                      options={[
+                        { value: 'expense', label: t.transactions.expense },
+                        { value: 'income', label: t.transactions.income },
+                      ]}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          type: (v as TransactionType) ?? 'expense',
+                        })
+                      }
+                    />
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-700">Nominal</label>
+                      <CurrencyInput
+                        value={form.amount}
+                        onChange={(val) => setForm({ ...form, amount: val })}
+                      />
+                    </div>
+                  </div>
 
-                <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
-                  <Button variant="secondary" onClick={resetForm}>
-                    <HiOutlineArrowPath className="mr-1 h-4 w-4" />
-                    Scan Lagi
-                  </Button>
-                  <Button
-                    onClick={() => saveMutation.mutate()}
-                    loading={saveMutation.isPending}
-                    disabled={
-                      !form.wallet_id ||
-                      !form.category_id ||
-                      form.amount <= 0
-                    }
-                  >
-                    <HiOutlineCheckCircle className="mr-1 h-4 w-4" />
-                    Simpan Transaksi
-                  </Button>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">Merchant</label>
+                    <input
+                      type="text"
+                      value={form.merchant_name}
+                      onChange={(e) => setForm({ ...form, merchant_name: e.target.value })}
+                      placeholder="Contoh: Alfamart"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RSelect
+                      label="Dompet"
+                      value={form.wallet_id}
+                      options={walletOptions}
+                      onChange={(v) => setForm({ ...form, wallet_id: v ?? '' })}
+                    />
+                    <RSelect
+                      label="Kategori"
+                      value={form.category_id}
+                      options={categoryOptions}
+                      onChange={(v) => setForm({ ...form, category_id: v ?? '' })}
+                    />
+                  </div>
+
+                  <div>
+                    <DateInput
+                      label="Tanggal Transaksi"
+                      value={form.transaction_date || null}
+                      onChange={(d) =>
+                        setForm({
+                          ...form,
+                          transaction_date: d ? d.toISOString().slice(0, 10) : '',
+                        })
+                      }
+                      placeholderText="Pilih tanggal"
+                    />
+                  </div>
+
+                  <Textarea
+                    label="Catatan"
+                    rows={3}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Tambahkan catatan transaksi…"
+                  />
+
+                  <div className="flex gap-2 border-t border-slate-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      Batal Edit
+                    </button>
+                    <Button
+                      className="flex-1 rounded-xl"
+                      onClick={() => {
+                        saveMutation.mutate()
+                      }}
+                      loading={saveMutation.isPending}
+                      disabled={!form.wallet_id || !form.category_id || form.amount <= 0}
+                    >
+                      <HiOutlineCheckCircle className="mr-1 h-4 w-4" />
+                      Simpan Transaksi
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         </div>
       )}
 
       {history.length > 0 ? (
-        <Card className="mt-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div
+          className="mt-8 rounded-3xl p-6"
+          style={{
+            background: 'rgba(255,255,255,0.40)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.60)',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+          }}
+        >
+          <div className="flex items-center justify-between border-b border-slate-200/50 pb-4">
             <div className="flex items-center gap-2">
-              <HiOutlineClock className="h-5 w-5 text-brand-600" />
-              <h3 className="text-base font-semibold text-slate-900">Riwayat Scan</h3>
-              <Badge tone="gray">{history.length}</Badge>
+              <HiOutlineClock className="h-5 w-5 text-brand-600 animate-pulse" />
+              <h3 className="text-base font-extrabold text-slate-900">Riwayat Scan Struk</h3>
+              <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                {history.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedHistory(allHistorySelected ? new Set() : new Set(history.map((item) => item.id)))
+                }
+                className="rounded-xl border border-white/80 bg-white/62 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-xl hover:bg-white"
+              >
+                {allHistorySelected ? 'Batal pilih' : 'Pilih semua'}
+              </button>
+              {selectedCount > 0 ? (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  leftIcon={<HiOutlineTrash className="h-4 w-4" />}
+                  onClick={() => deleteHistoryItems(Array.from(selectedHistory))}
+                >
+                  Hapus ({selectedCount})
+                </Button>
+              ) : null}
             </div>
           </div>
 
-          <div className="mt-3 space-y-5">
+          <div className="mt-4 space-y-6">
             {groupHistoryByDay(history).map((group) => (
               <div key={group.label}>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   {group.label}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {group.items.map((entry) => (
-                    <button
+                    <div
                       key={entry.id}
-                      type="button"
-                      onClick={() => setViewing(entry)}
-                      className="group relative flex gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-brand-300 hover:shadow-sm"
+                      className="group relative flex gap-3 rounded-2xl border border-white/70 bg-white/62 p-3 text-left shadow-sm backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:bg-white hover:shadow-lg hover:shadow-brand-100/30"
                     >
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dashed border-slate-200 bg-slate-100">
+                      <input
+                        type="checkbox"
+                        checked={selectedHistory.has(entry.id)}
+                        onChange={(event) => {
+                          setSelectedHistory((prev) => {
+                            const next = new Set(prev)
+                            if (event.target.checked) next.add(entry.id)
+                            else next.delete(entry.id)
+                            return next
+                          })
+                        }}
+                        aria-label="Pilih riwayat scan"
+                        className="mt-5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setViewing(entry)}
+                        className="flex min-w-0 flex-1 gap-3 text-left"
+                      >
+                      <span className="absolute right-3 bottom-3 grid h-8 w-8 place-items-center rounded-xl bg-brand-600 text-white opacity-0 shadow-lg shadow-brand-200 transition group-hover:opacity-100">
+                        <HiOutlineEye className="h-4 w-4" />
+                      </span>
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-dashed border-slate-200 bg-slate-50">
                         {entry.imagePreview ? (
                           <img
                             src={entry.imagePreview}
@@ -636,41 +924,49 @@ export function ScanReceiptPage() {
                           />
                         ) : (
                           <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-400">
-                            <HiOutlinePhoto className="h-6 w-6" />
+                            <HiOutlinePhoto className="h-5 w-5" />
                             <span className="text-[10px]">No image</span>
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <Badge tone={entry.type === 'income' ? 'green' : 'red'}>
+                          <span
+                            className={cn(
+                              'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold',
+                              entry.type === 'income'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200',
+                            )}
+                          >
                             {entry.type === 'income' ? '+' : '-'}
                             {new Intl.NumberFormat('id-ID', {
                               style: 'currency',
                               currency: 'IDR',
                               maximumFractionDigits: 0,
                             }).format(entry.amount)}
-                          </Badge>
-                          <span className="text-[10px] tabular-nums text-slate-400">
+                          </span>
+                          <span className="text-[10px] tabular-nums text-slate-400 font-medium">
                             {formatTimeLabel(entry.timestamp)}
                           </span>
                         </div>
-                        <p className="mt-1 truncate text-sm font-medium text-slate-900">
-                          {entry.merchant || '—'}
+                        <p className="mt-1 truncate text-sm font-bold text-slate-800">
+                          {entry.merchant}
                         </p>
                         {entry.description ? (
-                          <p className="line-clamp-1 text-xs text-slate-500">
+                          <p className="line-clamp-1 text-xs text-slate-400 font-medium">
                             {entry.description}
                           </p>
                         ) : null}
                       </div>
                     </button>
+                    </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       ) : null}
 
       <Modal
@@ -680,11 +976,11 @@ export function ScanReceiptPage() {
         footer={
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
-              variant="secondary"
+              variant="danger"
               onClick={() => {
-                if (viewing) deleteScanMutation.mutate(viewing.id)
+                if (!viewing) return
+                deleteHistoryItems([viewing.id])
               }}
-              loading={deleteScanMutation.isPending}
             >
               Hapus Riwayat
             </Button>
@@ -697,7 +993,7 @@ export function ScanReceiptPage() {
         {viewing ? (
           <div className="space-y-4">
             {viewing.imagePreview ? (
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <div className="overflow-hidden rounded-2xl border border-white/80 bg-white/60 shadow-inner">
                 <img
                   src={viewing.imagePreview}
                   alt="Struk"
@@ -730,7 +1026,7 @@ export function ScanReceiptPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-400">Merchant</p>
-                <p className="text-slate-800">{viewing.merchant || '—'}</p>
+                <p className="text-slate-800">{viewing.merchant}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-400">Kategori</p>

@@ -14,8 +14,20 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   return unwrap<AuthResponse>(await api.post('/auth/register', payload))
 }
 
-export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
-  return unwrap<AuthResponse>(await api.post('/auth/google', { id_token: idToken }))
+export async function loginWithGoogle(idToken: string, mode: 'login' | 'register' = 'login'): Promise<AuthResponse> {
+  return unwrap<AuthResponse>(await api.post('/auth/google', { id_token: idToken, mode }))
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post('/auth/forgot-password', { email })
+}
+
+export async function resetPassword(payload: {
+  email: string
+  otp: string
+  new_password: string
+}): Promise<void> {
+  await api.post('/auth/reset-password', payload)
 }
 
 export async function getMe(): Promise<AuthUser> {

@@ -6,8 +6,8 @@ import {
   HiOutlineArrowTrendingDown,
   HiOutlineArrowTrendingUp,
   HiOutlineBanknotes,
-  HiOutlineChartBar,
-  HiOutlineChartPie,
+  HiOutlineCalendarDays,
+  HiOutlineLightBulb,
   HiOutlinePlus,
   HiOutlineWallet,
 } from 'react-icons/hi2'
@@ -15,11 +15,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -29,42 +24,55 @@ import {
 import { walletApi } from '@/features/wallets/api'
 import { transactionApi } from '@/features/transactions/api'
 import { categoryApi } from '@/features/categories/api'
-import { Card, PageHeader, Shimmer, Badge, EmptyState, Button } from '@/components/ui'
+import { subscriptionApi, type Subscription } from '@/features/subscription/api'
+import { upcomingBillingApi, type UpcomingBilling } from '@/features/billing/api'
+import { Card, PageHeader, Shimmer, EmptyState, Button } from '@/components/ui'
 import { useT } from '@/i18n'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import type { Category, Transaction } from '@/types/api'
 
 type TrendRange = 'today' | '7d' | '30d' | '6mo'
 
-const PIE_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#64748b']
+interface CategoryInsight {
+  id: string
+  name: string
+  amount: number
+  count: number
+}
 
-const TONE: Record<
-  string,
-  { bg: string; ring: string; icon: string; value: string }
-> = {
+const TONE = {
   brand: {
-    bg: 'bg-brand-50',
-    ring: 'ring-brand-100',
-    icon: 'bg-brand-100 text-brand-700',
-    value: 'text-brand-700',
+    bg: 'rgba(239, 246, 255, 0.55)',
+    border: '1px solid rgba(191, 219, 254, 0.70)',
+    iconBg: 'rgba(219, 234, 254, 0.90)',
+    iconBorder: '1px solid rgba(191, 219, 254, 0.80)',
+    icon: 'text-blue-600',
+    value: 'text-blue-950',
   },
   emerald: {
-    bg: 'bg-emerald-50',
-    ring: 'ring-emerald-100',
-    icon: 'bg-emerald-100 text-emerald-700',
-    value: 'text-emerald-700',
+    bg: 'rgba(236, 253, 245, 0.55)',
+    border: '1px solid rgba(167, 243, 208, 0.70)',
+    iconBg: 'rgba(209, 250, 229, 0.90)',
+    iconBorder: '1px solid rgba(167, 243, 208, 0.80)',
+    icon: 'text-emerald-600',
+    value: 'text-emerald-950',
   },
   rose: {
-    bg: 'bg-rose-50',
-    ring: 'ring-rose-100',
-    icon: 'bg-rose-100 text-rose-700',
-    value: 'text-rose-700',
+    bg: 'rgba(255, 241, 242, 0.55)',
+    border: '1px solid rgba(254, 205, 211, 0.70)',
+    iconBg: 'rgba(254, 226, 226, 0.90)',
+    iconBorder: '1px solid rgba(254, 205, 211, 0.80)',
+    icon: 'text-rose-600',
+    value: 'text-rose-950',
   },
   slate: {
-    bg: 'bg-white',
-    ring: 'ring-slate-200',
-    icon: 'bg-slate-100 text-slate-700',
-    value: 'text-slate-900',
+    bg: 'rgba(245, 243, 255, 0.55)',
+    border: '1px solid rgba(221, 214, 254, 0.70)',
+    iconBg: 'rgba(237, 233, 254, 0.90)',
+    iconBorder: '1px solid rgba(221, 214, 254, 0.80)',
+    icon: 'text-violet-600',
+    value: 'text-violet-950',
   },
 }
 
@@ -114,8 +122,18 @@ export function DashboardPage() {
   })
 
   const categories = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoryApi.list,
+    queryKey: ['categories', 'all'],
+    queryFn: () => categoryApi.list(),
+  })
+
+  const activeSubscription = useQuery({
+    queryKey: ['subscriptions', 'active'],
+    queryFn: subscriptionApi.active,
+  })
+
+  const upcomingBillings = useQuery({
+    queryKey: ['upcoming-billings'],
+    queryFn: upcomingBillingApi.list,
   })
 
   const totalBalance = useMemo(
@@ -147,31 +165,10 @@ export function DashboardPage() {
     return buildTrendData(trendRange, txns, now)
   }, [trendRange, longRangeTxns.data, now])
 
-  const monthlyData = useMemo(() => {
-    const txns = longRangeTxns.data?.data ?? []
-    return buildMonthlyData(txns, now)
-  }, [longRangeTxns.data, now])
-
-  const pieData = useMemo(() => {
-    const catMap = new Map((categories.data ?? []).map((category) => [category.id, category]))
-    const totals = new Map<string, number>()
-
-    for (const tx of monthTxns.data?.data ?? []) {
-      if (tx.type !== 'expense') continue
-
-      const categoryName = catMap.get(tx.category_id)?.name ?? 'Lainnya'
-      totals.set(categoryName, (totals.get(categoryName) ?? 0) + Number(tx.amount))
-    }
-
-    const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1])
-    const top = sorted.slice(0, 5)
-    const rest = sorted.slice(5).reduce((sum, [, value]) => sum + value, 0)
-
-    const result = top.map(([name, value]) => ({ name, value }))
-    if (rest > 0) result.push({ name: 'Lainnya', value: rest })
-
-    return result
-  }, [monthTxns.data, categories.data])
+  const categoryInsights = useMemo(
+    () => buildCategoryInsights(monthTxns.data?.data ?? [], categories.data ?? []),
+    [monthTxns.data, categories.data],
+  )
 
   return (
     <div className="space-y-6">
@@ -180,7 +177,10 @@ export function DashboardPage() {
         subtitle="Ringkasan kondisi keuangan, transaksi terbaru, dan performa bulanan kamu."
         action={
           <Link to="/app/transactions">
-            <Button leftIcon={<HiOutlinePlus className="h-4 w-4" />}>
+            <Button
+              className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
+              leftIcon={<HiOutlinePlus className="h-4 w-4" />}
+            >
               {t.transactions.newTransaction}
             </Button>
           </Link>
@@ -218,6 +218,20 @@ export function DashboardPage() {
           value={formatCurrency(monthSummary.expense)}
           Icon={HiOutlineArrowTrendingDown}
           tone="rose"
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-3">
+        <AiCategoryInsight
+          loading={monthTxns.isLoading || categories.isLoading}
+          insights={categoryInsights}
+          expense={monthSummary.expense}
+        />
+
+        <UpcomingBillingCard
+          loading={activeSubscription.isLoading || upcomingBillings.isLoading}
+          subscription={activeSubscription.data ?? null}
+          billings={upcomingBillings.data ?? []}
         />
       </section>
 
@@ -293,85 +307,6 @@ export function DashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <Card>
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-950">Kategori Pengeluaran</h2>
-              <p className="mt-1 text-xs text-slate-500">Distribusi pengeluaran bulan ini.</p>
-            </div>
-            <HiOutlineChartPie className="h-5 w-5 text-slate-400" />
-          </div>
-
-          {monthTxns.isLoading || categories.isLoading ? (
-            <Shimmer className="h-72 w-full rounded-2xl" />
-          ) : pieData.length === 0 ? (
-            <EmptyChart message="Belum ada pengeluaran bulan ini." />
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={52}
-                  outerRadius={92}
-                  paddingAngle={3}
-                  stroke="none"
-                >
-                  {pieData.map((_, index) => (
-                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-                <Legend
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: 11 }}
-                  formatter={(value) => <span className="text-slate-700">{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-
-        <Card className="xl:col-span-2">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-950">6 Bulan Terakhir</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Perbandingan pemasukan dan pengeluaran per bulan.
-              </p>
-            </div>
-            <HiOutlineChartBar className="h-5 w-5 text-slate-400" />
-          </div>
-
-          {longRangeTxns.isLoading ? (
-            <Shimmer className="h-72 w-full rounded-2xl" />
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={monthlyData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="label" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => compactCurrency(Number(value))}
-                  width={55}
-                />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="income" fill="#10b981" radius={[8, 8, 0, 0]} name="Pemasukan" />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[8, 8, 0, 0]} name="Pengeluaran" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -410,17 +345,23 @@ export function DashboardPage() {
                 }
               />
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="space-y-1">
                 {recentTxns.data!.data.map((tx) => (
-                  <li key={tx.id} className="flex items-center justify-between gap-4 py-3">
+                  <li
+                    key={tx.id}
+                    className="group flex items-center justify-between gap-4 rounded-2xl border border-transparent px-3 py-2.5 transition-all duration-300 hover:bg-white/40 hover:border-white/50 hover:shadow-sm"
+                  >
                     <div className="flex min-w-0 items-center gap-3">
                       <div
                         className={cn(
-                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-105',
                           tx.type === 'income'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-rose-50 text-rose-700',
+                            ? 'bg-emerald-55 text-emerald-700 border border-emerald-100'
+                            : 'bg-rose-55 text-rose-700 border border-rose-100',
                         )}
+                        style={{
+                          background: tx.type === 'income' ? 'rgba(209, 250, 229, 0.60)' : 'rgba(254, 226, 226, 0.60)',
+                        }}
                       >
                         {tx.type === 'income' ? (
                           <HiOutlineArrowTrendingUp className="h-5 w-5" />
@@ -431,14 +372,11 @@ export function DashboardPage() {
 
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-950">
-                          {tx.merchant_name || tx.description || 'Tanpa deskripsi'}
+                          {tx.description || 'Tanpa deskripsi'}
                         </p>
 
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           <span>{formatDate(tx.transaction_date)}</span>
-                          <Badge tone={tx.source === 'ai_ocr' ? 'violet' : 'gray'}>
-                            {tx.source}
-                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -487,19 +425,38 @@ function StatCard({
   const color = TONE[tone]
 
   return (
-    <div className={cn('rounded-3xl p-5 shadow-sm ring-1 transition hover:shadow-md', color.bg, color.ring)}>
-      <div className="flex items-center justify-between gap-4">
+    <div
+      className="group relative overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-md"
+      style={{
+        background: color.bg,
+        backdropFilter: 'blur(24px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+        border: color.border,
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.80)',
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+      </div>
+
+      <div className="relative flex items-center justify-between gap-4">
         <p className="text-sm font-semibold text-slate-600">{label}</p>
 
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-2xl', color.icon)}>
+        <div
+          className={cn('flex h-11 w-11 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105', color.icon)}
+          style={{
+            background: color.iconBg,
+            border: color.iconBorder,
+          }}
+        >
           <Icon className="h-5 w-5" />
         </div>
       </div>
 
       {loading ? (
-        <Shimmer className="mt-4 h-8 w-32 rounded-lg" />
+        <Shimmer className="mt-4 h-8 w-32 rounded-xl" />
       ) : (
-        <p className={cn('mt-4 text-2xl font-bold tracking-tight', color.value)}>
+        <p className={cn('relative mt-4 text-3xl font-extrabold tracking-tight', color.value)}>
           {value}
         </p>
       )}
@@ -523,7 +480,16 @@ function MonthlyInsight({
   const isPositive = saved >= 0
 
   return (
-    <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+    <div
+      className="rounded-2xl p-6 text-white transition-all duration-300"
+      style={{
+        background: 'linear-gradient(135deg, rgba(29, 78, 216, 0.92), rgba(15, 23, 42, 0.90))',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+      }}
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
         Insight Bulan Ini
       </p>
@@ -573,6 +539,227 @@ function InsightRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+function AiCategoryInsight({
+  loading,
+  insights,
+  expense,
+}: {
+  loading?: boolean
+  insights: CategoryInsight[]
+  expense: number
+}) {
+  const top = insights[0]
+  const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
+
+  return (
+    <Card className="xl:col-span-2">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+            AI Insight
+          </p>
+          <h2 className="mt-1 text-base font-bold text-slate-950">
+            Kategori Pengeluaran
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Ringkasan kategori terbesar bulan ini dari transaksi yang sudah tercatat.
+          </p>
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+          <HiOutlineLightBulb className="h-5 w-5" />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Shimmer key={index} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+      ) : !top ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
+          Belum ada pengeluaran bulan ini. Insight kategori akan muncul setelah ada transaksi.
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+            <p className="text-sm font-semibold text-blue-950">
+              {top.name} menyerap {topPct}% dari pengeluaran bulan ini.
+            </p>
+            <p className="mt-1 text-sm leading-6 text-blue-800">
+              Cek transaksi di kategori ini sebelum menambah pengeluaran baru, terutama jika nominalnya mulai melewati pola bulanan kamu.
+            </p>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {insights.slice(0, 3).map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-white/70 bg-white/55 p-4 shadow-sm"
+              >
+                <p className="truncate text-sm font-semibold text-slate-950">{item.name}</p>
+                <p className="mt-2 text-lg font-extrabold text-slate-950">
+                  {formatCurrency(item.amount)}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{item.count} transaksi</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+function UpcomingBillingCard({
+  loading,
+  subscription,
+  billings,
+}: {
+  loading?: boolean
+  subscription: Subscription | null
+  billings: UpcomingBilling[]
+}) {
+  const rows = useMemo(
+    () => buildUpcomingBillingRows(subscription, billings),
+    [subscription, billings],
+  )
+  const urgentCount = rows.filter((row) => row.daysLeft >= 0 && row.daysLeft <= row.reminderWindow).length
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+            Upcoming Billing
+          </p>
+          <h2 className="mt-1 text-base font-bold text-slate-950">
+            Tagihan Berikutnya
+          </h2>
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-600">
+          <HiOutlineCalendarDays className="h-5 w-5" />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="mt-5 space-y-3">
+          <Shimmer className="h-8 w-32 rounded-xl" />
+          <Shimmer className="h-4 w-full rounded-xl" />
+        </div>
+      ) : rows.length > 0 ? (
+        <div className="mt-5">
+          <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+              Reminder terdekat
+            </p>
+            <p className="mt-1 text-xl font-extrabold text-slate-950">
+              {rows[0].name}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-violet-900">
+              {formatCurrency(rows[0].amount, rows[0].currency)} jatuh tempo {formatDate(rows[0].dueDate)}
+            </p>
+          </div>
+          <span
+            className={cn(
+              'mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold',
+              urgentCount > 0
+                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+                : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100',
+            )}
+          >
+            {urgentCount > 0 ? `${urgentCount} tagihan perlu dicek` : 'Semua tagihan aman'}
+          </span>
+          <div className="mt-4 space-y-2">
+            {rows.slice(0, 4).map((row) => (
+              <div
+                key={row.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/55 px-3 py-2.5 shadow-sm"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-slate-950">{row.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {row.provider} · {row.daysLeft <= 0 ? 'hari ini' : `${row.daysLeft} hari lagi`}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-extrabold text-slate-950">
+                  {formatCurrency(row.amount, row.currency)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
+          Belum ada reminder tagihan. Tambahkan VPS, domain, SaaS, atau langganan lain dari menu Upcoming Billing.
+        </div>
+      )}
+    </Card>
+  )
+}
+
+interface UpcomingBillingRow {
+  id: string
+  name: string
+  provider: string
+  amount: number
+  currency: string
+  dueDate: string
+  daysLeft: number
+  reminderWindow: number
+}
+
+function buildUpcomingBillingRows(
+  subscription: Subscription | null,
+  billings: UpcomingBilling[],
+): UpcomingBillingRow[] {
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+
+  const activeRows = billings
+    .filter((item) => item.status === 'active')
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      provider: item.provider || 'Reminder',
+      amount: Number(item.amount),
+      currency: item.currency || 'IDR',
+      dueDate: item.due_date,
+      daysLeft: daysUntil(item.due_date, startOfToday),
+      reminderWindow: 7,
+    }))
+
+  const subscriptionDate = subscription?.next_billing_at ?? subscription?.ends_at ?? null
+  const subscriptionRow =
+    subscription && subscriptionDate
+      ? [{
+          id: `subscription-${subscription.id}`,
+          name: `Langganan ${subscription.plan_name}`,
+          provider: 'SAKU',
+          amount: Number(subscription.amount),
+          currency: subscription.currency || 'IDR',
+          dueDate: subscriptionDate,
+          daysLeft: daysUntil(subscriptionDate, startOfToday),
+          reminderWindow: subscription.plan_code?.includes('year') ? 30 : 7,
+        }]
+      : []
+
+  return [...activeRows, ...subscriptionRow].sort((a, b) => {
+    const diff = a.daysLeft - b.daysLeft
+    if (diff !== 0) return diff
+    return a.name.localeCompare(b.name)
+  })
+}
+
+function daysUntil(dateLike: string, startOfToday: Date): number {
+  const due = new Date(dateLike)
+  if (Number.isNaN(due.getTime())) return 9999
+  due.setHours(0, 0, 0, 0)
+  return Math.ceil((due.getTime() - startOfToday.getTime()) / 86_400_000)
+}
+
 function WalletList({
   loading,
   wallets,
@@ -605,17 +792,17 @@ function WalletList({
             <Shimmer key={index} className="h-14 rounded-xl" />
           ))
         ) : wallets.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
+          <p className="rounded-2xl bg-white/40 px-4 py-5 text-center text-sm text-slate-500 border border-white/50">
             {emptyLabel}
           </p>
         ) : (
           wallets.slice(0, 5).map((wallet) => (
             <div
               key={wallet.id}
-              className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3"
+              className="flex items-center justify-between gap-4 rounded-2xl border border-transparent bg-white/40 px-4 py-3 transition-all duration-300 hover:bg-white/70 hover:border-white/60 hover:shadow-sm"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-700 ring-1 ring-slate-200">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-700 border border-slate-100">
                   <HiOutlineWallet className="h-5 w-5" />
                 </div>
 
@@ -650,30 +837,22 @@ function RangeTabs({
   ]
 
   return (
-    <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
+    <div className="inline-flex rounded-xl border border-white/80 bg-white/65 p-1 text-xs font-semibold shadow-sm">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
           className={cn(
-            'rounded-xl px-3 py-1.5 transition',
+            'rounded-lg px-3 py-1.5 transition',
             value === option.value
-              ? 'bg-white text-brand-700 shadow-sm ring-1 ring-slate-200'
+              ? 'bg-brand-600 text-white shadow-sm shadow-brand-200/70'
               : 'text-slate-500 hover:text-slate-800',
           )}
         >
           {option.label}
         </button>
       ))}
-    </div>
-  )
-}
-
-function EmptyChart({ message }: { message: string }) {
-  return (
-    <div className="flex h-72 items-center justify-center rounded-2xl bg-slate-50 text-sm text-slate-400">
-      {message}
     </div>
   )
 }
@@ -784,6 +963,29 @@ function buildMonthlyData(
   }
 
   return months
+}
+
+function buildCategoryInsights(txns: Transaction[], categories: Category[]): CategoryInsight[] {
+  const categoryMap = new Map(categories.map((category) => [category.id, category.name]))
+  const totals = new Map<string, CategoryInsight>()
+
+  for (const tx of txns) {
+    if (tx.type !== 'expense') continue
+
+    const id = tx.category_id || 'uncategorized'
+    const current = totals.get(id) ?? {
+      id,
+      name: categoryMap.get(id) ?? 'Uncategorized',
+      amount: 0,
+      count: 0,
+    }
+
+    current.amount += Number(tx.amount)
+    current.count += 1
+    totals.set(id, current)
+  }
+
+  return Array.from(totals.values()).sort((a, b) => b.amount - a.amount)
 }
 
 function compactCurrency(value: number): string {

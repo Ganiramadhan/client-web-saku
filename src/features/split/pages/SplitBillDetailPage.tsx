@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
-  HiOutlineArrowLeft,
   HiOutlineUserGroup,
   HiOutlinePencilSquare,
   HiOutlinePhone,
@@ -82,13 +81,8 @@ export function SplitBillDetailPage() {
         subtitle={`${total} peserta · ${new Date(bill.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/app/split-bills">
-              <Button variant="secondary" leftIcon={<HiOutlineArrowLeft className="h-4 w-4" />}>
-                Kembali
-              </Button>
-            </Link>
             <Link to={`/app/split-bills/${bill.id}/edit`}>
-              <Button variant="secondary" leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />}>
+              <Button variant="outline" leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />}>
                 Edit
               </Button>
             </Link>
@@ -117,8 +111,8 @@ export function SplitBillDetailPage() {
           <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-600">
             {formatCurrency(paidAmount, bill.currency)}
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-white/80">
+            <div className="h-full rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
           </div>
         </Card>
         <Card>
@@ -142,7 +136,7 @@ export function SplitBillDetailPage() {
 
       {/* Participants */}
       <Card className="mt-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center justify-between border-b border-white/80 pb-3">
           <div className="flex items-center gap-2">
             <HiOutlineUserGroup className="h-5 w-5 text-brand-600" />
             <h3 className="text-base font-semibold text-slate-900">Peserta</h3>
@@ -154,7 +148,7 @@ export function SplitBillDetailPage() {
             <HiOutlineShare className="h-4 w-4" /> Salin teks
           </button>
         </div>
-        <ul className="mt-3 divide-y divide-slate-100">
+        <ul className="mt-3 divide-y divide-white/80">
           {bill.participants.map((p) => {
             const isPaid = Boolean(p.paid_at)
             return (
@@ -163,8 +157,8 @@ export function SplitBillDetailPage() {
                   className={
                     'flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ' +
                     (isPaid
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-600')
+                      ? 'border border-emerald-100 bg-emerald-50 text-emerald-700'
+                      : 'border border-white/80 bg-white/70 text-slate-600')
                   }
                 >
                   {p.name.charAt(0).toUpperCase()}
@@ -201,8 +195,8 @@ export function SplitBillDetailPage() {
                     className={
                       'inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold transition ' +
                       (isPaid
-                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700')
+                        ? 'border border-white/80 bg-white/70 text-slate-700 hover:bg-white'
+                        : 'bg-brand-600 text-white shadow-lg shadow-brand-200/50 hover:bg-brand-700')
                     }
                   >
                     {isPaid ? 'Batalkan' : 'Tandai Lunas'}
@@ -211,7 +205,7 @@ export function SplitBillDetailPage() {
                     <button
                       onClick={() => share.mutate(p.phone)}
                       disabled={share.isPending}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-emerald-600 transition hover:bg-emerald-50"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-emerald-600 transition hover:bg-white"
                       title="Kirim via WhatsApp"
                     >
                       <FaWhatsapp className="h-4 w-4" />

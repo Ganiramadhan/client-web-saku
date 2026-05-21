@@ -66,6 +66,12 @@ export function AddTransactionPage() {
     }
   }, [initialWallet, wallets.data])
 
+  useEffect(() => {
+    if (form.wallet_id || !wallets.data?.length) return
+    const fallback = wallets.data.find((w) => w.is_default) ?? wallets.data[0]
+    setForm((prev) => (prev.wallet_id ? prev : { ...prev, wallet_id: fallback.id }))
+  }, [form.wallet_id, wallets.data])
+
   const filteredCats = useMemo(() => {
     const cats = (categories.data ?? []).filter((c) => c.type === activeTab)
     return cats.sort((a, b) => {
@@ -77,7 +83,7 @@ export function AddTransactionPage() {
 
   const m = useMutation({
     mutationFn: () => {
-      const dateObj = new Date(form.transaction_date)
+      const dateObj = new Date(`${form.transaction_date}T00:00:00`)
       const isoDateTime = dateObj.toISOString()
       
       const payload = {
@@ -149,22 +155,22 @@ export function AddTransactionPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="space-y-6">
       <PageHeader 
         title="Tambah Transaksi" 
-        subtitle="Catat pemasukan dan pengeluaran Anda"
+        subtitle="Catat pemasukan dan pengeluaran secara manual."
       />
 
-      <div className="mx-auto max-w-4xl px-3 pb-8 sm:px-4 lg:px-6">
-        {/* Soft Tabs */}
-        <div className="mb-6 flex gap-3">
+      <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/80 bg-white/62 p-1 shadow-sm backdrop-blur-xl">
           <button
             onClick={() => { setActiveTab('expense'); setForm({ ...form, type: 'expense', category_id: '', merchant_name: '' }) }}
             className={cn(
-              'flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 sm:px-6 sm:text-base',
+              'rounded-lg py-2.5 text-sm font-bold transition',
               activeTab === 'expense'
                 ? 'bg-rose-600 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:bg-slate-50 border border-gray-200'
+                : 'text-slate-600 hover:bg-white hover:text-slate-900'
             )}
           >
             {t.transactions.expense}
@@ -172,20 +178,20 @@ export function AddTransactionPage() {
           <button
             onClick={() => { setActiveTab('income'); setForm({ ...form, type: 'income', category_id: '', merchant_name: '' }) }}
             className={cn(
-              'flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 sm:px-6 sm:text-base',
+              'rounded-lg py-2.5 text-sm font-bold transition',
               activeTab === 'income'
                 ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:bg-slate-50 border border-gray-200'
+                : 'text-slate-600 hover:bg-white hover:text-slate-900'
             )}
           >
             {t.transactions.income}
           </button>
         </div>
 
-        <Card className="shadow-lg backdrop-blur-sm bg-white/95">
+        <Card className="border border-white/80 bg-white/68 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
           {/* Amount Input */}
           <div className="mb-6">
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
+            <label className="mb-2 block text-sm font-bold text-slate-700">
               {t.common.amount}
             </label>
             <CurrencyInput
@@ -197,10 +203,10 @@ export function AddTransactionPage() {
 
           {/* Category Selection */}
           <div className="mb-6">
-            <label className="mb-3 block text-sm font-semibold text-gray-700">
+            <label className="mb-3 block text-sm font-bold text-slate-700">
               {t.transactions.category}
             </label>
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-5 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
               {filteredCats.map((cat) => {
                 const Icon = categoryIconsMap[cat.name] || IoEllipsisHorizontal
                 const isSelected = form.category_id === cat.id
@@ -209,28 +215,28 @@ export function AddTransactionPage() {
                     key={cat.id}
                     onClick={() => setForm({ ...form, category_id: cat.id })}
                     className={cn(
-                      'flex flex-col items-center gap-2 rounded-xl p-3 transition-all duration-200 sm:p-4',
+                      'min-h-24 rounded-xl border p-3 text-left transition hover:-translate-y-0.5',
                       isSelected
                         ? activeTab === 'income'
-                          ? 'bg-emerald-50 ring-2 ring-emerald-500'
-                          : 'bg-rose-50 ring-2 ring-rose-500'
-                        : 'bg-white hover:bg-gray-50 hover:shadow-md border border-gray-200'
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-100'
+                          : 'border-rose-300 bg-rose-50 text-rose-950 ring-1 ring-rose-100'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:border-brand-200 hover:bg-white'
                     )}
                   >
                     <Icon 
                       className={cn(
-                        'h-6 w-6 sm:h-7 sm:w-7', 
+                        'h-6 w-6 sm:h-7 sm:w-7 transition-transform duration-300', 
                         isSelected 
-                          ? (activeTab === 'income' ? 'text-green-600' : 'text-red-600') 
-                          : 'text-gray-600'
+                          ? (activeTab === 'income' ? 'text-emerald-600 scale-110' : 'text-rose-600 scale-110') 
+                          : 'text-slate-500'
                       )} 
                     />
-                    <span 
+                    <span
                       className={cn(
-                        'text-center text-xs font-medium leading-tight',
+                        'mt-3 block text-xs font-semibold leading-tight transition-colors',
                         isSelected 
-                          ? (activeTab === 'income' ? 'text-green-900' : 'text-red-900') 
-                          : 'text-gray-700'
+                          ? (activeTab === 'income' ? 'text-emerald-950' : 'text-rose-950') 
+                          : 'text-slate-600'
                       )}
                     >
                       {cat.name}
@@ -243,10 +249,10 @@ export function AddTransactionPage() {
 
           {/* Wallet Selection */}
           <div className="mb-6">
-            <label className="mb-3 block text-sm font-semibold text-gray-700">
+            <label className="mb-3 block text-sm font-bold text-slate-700">
               {t.transactions.wallet}
             </label>
-            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:gap-3">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               {(wallets.data ?? []).map((w) => {
                 const WalletIcon = getWalletIcon(w.name)
                 const isSelected = form.wallet_id === w.id
@@ -255,14 +261,14 @@ export function AddTransactionPage() {
                     key={w.id}
                     onClick={() => setForm({ ...form, wallet_id: w.id })}
                     className={cn(
-                      'flex items-center justify-center gap-2 rounded-xl px-3 py-3 font-medium transition-all duration-200 sm:flex-1 sm:px-4',
+                      'flex min-w-0 items-center gap-2.5 rounded-xl border px-4 py-3 font-semibold transition hover:-translate-y-0.5',
                       isSelected
-                        ? 'bg-blue-50 ring-2 ring-blue-500 text-blue-900'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
+                        ? 'border-blue-300 bg-blue-50 text-blue-950 ring-1 ring-blue-100'
+                        : 'border-slate-200 bg-white/70 text-slate-600 hover:border-brand-200 hover:bg-white'
                     )}
                   >
-                    <WalletIcon className={cn('h-5 w-5', isSelected ? 'text-blue-600' : 'text-gray-600')} />
-                    <span className="text-sm font-semibold">{w.name}</span>
+                    <WalletIcon className={cn('h-5 w-5', isSelected ? 'text-blue-600' : 'text-gray-500')} />
+                    <span className="truncate text-sm font-semibold">{w.name}</span>
                   </button>
                 )
               })}
@@ -286,10 +292,10 @@ export function AddTransactionPage() {
 
           {/* Merchant Selection */}
           <div className="mb-6">
-            <label className="mb-3 block text-sm font-semibold text-gray-700">
+            <label className="mb-3 block text-sm font-bold text-slate-700">
               {t.transactions.merchant}
             </label>
-            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-4 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {merchantOptions.map((merchant) => {
                 const Icon = merchant.icon
                 const isSelected = form.merchant_name === merchant.name
@@ -299,22 +305,22 @@ export function AddTransactionPage() {
                     key={merchant.name}
                     onClick={() => setForm({ ...form, merchant_name: isLainnya ? '' : merchant.name })}
                     className={cn(
-                      'flex flex-col items-center gap-2 rounded-xl p-3 transition-all duration-200 sm:p-3.5',
+                      'rounded-xl border p-3 text-left transition hover:-translate-y-0.5',
                       isSelected
-                        ? 'bg-violet-50 ring-2 ring-violet-500'
-                        : 'bg-white hover:bg-gray-50 hover:shadow-md border border-gray-200'
+                        ? 'border-violet-300 bg-violet-50 text-violet-950 ring-1 ring-violet-100'
+                        : 'border-slate-200 bg-white/70 text-slate-600 hover:border-brand-200 hover:bg-white'
                     )}
                   >
                     <Icon 
                       className={cn(
                         'h-5 w-5 sm:h-6 sm:w-6', 
-                        isSelected ? 'text-purple-600' : 'text-gray-600'
+                        isSelected ? 'text-purple-600' : 'text-gray-500'
                       )} 
                     />
                     <span 
                       className={cn(
-                        'text-center text-xs font-medium leading-tight',
-                        isSelected ? 'text-purple-900' : 'text-gray-700'
+                        'mt-2 block text-xs font-semibold leading-tight',
+                        isSelected ? 'text-purple-950' : 'text-slate-600'
                       )}
                     >
                       {merchant.name}
@@ -339,7 +345,7 @@ export function AddTransactionPage() {
           {/* Advanced Options Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 flex w-full items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-slate-100 border border-gray-200"
+            className="mb-4 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-white"
           >
             <span>Deskripsi (Opsional)</span>
             {showAdvanced ? <HiChevronUp className="h-5 w-5" /> : <HiChevronDown className="h-5 w-5" />}
@@ -373,15 +379,48 @@ export function AddTransactionPage() {
               className={cn(
                 'flex-1 rounded-xl py-3.5 text-sm font-bold shadow-sm sm:py-4 sm:text-base transition-all duration-200',
                 activeTab === 'income'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white border-0'
               )}
             >
               Simpan Transaksi
             </Button>
           </div>
         </Card>
+        </div>
+
+        <Card className="h-fit">
+          <div className="flex items-center gap-2 border-b border-white/60 pb-4">
+            <span className={cn('h-2.5 w-2.5 rounded-full', activeTab === 'income' ? 'bg-emerald-500' : 'bg-rose-500')} />
+            <h3 className="text-sm font-semibold text-slate-900">Ringkasan</h3>
+          </div>
+          <dl className="mt-3 space-y-2 text-sm">
+            <SummaryRow label="Tipe" value={activeTab === 'income' ? t.transactions.income : t.transactions.expense} />
+            <SummaryRow label="Nominal" value={`Rp ${Number(form.amount || 0).toLocaleString('id-ID')}`} />
+            <SummaryRow
+              label="Dompet"
+              value={(wallets.data ?? []).find((w) => w.id === form.wallet_id)?.name ?? 'Belum dipilih'}
+            />
+            <SummaryRow
+              label="Kategori"
+              value={filteredCats.find((c) => c.id === form.category_id)?.name ?? 'Belum dipilih'}
+            />
+            <SummaryRow label="Tanggal" value={form.transaction_date || 'Belum dipilih'} />
+          </dl>
+          <p className="mt-5 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-slate-500">
+            Pastikan dompet, kategori, nominal, dan tanggal sudah benar sebelum menyimpan transaksi.
+          </p>
+        </Card>
       </div>
+    </div>
+  )
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
+      <span className="text-slate-500">{label}</span>
+      <span className="max-w-[11rem] text-right font-semibold text-slate-900">{value}</span>
     </div>
   )
 }

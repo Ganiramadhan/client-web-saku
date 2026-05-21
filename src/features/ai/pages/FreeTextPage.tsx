@@ -10,8 +10,14 @@ import {
   HiOutlineBars3,
   HiOutlineXMark,
   HiOutlineUser,
+  HiOutlineCheckCircle,
+  HiOutlineQuestionMarkCircle,
 } from 'react-icons/hi2'
-import { aiApi } from '@/features/ai/api'
+import {
+  RiSparklingLine,
+  RiWalletLine,
+} from 'react-icons/ri'
+import { aiApi, aiLogApi } from '@/features/ai/api'
 import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
@@ -68,16 +74,7 @@ interface ChatSession {
   messages: Message[]
   createdAt: number
   updatedAt: number
-}
-
-const SESSIONS_KEY_PREFIX = 'saku_ai_sessions_v3:'
-const ACTIVE_KEY_PREFIX = 'saku_ai_active_session_v3:'
-
-function sessionsKey(userId: string | null | undefined) {
-  return SESSIONS_KEY_PREFIX + (userId || 'anon')
-}
-function activeKey(userId: string | null | undefined) {
-  return ACTIVE_KEY_PREFIX + (userId || 'anon')
+  logIds?: string[]
 }
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
@@ -86,24 +83,9 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
-function loadSessions(userId: string | null | undefined): ChatSession[] {
-  try {
-    const raw = localStorage.getItem(sessionsKey(userId))
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-  } catch {
-    return []
-  }
-}
-
-function saveSessions(userId: string | null | undefined, sessions: ChatSession[]) {
-  try {
-    localStorage.setItem(sessionsKey(userId), JSON.stringify(sessions.slice(0, 100)))
-  } catch {
-    /* quota — ignore */
-  }
+function cleanMerchant(value?: string | null): string {
+  const merchant = (value ?? '').trim()
+  return merchant === '-' ? '' : merchant
 }
 
 function deriveTitle(messages: Message[]): string {
@@ -111,6 +93,146 @@ function deriveTitle(messages: Message[]): string {
   if (!firstUser) return 'Chat baru'
   const t = firstUser.content.trim().replace(/\s+/g, ' ')
   return t.length > 40 ? t.slice(0, 40) + '…' : t
+}
+
+function chatSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['data']): ChatSession[] {
+  const groups = new Map<string, Awaited<ReturnType<typeof aiLogApi.list>>['data']>()
+  logs
+    .filter((log) => log.feature === 'chat' && log.status === 'success')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .forEach((log) => {
+      const raw = log.raw_response ?? {}
+      const sessionId = typeof raw.session_id === 'string' && raw.session_id.trim()
+        ? raw.session_id.trim()
+        : 'legacy-chat-history'
+      groups.set(sessionId, [...(groups.get(sessionId) ?? []), log])
+    })
+
+  return Array.from(groups.entries()).map(([sessionId, rows]) => {
+    const messages: Message[] = rows.flatMap((log) => {
+        const raw = log.raw_response ?? {}
+        const userMessage = typeof raw.message === 'string' ? raw.message.trim() : ''
+        const reply = typeof raw.reply === 'string' ? cleanReply(raw.reply) : ''
+        const createdAt = new Date(log.created_at).getTime()
+        const out: Message[] = []
+        if (userMessage) out.push({ id: `${log.id}-user-${createdAt}`, role: 'user', content: userMessage })
+        if (reply) out.push({ id: `${log.id}-assistant-${createdAt}`, role: 'assistant', content: reply })
+        return out
+      })
+    const first = rows[0]
+    const latest = rows[rows.length - 1]
+    return {
+      id: sessionId,
+      mode: 'chatbot',
+      title: deriveTitle(messages),
+      messages,
+      createdAt: first ? new Date(first.created_at).getTime() : Date.now(),
+      updatedAt: latest ? new Date(latest.updated_at || latest.created_at).getTime() : Date.now(),
+      logIds: rows.map((log) => log.id),
+    }
+  })
+}
+
+function nlpSessionsFromLogs(logs: Awaited<ReturnType<typeof aiLogApi.list>>['data']): ChatSession[] {
+  const groups = new Map<string, Awaited<ReturnType<typeof aiLogApi.list>>['data']>()
+  logs
+    .filter((log) => log.feature === 'categorize' && log.status === 'success')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .forEach((log) => {
+      const raw = log.raw_response ?? {}
+      const sessionId = typeof raw.session_id === 'string' && raw.session_id.trim()
+        ? raw.session_id.trim()
+        : 'legacy-nlp-history'
+      groups.set(sessionId, [...(groups.get(sessionId) ?? []), log])
+    })
+
+  return Array.from(groups.entries()).map(([sessionId, sorted]) => {
+    const messages: Message[] = sorted.flatMap((log) => {
+      const raw = log.raw_response ?? {}
+      const input = typeof raw.message === 'string' ? raw.message.trim() : ''
+      const txs = Array.isArray(raw.transactions) ? raw.transactions : []
+      const items = txs.length > 0
+        ? txs
+        : log.extracted_amount
+          ? [{
+              amount: log.extracted_amount,
+              merchant_name: cleanMerchant(log.extracted_merchant),
+              category: log.extracted_category,
+              type: raw.type,
+              confidence: typeof raw.confidence === 'number' ? raw.confidence : undefined,
+              description: input,
+            }]
+          : []
+      const summary =
+        items.length > 1
+          ? `Saya menangkap ${items.length} transaksi. Pilih yang ingin disimpan, lalu klik "Simpan terpilih".`
+          : items.length === 1
+            ? 'Silakan cek dan konfirmasi detailnya di bawah:'
+            : 'Catatan ini sudah diproses oleh AI.'
+      const createdAt = new Date(log.created_at).getTime()
+      const out: Message[] = []
+      if (input) out.push({ id: `${log.id}-user-${createdAt}`, role: 'user', content: input })
+      out.push({ id: `${log.id}-assistant-${createdAt}`, role: 'assistant', content: summary })
+
+      const batchId = items.length > 1 ? `${log.id}-batch` : undefined
+      for (const [index, itemRaw] of items.entries()) {
+        const item = itemRaw as Record<string, unknown>
+        const amount = Number(item.amount ?? 0)
+        const type = item.type === 'income' ? 'income' : 'expense'
+        const merchant = cleanMerchant(typeof item.merchant_name === 'string' ? item.merchant_name : '')
+        const category = typeof item.category === 'string' ? item.category : ''
+        const description = typeof item.description === 'string' ? item.description : input
+        const confidence = typeof item.confidence === 'number' ? item.confidence : undefined
+        out.push({
+          id: `${log.id}-review-${index}-${createdAt}`,
+          role: 'assistant',
+          content: '',
+          type: 'transaction-review',
+          extractedData: {
+            amount,
+            merchant_name: merchant,
+            category,
+            type,
+            confidence,
+            description,
+          },
+          form: {
+            wallet_id: '',
+            category_id: '',
+            amount,
+            type,
+            merchant_name: merchant,
+            description,
+            transaction_date: new Date(log.created_at).toISOString().slice(0, 10),
+          },
+          batchId,
+          selected: items.length > 1 ? true : undefined,
+        })
+      }
+      if (batchId) {
+        out.push({
+          id: `${log.id}-batch-actions-${createdAt}`,
+          role: 'assistant',
+          content: '',
+          type: 'batch-actions',
+          batchId,
+        })
+      }
+      return out
+    })
+
+    const first = sorted[0]
+    const latest = sorted[sorted.length - 1]
+    return {
+      id: sessionId,
+      mode: 'nlp',
+      title: deriveTitle(messages),
+      messages,
+      createdAt: first ? new Date(first.created_at).getTime() : Date.now(),
+      updatedAt: latest ? new Date(latest.updated_at || latest.created_at).getTime() : Date.now(),
+      logIds: sorted.map((log) => log.id),
+    }
+  })
 }
 
 function groupSessionsByDate(sessions: ChatSession[]) {
@@ -160,6 +282,31 @@ function cleanReply(reply: string): string {
     }
   }
   return t
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^\s*[-*]\s+/gm, '- ')
+    .trim()
+}
+
+function normalizeCategoryName(value?: string): string {
+  return (value ?? '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function categoryTokens(value?: string): string[] {
+  const n = normalizeCategoryName(value)
+  const groups = [
+    ['makan', 'minum', 'food', 'drink', 'beverage', 'nasi', 'padang', 'warung', 'resto', 'restaurant', 'kopi', 'coffee', 'cafe'],
+    ['transport', 'transportasi', 'gojek', 'grab', 'bensin', 'parkir', 'taxi', 'ojek'],
+    ['belanja', 'shopping', 'shop', 'mall', 'tokopedia', 'shopee', 'baju'],
+    ['tagihan', 'bill', 'bills', 'listrik', 'wifi', 'internet', 'pulsa', 'vps', 'domain'],
+    ['hiburan', 'entertainment', 'netflix', 'spotify', 'game', 'bioskop'],
+    ['gaji', 'salary', 'payroll', 'bonus', 'freelance'],
+  ]
+  return groups.find((group) => group.some((token) => n.includes(token))) ?? []
 }
 
 const NLP_EXAMPLES = [
@@ -208,6 +355,7 @@ function UserAvatar({ photoUrl, name }: { photoUrl?: string; name?: string }) {
       <img
         src={photoUrl}
         alt={name ?? 'User'}
+        referrerPolicy="no-referrer"
         className="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover"
       />
     )
@@ -219,14 +367,39 @@ function UserAvatar({ photoUrl, name }: { photoUrl?: string; name?: string }) {
   )
 }
 
+function AIAvatar() {
+  return (
+    <div className="relative mt-0.5 h-8 w-8 shrink-0">
+      <span className="absolute inset-0 rounded-full bg-brand-400/30 animate-ping" />
+      <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-[10px] font-black text-white shadow-lg shadow-slate-300/50 ring-2 ring-white">
+        AI
+      </span>
+    </div>
+  )
+}
+
 /* ─────────────────────────── Transaction Review Card ─────────────────────────── */
+
+function getCategoryEmoji(name?: string): string {
+  if (!name) return '💰'
+  const n = name.toLowerCase()
+  if (n.includes('makan') || n.includes('minum') || n.includes('kuliner') || n.includes('food') || n.includes('drink') || n.includes('kopi') || n.includes('coffee') || n.includes('warung') || n.includes('restoran')) return '🍔'
+  if (n.includes('trans') || n.includes('ojek') || n.includes('gojek') || n.includes('grab') || n.includes('bensin') || n.includes('mobil') || n.includes('motor') || n.includes('travel') || n.includes('bus') || n.includes('kereta')) return '🚗'
+  if (n.includes('belanja') || n.includes('shop') || n.includes('supermarket') || n.includes('mall') || n.includes('baju') || n.includes('pakaian')) return '🛍️'
+  if (n.includes('hiburan') || n.includes('nonton') || n.includes('bioskop') || n.includes('game') || n.includes('rekreasi') || n.includes('play')) return '🎮'
+  if (n.includes('kesehatan') || n.includes('obat') || n.includes('dokter') || n.includes('rs') || n.includes('sakit') || n.includes('health') || n.includes('medical')) return '🏥'
+  if (n.includes('tagihan') || n.includes('listrik') || n.includes('air') || n.includes('wifi') || n.includes('internet') || n.includes('pulsa') || n.includes('bill')) return '⚡'
+  if (n.includes('gaji') || n.includes('salary') || n.includes('bonus') || n.includes('pendapatan') || n.includes('income')) return '💵'
+  if (n.includes('investasi') || n.includes('saham') || n.includes('reksadana')) return '📈'
+  if (n.includes('edukasi') || n.includes('sekolah') || n.includes('kuliah') || n.includes('buku')) return '🎓'
+  return '💸'
+}
 
 function TransactionReviewCard({
   message,
   walletOptions,
   categoryOptions,
   onSave,
-  onReset,
   onFormChange,
   onToggleSelect,
   isSaving,
@@ -235,7 +408,6 @@ function TransactionReviewCard({
   walletOptions: SelectOption[]
   categoryOptions: (type: TransactionType) => SelectOption[]
   onSave: (form: TxForm) => void
-  onReset: () => void
   onFormChange: (form: TxForm) => void
   onToggleSelect?: () => void
   isSaving: boolean
@@ -250,17 +422,116 @@ function TransactionReviewCard({
   const update = (patch: Partial<TxForm>) => onFormChange({ ...form, ...patch })
   const invalid = !form.wallet_id || !form.category_id || form.amount <= 0
 
+  const [isEditing, setIsEditing] = useState(false)
+
+  const walletName = walletOptions.find((w) => w.value === form.wallet_id)?.label
+  const categoryName = filteredCats.find((c) => c.value === form.category_id)?.label
+  const categoryEmoji = getCategoryEmoji(categoryName || message.extractedData?.category)
+
+  if (!isEditing || saved) {
+    return (
+      <div className={cn('relative mt-3 overflow-hidden rounded-2xl border border-white/80 bg-white/68 shadow-lg shadow-slate-200/35 backdrop-blur-2xl transition duration-300 hover:shadow-xl', saved && 'ring-1 ring-emerald-200')}>
+        {saved ? (
+          <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+            <HiOutlineCheckCircle className="h-3.5 w-3.5" />
+            Tersimpan
+          </div>
+        ) : null}
+        <div className="px-5 pb-4 pt-5">
+          <div className="mb-3 flex items-center gap-2">
+            <RiSparklingLine className="h-4 w-4 text-blue-500 animate-pulse" />
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              Pratinjau Transaksi
+            </p>
+            {!saved ? (
+              <span
+                className={cn(
+                  'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                  conf >= 0.8
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : conf >= 0.5
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200',
+                )}
+              >
+                {(conf * 100).toFixed(0)}% akurat
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 text-2xl">
+              {categoryEmoji}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-slate-900">
+                {form.description || 'Deskripsi tidak tersedia'}
+              </p>
+              <p className="truncate text-xs text-slate-400">
+                {categoryName || 'Kategori tidak tersedia'}
+              </p>
+            </div>
+
+            <span
+              className={cn(
+                'ml-auto text-lg font-extrabold shrink-0',
+                form.type === 'income' ? 'text-emerald-600' : 'text-rose-500',
+              )}
+            >
+              {form.type === 'income' ? '+' : '-'}Rp {form.amount.toLocaleString('id-ID')}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 px-3.5 py-2.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <RiWalletLine className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="truncate text-xs font-medium text-slate-600">
+                {walletName || 'Pilih Dompet'}
+              </span>
+            </div>
+
+            <span className="text-xs text-slate-400 shrink-0">
+              {form.transaction_date}
+            </span>
+          </div>
+        </div>
+
+        {!saved ? (
+          <div className="flex border-t border-slate-200/50 bg-white/30">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="flex-1 py-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-white/50"
+            >
+              Edit Detail
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(form)}
+              disabled={isSaving || invalid}
+              className="flex-1 py-3 text-xs font-bold text-brand-600 transition-colors hover:bg-brand-50/70 disabled:opacity-40"
+            >
+              {isSaving ? 'Menyimpan…' : 'Konfirmasi'}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  // Edit / Saved Mode
   return (
     <div
       className={cn(
-        'relative mt-3 overflow-hidden rounded-xl border bg-white transition',
+        'relative mt-3 overflow-hidden rounded-3xl border bg-white/40 backdrop-blur-xl transition shadow-md',
         saved
-          ? 'border-emerald-200 ring-1 ring-emerald-100'
+          ? 'border-emerald-300 ring-1 ring-emerald-100 bg-emerald-50/10'
           : isBatch && selected && invalid
-            ? 'border-amber-200 ring-1 ring-amber-100'
+            ? 'border-amber-300 ring-1 ring-amber-100'
             : isBatch && selected
-              ? 'border-brand-200 ring-1 ring-brand-100'
-              : 'border-slate-200',
+              ? 'border-brand-300 ring-1 ring-brand-100'
+              : 'border-white/60',
       )}
     >
       {saved ? (
@@ -272,7 +543,7 @@ function TransactionReviewCard({
       <div
         className={cn(
           'border-b px-4 py-3',
-          saved ? 'border-emerald-100 bg-emerald-50/40' : 'border-slate-100 bg-slate-50',
+          saved ? 'border-emerald-100 bg-emerald-50/40' : 'border-slate-200/50 bg-slate-50/40',
         )}
       >
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -289,8 +560,8 @@ function TransactionReviewCard({
                 <span>{selected ? 'Akan disimpan' : 'Lewati'}</span>
               </label>
             ) : (
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Yang AI Tangkap
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {saved ? 'Detail Transaksi' : 'Edit Transaksi'}
               </span>
             )}
           </div>
@@ -321,7 +592,7 @@ function TransactionReviewCard({
                 message.extractedData?.type === 'income' ? t.transactions.income : t.transactions.expense,
             },
             { label: 'Kategori', value: message.extractedData?.category ?? '-' },
-            { label: 'Merchant', value: message.extractedData?.merchant_name || '-' },
+            { label: 'Merchant', value: cleanMerchant(message.extractedData?.merchant_name) },
           ].map((item) => (
             <div key={item.label}>
               <p className="text-xs text-slate-400">{item.label}</p>
@@ -332,9 +603,6 @@ function TransactionReviewCard({
       </div>
 
       <div className={cn('px-4 py-4', saved && 'pointer-events-none opacity-60')}>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Review & Konfirmasi
-        </p>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <RSelect
@@ -347,7 +615,7 @@ function TransactionReviewCard({
               onChange={(v) => update({ type: (v as TransactionType) ?? 'expense' })}
             />
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Nominal</label>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">Nominal</label>
               <CurrencyInput
                 value={form.amount}
                 onChange={(val) => update({ amount: val })}
@@ -356,7 +624,7 @@ function TransactionReviewCard({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
               Tanggal Transaksi
             </label>
             <input
@@ -364,31 +632,33 @@ function TransactionReviewCard({
               aria-label="Tanggal Transaksi"
               value={form.transaction_date}
               onChange={(e) => update({ transaction_date: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
 
-          <RSelect
-            label="Dompet"
-            value={form.wallet_id}
-            options={walletOptions}
-            onChange={(v) => update({ wallet_id: v ?? '' })}
-          />
-          <RSelect
-            label="Kategori"
-            value={form.category_id}
-            options={filteredCats}
-            onChange={(v) => update({ category_id: v ?? '' })}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <RSelect
+              label="Dompet"
+              value={form.wallet_id}
+              options={walletOptions}
+              onChange={(v) => update({ wallet_id: v ?? '' })}
+            />
+            <RSelect
+              label="Kategori"
+              value={form.category_id}
+              options={filteredCats}
+              onChange={(v) => update({ category_id: v ?? '' })}
+            />
+          </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">Merchant</label>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">Merchant</label>
             <input
               type="text"
               value={form.merchant_name}
               onChange={(e) => update({ merchant_name: e.target.value })}
               placeholder="Nama toko / sumber"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
 
@@ -404,20 +674,25 @@ function TransactionReviewCard({
         {!saved ? (
           <div className="mt-4 flex gap-2">
             <button
-              onClick={onReset}
+              type="button"
+              onClick={() => {
+                setIsEditing(false)
+              }}
               className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
-              {isBatch ? 'Hapus dari daftar' : 'Batal'}
+              Batal Edit
             </button>
-            {!isBatch ? (
-              <button
-                onClick={() => onSave(form)}
-                disabled={isSaving || invalid}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
-              >
-                {isSaving ? 'Menyimpan…' : 'Simpan Transaksi'}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                onSave(form)
+                setIsEditing(false)
+              }}
+              disabled={isSaving || invalid}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
+            >
+              {isSaving ? 'Menyimpan…' : 'Simpan Transaksi'}
+            </button>
           </div>
         ) : null}
       </div>
@@ -531,11 +806,11 @@ function ChatSidebar({
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200 bg-slate-50 transition-transform md:static md:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/80 bg-white/76 shadow-xl shadow-slate-200/40 backdrop-blur-2xl transition-transform md:static md:inset-auto md:z-auto md:h-full md:translate-x-0 md:shadow-none',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-white/80 px-4 py-3">
           <div className="text-sm font-semibold text-slate-700">Riwayat Chat</div>
           <button
             onClick={onClose}
@@ -675,20 +950,20 @@ export function FreeTextPage() {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
 
-  const [sessions, setSessions] = useState<ChatSession[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
+    const fresh = {
+      id: uid(),
+      mode: 'nlp' as AIMode,
+      title: 'Chat baru',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    return [fresh]
+  })
 
-  /* Re-load when the signed-in user changes (prevents leak across users) */
-  useEffect(() => {
-    const loaded = loadSessions(user?.id)
-    setSessions(loaded)
-    const savedActive = localStorage.getItem(activeKey(user?.id))
-    setActiveId(
-      savedActive && loaded.some((s) => s.id === savedActive)
-        ? savedActive
-        : loaded[0]?.id ?? null,
-    )
-  }, [user?.id])
+  const [activeId, setActiveId] = useState<string | null>(() => sessions[0]?.id ?? null)
+
   const [text, setText] = useState('')
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -703,14 +978,45 @@ export function FreeTextPage() {
     queryKey: ['categories', 'all'],
     queryFn: () => categoryApi.list(),
   })
+  const chatLogs = useQuery({
+    queryKey: ['ai-logs', 'chat-history', user?.id],
+    queryFn: () => aiLogApi.chatHistory(1, 50),
+  })
+  const nlpLogs = useQuery({
+    queryKey: ['ai-logs', 'nlp-history', user?.id],
+    queryFn: () => aiLogApi.nlpHistory(1, 50),
+  })
 
-  /* Persist sessions */
   useEffect(() => {
-    saveSessions(user?.id, sessions)
-  }, [sessions, user?.id])
-  useEffect(() => {
-    if (activeId) localStorage.setItem(activeKey(user?.id), activeId)
-  }, [activeId, user?.id])
+    const dbSessions = [
+      ...(chatLogs.data ? chatSessionsFromLogs(chatLogs.data.data) : []),
+      ...(nlpLogs.data ? nlpSessionsFromLogs(nlpLogs.data.data) : []),
+    ].filter(Boolean) as ChatSession[]
+
+    const timer = window.setTimeout(() => {
+      let shouldActivateDb = false
+      setSessions((prev) => {
+        const currentSession = prev.find((session) => session.id === activeId)
+        shouldActivateDb = dbSessions.length > 0 && (!activeId || !currentSession || currentSession.messages.length === 0)
+        const dbIds = new Set(dbSessions.map((session) => session.id))
+        const transient = prev.filter((session) => !dbIds.has(session.id) && !session.id.startsWith('legacy-') && !session.id.startsWith('db-'))
+        const next = [...dbSessions, ...transient]
+        if (next.length > 0) return next.sort((a, b) => b.updatedAt - a.updatedAt)
+        return [
+          {
+            id: uid(),
+            mode: 'nlp' as AIMode,
+            title: 'Chat baru',
+            messages: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+        ]
+      })
+      if (shouldActivateDb && dbSessions[0]) setActiveId(dbSessions[0].id)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [chatLogs.data, nlpLogs.data, activeId])
 
   const active = useMemo(
     () => sessions.find((s) => s.id === activeId) ?? null,
@@ -718,32 +1024,6 @@ export function FreeTextPage() {
   )
   const mode: AIMode = active?.mode ?? 'nlp'
   const messages: Message[] = active?.messages ?? []
-
-  /* Ensure there is at least one session.
-   *
-   * BUG history-disappears-on-reload: this effect used to have `[]` deps and
-   * read `sessions` from the closure. On mount that closure value is the
-   * initial empty array, so the effect would always create a fresh session
-   * and immediately overwrite whatever the `[user?.id]` loader had just
-   * placed into state (race between the two mount-effects). Solution: use
-   * functional setState so we always inspect the *current* state, and key
-   * the run on `user?.id` so it co-ordinates with the loader.
-   */
-  useEffect(() => {
-    setSessions((prev) => {
-      if (prev.length > 0) return prev
-      const fresh: ChatSession = {
-        id: uid(),
-        mode: 'nlp',
-        title: 'Chat baru',
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      }
-      setActiveId(fresh.id)
-      return [fresh]
-    })
-  }, [user?.id])
 
   const updateActive = useCallback(
     (mut: (m: Message[]) => Message[]) => {
@@ -763,6 +1043,33 @@ export function FreeTextPage() {
     [activeId],
   )
 
+  const showHelp = useCallback(() => {
+    const guide =
+      mode === 'nlp'
+        ? [
+            'Panduan NLP:',
+            '1. Tulis transaksi seperti chat biasa, contoh: "beli kopi 25rb pakai BCA".',
+            '2. Untuk banyak transaksi, pisahkan dengan koma.',
+            '3. Dompet otomatis memakai dompet utama, tapi tetap bisa diedit di preview.',
+            '4. Cek kategori, nominal, dan tanggal sebelum disimpan.',
+          ].join('\n')
+        : [
+            'Panduan Chatbot:',
+            '1. Tanya ringkasan, kategori terbesar, atau perbandingan pengeluaran.',
+            '2. Gunakan pertanyaan lanjutan seperti "buat lebih singkat" atau "apa saran hematnya?".',
+            '3. Jawaban memakai data transaksi yang tersedia di akunmu dan ditulis tanpa format markdown.',
+            '4. Kalau bingung, ketik "help" kapan saja untuk melihat panduan ini.',
+          ].join('\n')
+    updateActive((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        role: 'assistant',
+        content: guide,
+      },
+    ])
+  }, [mode, updateActive])
+
   const handleNew = (m: AIMode) => {
     const fresh: ChatSession = {
       id: uid(),
@@ -778,10 +1085,6 @@ export function FreeTextPage() {
     setText('')
   }
 
-  // Switch to the most recent existing session of the given mode.
-  // If none exists, create one. This is bound to the NLP / Chatbot quick-switch
-  // buttons in the sidebar so users keep their conversation history when
-  // toggling mode — only the explicit "Chat baru" button creates a fresh chat.
   const handleSwitchMode = (m: AIMode) => {
     const latest = [...sessions]
       .filter((s) => s.mode === m)
@@ -795,10 +1098,33 @@ export function FreeTextPage() {
     handleNew(m)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const target = sessions.find((s) => s.id === id)
+    if (target?.logIds?.length) {
+      try {
+        await aiLogApi.deleteMany(target.logIds)
+        qc.invalidateQueries({ queryKey: ['ai-logs', 'chat-history', user?.id] })
+        qc.invalidateQueries({ queryKey: ['ai-logs', 'nlp-history', user?.id] })
+        toast.success('Riwayat berhasil dihapus')
+      } catch (error) {
+        toast.error(toErrorMessage(error))
+        return
+      }
+    }
     setSessions((prev) => {
-      const next = prev.filter((s) => s.id !== id)
-      if (id === activeId) {
+      let next = prev.filter((s) => s.id !== id)
+      if (next.length === 0) {
+        const fresh: ChatSession = {
+          id: uid(),
+          mode: 'nlp',
+          title: 'Chat baru',
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+        next = [fresh]
+      }
+      if (id === activeId || !next.some((s) => s.id === activeId)) {
         setActiveId(next[0]?.id ?? null)
       }
       return next
@@ -820,20 +1146,27 @@ export function FreeTextPage() {
 
   /* category lookup */
   const findCategoryId = useCallback(
-    (categoryName?: string): string | undefined => {
-      if (!categoryName) return undefined
-      return categories.data?.find(
-        (c) =>
-          c.name.toLowerCase().includes(categoryName.toLowerCase()) ||
-          categoryName.toLowerCase().includes(c.name.toLowerCase()),
-      )?.id
+    (categoryName?: string, type?: TransactionType, context?: string): string | undefined => {
+      const wanted = normalizeCategoryName([categoryName, context].filter(Boolean).join(' '))
+      if (!wanted) return undefined
+      const scoped = (categories.data ?? []).filter((c) => !type || c.type === type)
+      const exact = scoped.find((c) => {
+        const current = normalizeCategoryName(c.name)
+        return current === wanted || current.includes(wanted) || wanted.includes(current)
+      })
+      if (exact) return exact.id
+      const tokens = categoryTokens(wanted)
+      return scoped.find((c) => {
+        const current = normalizeCategoryName(c.name)
+        return tokens.some((token) => current.includes(token))
+      })?.id
     },
     [categories.data],
   )
 
   /* ─── Mutations ─── */
   const categorizeMutation = useMutation({
-    mutationFn: (inputText: string) => aiApi.categorize({ text: inputText }),
+    mutationFn: (inputText: string) => aiApi.categorize({ text: inputText, session_id: active?.id ?? activeId ?? undefined }),
     onSuccess: (data, inputText) => {
       // Prefer the multi-transaction array when the model returned one.
       // Fallback to the single top-level fields for older responses.
@@ -844,7 +1177,7 @@ export function FreeTextPage() {
             ? [
                 {
                   amount: data.amount,
-                  merchant_name: data.merchant_name,
+                  merchant_name: cleanMerchant(data.merchant_name),
                   category: data.category,
                   type: data.type,
                   confidence: data.confidence,
@@ -860,7 +1193,7 @@ export function FreeTextPage() {
             id: uid(),
             role: 'assistant',
             content:
-              'Maaf, saya belum berhasil menangkap detail transaksinya. Coba tulis lebih spesifik, misalnya: "beli bubur ayam 14rb" atau pisahkan dengan koma jika banyak transaksi.',
+              'Saya belum berhasil menangkap detail transaksinya. Coba tulis lebih spesifik, misalnya: "beli bubur ayam 14rb". Kalau butuh panduan, ketik "help".',
           },
         ])
         return
@@ -880,12 +1213,13 @@ export function FreeTextPage() {
           : 'Silakan cek dan konfirmasi detailnya di bawah:',
       }
       const reviewMsgs: Message[] = items.map((item) => {
+        const type = (item.type as TransactionType) || 'expense'
         const form: TxForm = {
           wallet_id: defaultWallet,
-          category_id: findCategoryId(item.category) || '',
+          category_id: findCategoryId(item.category, type, `${item.description ?? ''} ${item.merchant_name ?? ''} ${inputText}`) || '',
           amount: item.amount || 0,
-          type: (item.type as TransactionType) || 'expense',
-          merchant_name: item.merchant_name || '',
+          type,
+          merchant_name: cleanMerchant(item.merchant_name),
           description: item.description || inputText,
           transaction_date: today,
         }
@@ -896,7 +1230,7 @@ export function FreeTextPage() {
           type: 'transaction-review',
           extractedData: {
             amount: item.amount,
-            merchant_name: item.merchant_name,
+            merchant_name: cleanMerchant(item.merchant_name),
             category: item.category,
             type: item.type,
             confidence: item.confidence,
@@ -920,6 +1254,7 @@ export function FreeTextPage() {
         : []
       // Render order: intro → review cards → batch actions toolbar (at the bottom).
       updateActive((prev) => [...prev, intro, ...reviewMsgs, ...batchActions])
+      qc.invalidateQueries({ queryKey: ['ai-logs', 'nlp-history', user?.id] })
     },
     onError: (e) => {
       updateActive((prev) => [
@@ -951,13 +1286,16 @@ export function FreeTextPage() {
           role: m.role as 'user' | 'assistant',
           content: m.content,
         }))
-      return aiApi.chat({ message: msg, include_context: true, history: prior })
+      return aiApi.chat({ message: msg, include_context: true, history: prior, session_id: active?.id ?? activeId ?? undefined })
     },
     onSuccess: (data) => {
       updateActive((prev) => [
         ...prev,
         { id: uid(), role: 'assistant', content: cleanReply(data.reply) },
       ])
+      window.setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ['ai-logs', 'chat-history', user?.id] })
+      }, 800)
     },
     onError: (e) => {
       updateActive((prev) => [
@@ -1146,6 +1484,10 @@ export function FreeTextPage() {
     updateActive((prev) => [...prev, { id: uid(), role: 'user', content: trimmed }])
     setText('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    if (/^(help|bantuan|panduan)$/i.test(trimmed)) {
+      window.setTimeout(showHelp, 0)
+      return
+    }
     if (mode === 'nlp') categorizeMutation.mutate(trimmed)
     else chatMutation.mutate(trimmed)
   }
@@ -1202,16 +1544,96 @@ export function FreeTextPage() {
     value: w.id,
     label: w.name,
   }))
+  const defaultWalletId = wallets.data?.find((w) => w.is_default)?.id ?? wallets.data?.[0]?.id ?? ''
   const categoryOptions = (type: TransactionType): SelectOption[] =>
     (categories.data?.filter((c) => c.type === type) ?? []).map((c) => ({
       value: c.id,
       label: c.name,
     }))
+  const resolveReviewForm = useCallback(
+    (message: Message): TxForm | undefined => {
+      if (!message.form) return undefined
+      const form = message.form
+      const categoryId =
+        form.category_id ||
+        findCategoryId(
+          message.extractedData?.category,
+          form.type,
+          `${message.extractedData?.description ?? ''} ${message.extractedData?.merchant_name ?? ''} ${form.description ?? ''}`,
+        ) ||
+        ''
+
+      return {
+        ...form,
+        wallet_id: form.wallet_id || defaultWalletId,
+        category_id: categoryId,
+      }
+    },
+    [defaultWalletId, findCategoryId],
+  )
+
+  useEffect(() => {
+    const defaultWallet = wallets.data?.find((w) => w.is_default)?.id ?? wallets.data?.[0]?.id
+    if (!defaultWallet) return
+    const timer = window.setTimeout(() => {
+      setSessions((prev) =>
+        prev.map((session) =>
+          ({
+            ...session,
+            messages: session.messages.map((message) =>
+              message.type === 'transaction-review' && message.form && !message.form.wallet_id && !message.saved
+                ? { ...message, form: { ...message.form, wallet_id: defaultWallet } }
+                : message,
+            ),
+          }),
+        ),
+      )
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [wallets.data])
+
+  useEffect(() => {
+    if (!categories.data?.length) return
+    const timer = window.setTimeout(() => {
+      setSessions((prev) =>
+        prev.map((session) =>
+          ({
+            ...session,
+            messages: session.messages.map((message) => {
+              if (
+                message.type !== 'transaction-review' ||
+                !message.form ||
+                message.form.category_id ||
+                !message.extractedData?.category ||
+                message.saved
+              ) {
+                return message
+              }
+              const categoryId = findCategoryId(
+                message.extractedData.category,
+                message.form.type,
+                `${message.extractedData.description ?? ''} ${message.extractedData.merchant_name ?? ''} ${message.form.description ?? ''}`,
+              )
+              return categoryId
+                ? { ...message, form: { ...message.form, category_id: categoryId } }
+                : message
+            }),
+          }),
+        ),
+      )
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [categories.data, findCategoryId])
 
   const examples = mode === 'nlp' ? NLP_EXAMPLES : CHAT_EXAMPLES
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-white md:h-[calc(100vh-4.5rem)]">
+    <div className="relative flex h-[calc(100dvh-8rem)] min-h-[680px] overflow-hidden rounded-2xl border border-white/80 bg-white/30 shadow-lg shadow-slate-200/30 backdrop-blur-xl">
+      {/* Background ambient glows */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl animate-pulse" />
+        <div className="absolute -right-20 bottom-10 h-[500px] w-[500px] rounded-full bg-violet-500/10 blur-3xl" style={{ animationDelay: '2s' }} />
+      </div>
       <ChatSidebar
         sessions={sessions}
         activeId={activeId}
@@ -1230,7 +1652,7 @@ export function FreeTextPage() {
       {/* Main panel */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 md:px-6">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/80 bg-white/40 px-4 py-3 md:px-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -1248,50 +1670,65 @@ export function FreeTextPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => handleNew(mode)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-brand-50 hover:text-brand-700"
-          >
-            <HiOutlinePencilSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">Chat baru</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={showHelp}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/80 bg-white/62 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl hover:bg-white hover:text-brand-700"
+            >
+              <HiOutlineQuestionMarkCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Help</span>
+            </button>
+            <button
+              onClick={() => handleNew(mode)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-brand-50 hover:text-brand-700"
+            >
+              <HiOutlinePencilSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Chat baru</span>
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
           <div className="mx-auto max-w-2xl space-y-5">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center py-10 text-center">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                  {mode === 'nlp' ? (
-                    <HiOutlineSparkles className="h-6 w-6 text-violet-500" />
-                  ) : (
-                    <HiOutlineChatBubbleLeftRight className="h-6 w-6 text-emerald-500" />
-                  )}
+              <div className="py-6">
+                <div className="mx-auto mb-8 max-w-lg rounded-2xl border border-white/80 bg-white/62 px-6 py-8 text-center shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+                  <AIAvatar />
+                  <p className="text-xs font-bold uppercase tracking-widest text-brand-600">
+                    SAKU AI
+                  </p>
+                  <h2 className="mt-2 text-xl font-extrabold text-slate-900">
+                    {mode === 'nlp'
+                      ? 'Catat Transaksi Instan lewat Chat'
+                      : 'Tanya Jawab & Dapatkan Analisis Keuangan'}
+                  </h2>
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    {mode === 'nlp'
+                      ? 'Tulis transaksi seperti chat biasa. AI akan membuat pratinjau sebelum disimpan.'
+                      : 'Tanyakan ringkasan, pola pengeluaran, atau saran hemat dari data keuanganmu.'}
+                  </p>
                 </div>
-                <h2 className="mb-1 text-sm font-semibold text-slate-800">
-                  {mode === 'nlp'
-                    ? 'NLP Mode — Pencatatan Cepat'
-                    : 'Chatbot Mode — Tanya Jawab'}
-                </h2>
-                <p className="mb-6 max-w-sm text-xs leading-relaxed text-slate-400">
-                  {mode === 'nlp'
-                    ? 'Tulis transaksi dalam bahasa sehari-hari. AI akan mengekstrak nominal, kategori, dan tipe otomatis.'
-                    : 'Tanya tentang keuangan kamu — saya akan menjawab dengan ringkas berdasarkan transaksi terakhir.'}
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {examples.map((ex, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setText(ex)
-                        textareaRef.current?.focus()
-                      }}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-brand-300 hover:bg-brand-50"
-                    >
-                      {ex}
-                    </button>
-                  ))}
+
+                <div>
+                  <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Coba ketuk contoh di bawah ini
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {examples.map((ex, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setText(ex)
+                          textareaRef.current?.focus()
+                        }}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 transition"
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1305,9 +1742,7 @@ export function FreeTextPage() {
                 )}
               >
                 {msg.role === 'assistant' && (
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                    AI
-                  </div>
+                  <AIAvatar />
                 )}
 
                 <div
@@ -1340,32 +1775,33 @@ export function FreeTextPage() {
                     />
                   )}
 
-                  {msg.type === 'transaction-review' && msg.extractedData && msg.form && (
-                    <TransactionReviewCard
-                      message={msg}
-                      walletOptions={walletOptions}
-                      categoryOptions={categoryOptions}
-                      isSaving={
-                        (savingMessageId === msg.id && saveMutation.isPending) ||
-                        (!!msg.batchId && bulkSavingBatchId === msg.batchId)
-                      }
-                      onSave={(form) => {
-                        setSavingMessageId(msg.id)
-                        saveMutation.mutate({
-                          form,
-                          extractedData: msg.extractedData,
-                          messageId: msg.id,
-                        })
-                      }}
-                      onReset={() =>
-                        updateActive((prev) => prev.filter((m) => m.id !== msg.id))
-                      }
-                      onFormChange={(form) => handleUpdateForm(msg.id, form)}
-                      onToggleSelect={
-                        msg.batchId ? () => handleToggleSelect(msg.id) : undefined
-                      }
-                    />
-                  )}
+                  {msg.type === 'transaction-review' && msg.extractedData && msg.form ? (() => {
+                    const resolvedForm = resolveReviewForm(msg)
+                    const resolvedMessage = resolvedForm ? { ...msg, form: resolvedForm } : msg
+                    return (
+                      <TransactionReviewCard
+                        message={resolvedMessage}
+                        walletOptions={walletOptions}
+                        categoryOptions={categoryOptions}
+                        isSaving={
+                          (savingMessageId === msg.id && saveMutation.isPending) ||
+                          (!!msg.batchId && bulkSavingBatchId === msg.batchId)
+                        }
+                        onSave={(form) => {
+                          setSavingMessageId(msg.id)
+                          saveMutation.mutate({
+                            form,
+                            extractedData: msg.extractedData,
+                            messageId: msg.id,
+                          })
+                        }}
+                        onFormChange={(form) => handleUpdateForm(msg.id, form)}
+                        onToggleSelect={
+                          msg.batchId ? () => handleToggleSelect(msg.id) : undefined
+                        }
+                      />
+                    )
+                  })() : null}
                 </div>
 
                 {msg.role === 'user' && (
@@ -1376,9 +1812,7 @@ export function FreeTextPage() {
 
             {isPending && (
               <div className="flex items-center gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                  AI
-                </div>
+                <AIAvatar />
                 <div className="flex items-center gap-1 rounded-2xl bg-slate-100 px-4 py-3">
                   <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
                   <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />

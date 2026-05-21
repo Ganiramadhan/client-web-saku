@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ProRoute } from '@/components/ProRoute'
 import { AppLayout } from '@/layouts/AppLayout'
 
 import { LandingPage } from '@/features/landing/pages/LandingPage'
-import { LoginPage, RegisterPage } from '@/features/auth/pages/AuthPages'
+import { ForgotPasswordPage, LoginPage, RegisterPage } from '@/features/auth/pages/AuthPages'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
@@ -17,7 +18,6 @@ import { FreeTextPage } from '@/features/ai/pages/FreeTextPage'
 import { AdminUsersPage } from '@/features/adminUsers/pages/AdminUsersPage'
 import { ProfilePage } from '@/features/account/pages/ProfilePage'
 import { SettingsPage } from '@/features/account/pages/SettingsPage'
-import { PlansPage } from '@/features/subscription/pages/PlansPage'
 import { ThanksPage } from '@/features/subscription/pages/ThanksPage'
 import { SubscribersPage } from '@/features/subscription/pages/SubscribersPage'
 import { SplitBillsListPage } from '@/features/split/pages/SplitBillsListPage'
@@ -32,6 +32,7 @@ export function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Authenticated workspace */}
       <Route
@@ -47,16 +48,18 @@ export function AppRoutes() {
         <Route path="transactions" element={<TransactionsListPage />} />
         <Route path="transactions/add" element={<AddTransactionPage />} />
         <Route path="transactions/:id" element={<TransactionDetailPage />} />
-        <Route path="scan-receipt" element={<ScanReceiptPage />} />
-        <Route path="free-text" element={<FreeTextPage />} />
-        <Route path="targets" element={<TargetsPage />} />
+        <Route path="scan-receipt" element={<ProRoute feature="scan"><ScanReceiptPage /></ProRoute>} />
+        <Route path="free-text" element={<ProRoute feature="chat"><FreeTextPage /></ProRoute>} />
+        <Route path="targets" element={<ProRoute feature="targets"><TargetsPage /></ProRoute>} />
+        <Route path="upcoming-billings" element={<ProfilePage defaultSection="billing" />} />
         <Route path="split-bills" element={<SplitBillsListPage />} />
         <Route path="split-bills/new" element={<SplitBillFormPage />} />
         <Route path="split-bills/:id" element={<SplitBillDetailPage />} />
         <Route path="split-bills/:id/edit" element={<SplitBillFormPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="subscription" element={<PlansPage />} />
+        <Route path="subscription" element={<Navigate to="/app/profile" replace />} />
+        <Route path="subscription/plans" element={<Navigate to="/app/profile" replace />} />
         <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
 
@@ -73,6 +76,7 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
 
       {/* Super Admin only */}

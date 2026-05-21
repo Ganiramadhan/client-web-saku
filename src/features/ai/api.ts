@@ -28,12 +28,29 @@ export const aiLogApi = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/ai-logs/${id}`)
   },
+  deleteMany: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    await api.post('/ai-logs/bulk-delete', { ids })
+  },
+  chatHistory: async (page = 1, limit = 50): Promise<{ data: AIProcessingLog[]; meta: APIMeta | null }> =>
+    unwrapList<AIProcessingLog>(
+      await api.get('/ai/chat-history', { params: { page, limit } }),
+    ),
+  nlpHistory: async (page = 1, limit = 50): Promise<{ data: AIProcessingLog[]; meta: APIMeta | null }> =>
+    unwrapList<AIProcessingLog>(
+      await api.get('/ai/nlp-history', { params: { page, limit } }),
+    ),
+  scanReceiptHistory: async (page = 1, limit = 100): Promise<{ data: AIProcessingLog[]; meta: APIMeta | null }> =>
+    unwrapList<AIProcessingLog>(
+      await api.get('/ai/scan-receipt-history', { params: { page, limit } }),
+    ),
 }
 
 
 export interface CategorizeRequest {
   text: string
   user_categories?: string[]
+  session_id?: string
 }
 
 export interface ScanReceiptRequest {
@@ -62,6 +79,7 @@ export interface ChatRequest {
   message: string
   include_context?: boolean
   history?: ChatHistoryTurn[]
+  session_id?: string
 }
 
 export const aiApi = {

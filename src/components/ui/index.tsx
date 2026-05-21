@@ -30,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60'
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]'
   const sizes: Record<ButtonSize, string> = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
@@ -38,13 +38,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   }
   const variants: Record<ButtonVariant, string> = {
     primary:
-      'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus:ring-brand-500/40',
+      'bg-brand-600 text-white shadow-lg shadow-brand-200/50 hover:bg-brand-700 focus:ring-brand-500/40',
     secondary:
-      'bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500/40',
+      'bg-slate-900 text-white shadow-lg shadow-slate-200/50 hover:bg-slate-800 focus:ring-slate-500/40',
     outline:
-      'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-300/40',
-    ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-300/40',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500/40',
+      'border border-white/80 bg-white/70 text-slate-700 shadow-sm backdrop-blur-xl hover:bg-white focus:ring-slate-300/40',
+    ghost: 'bg-white/0 text-slate-700 hover:bg-white/70 focus:ring-slate-300/40',
+    danger: 'bg-rose-600 text-white shadow-lg shadow-rose-200/50 hover:bg-rose-700 focus:ring-rose-500/40',
   }
   return (
     <button
@@ -83,11 +83,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition placeholder:text-slate-400',
+          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition placeholder:text-slate-400',
           'focus:outline-none focus:ring-2',
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
           className,
         )}
         {...rest}
@@ -119,11 +119,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       <select
         ref={ref}
         className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition',
+          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition',
           'focus:outline-none focus:ring-2',
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
           className,
         )}
         {...rest}
@@ -155,11 +155,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         ref={ref}
         rows={3}
         className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition',
+          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition',
           'focus:outline-none focus:ring-2',
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
           className,
         )}
         {...rest}
@@ -174,9 +174,16 @@ export function Card({ className, children, ...rest }: React.HTMLAttributes<HTML
   return (
     <div
       className={cn(
-        'rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200',
+        'rounded-2xl p-6 shadow-lg shadow-slate-200/35 backdrop-blur-2xl transition-all duration-300',
         className,
       )}
+      style={{
+        background: 'rgba(255, 255, 255, 0.64)',
+        backdropFilter: 'blur(28px) saturate(170%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(170%)',
+        border: '1px solid rgba(255, 255, 255, 0.86)',
+        boxShadow: '0 16px 44px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.92)',
+      }}
       {...rest}
     >
       {children}
@@ -228,8 +235,8 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200/60 bg-white/30 px-6 py-12 text-center backdrop-blur-md">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100/80 text-slate-400">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
       </div>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -252,8 +259,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+        <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">{title}</h1>
+        {subtitle ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">{subtitle}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
     </div>

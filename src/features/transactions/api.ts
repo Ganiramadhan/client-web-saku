@@ -27,6 +27,7 @@ export interface TransactionListQuery {
   wallet_id?: string
   category_id?: string
   type?: TransactionType
+  source?: TransactionSource
   from?: string
   to?: string
   q?: string

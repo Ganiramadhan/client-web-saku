@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 
 export interface AuthUser {
   id: string
@@ -14,9 +14,32 @@ export interface AuthUser {
 interface AuthState {
   token: string | null
   user: AuthUser | null
-  setSession: (token: string, user: AuthUser) => void
+  remember: boolean
+  setSession: (token: string, user: AuthUser, remember?: boolean) => void
   setUser: (user: AuthUser) => void
   clear: () => void
+}
+
+const AUTH_STORAGE_KEY = 'saku-admin-auth'
+
+const authStorage: StateStorage = {
+  getItem: (name) => localStorage.getItem(name) ?? sessionStorage.getItem(name),
+  setItem: (name, value) => {
+    let remember = true
+    try {
+      remember = Boolean(JSON.parse(value)?.state?.remember)
+    } catch {
+      remember = true
+    }
+    const target = remember ? localStorage : sessionStorage
+    const other = remember ? sessionStorage : localStorage
+    target.setItem(name, value)
+    other.removeItem(name)
+  },
+  removeItem: (name) => {
+    localStorage.removeItem(name)
+    sessionStorage.removeItem(name)
+  },
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,11 +47,15 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
-      setSession: (token, user) => set({ token, user }),
+      remember: true,
+      setSession: (token, user, remember = true) => set({ token, user, remember }),
       setUser: (user) => set({ user }),
-      clear: () => set({ token: null, user: null }),
+      clear: () => set({ token: null, user: null, remember: true }),
     }),
-    { name: 'saku-admin-auth' },
+    {
+      name: AUTH_STORAGE_KEY,
+      storage: createJSONStorage(() => authStorage),
+    },
   ),
 )
 

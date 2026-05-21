@@ -60,7 +60,7 @@ export function CategoriesPage() {
       />
 
       {/* Filter pills */}
-      <div className="mb-5 inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+      <div className="mb-5 inline-flex items-center gap-1 rounded-2xl border border-white/80 bg-white/65 p-1 shadow-sm backdrop-blur-xl">
         <FilterPill active={filter === ''} onClick={() => setFilter('')}>
           Semua ({all.length})
         </FilterPill>
@@ -81,7 +81,7 @@ export function CategoriesPage() {
           <EmptyState
             title={t.common.empty}
             description="Belum ada kategori. Tambahkan kategori untuk mengelompokkan transaksimu."
-            action={<Button onClick={() => { setEditing(null); setOpen(true) }}>+ {t.categories.newCategory}</Button>}
+            action={<Button leftIcon={<HiOutlinePlus className="h-4 w-4" />} onClick={() => { setEditing(null); setOpen(true) }}>{t.categories.newCategory}</Button>}
           />
         </Card>
       ) : (
@@ -129,7 +129,7 @@ function FilterPill({
     <button
       onClick={onClick}
       className={cn(
-        'rounded-lg px-3 py-1.5 text-xs font-semibold transition',
+        'cursor-pointer rounded-xl px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 active:scale-[0.98]',
         active
           ? 'bg-brand-600 text-white shadow-sm'
           : 'text-slate-600 hover:bg-slate-100',
@@ -166,7 +166,7 @@ function CategoryGroup({
         {items.map((c) => (
           <div
             key={c.id}
-            className="group flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
+            className="group flex items-start gap-3 rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/85 hover:shadow-lg"
           >
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
@@ -191,7 +191,7 @@ function CategoryGroup({
               <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
                 <button
                   onClick={() => onEdit(c)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+                  className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition hover:-translate-y-0.5 hover:bg-slate-100 hover:text-brand-700"
                   title={t.common.edit}
                 >
                   <HiOutlinePencilSquare className="h-4 w-4" />
@@ -206,7 +206,7 @@ function CategoryGroup({
                     })
                     if (ok) onRemove(c)
                   }}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                  className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-600"
                   title={t.common.delete}
                 >
                   <HiOutlineTrash className="h-4 w-4" />

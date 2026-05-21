@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ComponentType } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
@@ -6,6 +6,9 @@ import {
   HiOutlineTrash,
   HiOutlineUserPlus,
   HiOutlineShieldCheck,
+  HiOutlineUsers,
+  HiOutlineCheckCircle,
+  HiOutlineNoSymbol,
 } from 'react-icons/hi2'
 import { adminUserApi, type AdminUserPayload } from '@/features/adminUsers/api'
 import {
@@ -14,7 +17,7 @@ import {
   type SelectOption,
 } from '@/components/ui'
 import { useT } from '@/i18n'
-import { formatDate } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import type { AdminUser } from '@/types/api'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -47,6 +50,15 @@ export function AdminUsersPage() {
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => adminUserApi.update(id, { status }),
+    onSuccess: () => {
+      toast.success('Status user diperbarui')
+      qc.invalidateQueries({ queryKey: ['admin-users'] })
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
   const onDelete = async (u: AdminUser) => {
     const ok = await confirm({
       title: 'Hapus user?',
@@ -67,6 +79,16 @@ export function AdminUsersPage() {
       )
   }, [q.data?.data, currentUser?.id, roleFilter, statusFilter])
 
+  const stats = useMemo(() => {
+    const all = (q.data?.data ?? []).filter((u) => u.id !== currentUser?.id)
+    return {
+      total: all.length,
+      active: all.filter((u) => (u.status ?? 'active') === 'active').length,
+      suspended: all.filter((u) => u.status === 'suspended').length,
+      admin: all.filter((u) => u.role === 'admin' || u.role === 'super_admin').length,
+    }
+  }, [q.data?.data, currentUser?.id])
+
   const columns = useMemo<ColumnDef<AdminUser>[]>(
     () => [
       {
@@ -85,8 +107,14 @@ export function AdminUsersPage() {
         accessorFn: (u) => u.name,
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-emerald-500 text-sm font-semibold text-white">
-              {(row.original.name?.trim()?.[0] ?? '?').toUpperCase()}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+              {row.original.photo_url ? (
+                <img src={row.original.photo_url} alt={row.original.name} className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                  {(row.original.name?.trim()?.[0] ?? '?').toUpperCase()}
+                </span>
+              )}
             </div>
             <div>
               <div className="font-medium text-slate-900">{row.original.name}</div>
@@ -134,6 +162,25 @@ export function AdminUsersPage() {
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <button
+              onClick={() => statusMutation.mutate({
+                id: row.original.id,
+                status: row.original.status === 'suspended' ? 'active' : 'suspended',
+              })}
+              className={cn(
+                'rounded-md p-1.5 text-slate-500',
+                row.original.status === 'suspended'
+                  ? 'hover:bg-emerald-50 hover:text-emerald-700'
+                  : 'hover:bg-amber-50 hover:text-amber-700',
+              )}
+              title={row.original.status === 'suspended' ? 'Aktifkan' : 'Suspend'}
+            >
+              {row.original.status === 'suspended' ? (
+                <HiOutlineCheckCircle className="h-4 w-4" />
+              ) : (
+                <HiOutlineNoSymbol className="h-4 w-4" />
+              )}
+            </button>
+            <button
               onClick={() => { setEditing(row.original); setOpen(true) }}
               className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-700"
               title={t.common.edit}
@@ -167,11 +214,18 @@ export function AdminUsersPage() {
         }
       />
 
+      <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <UserStatCard label="Total User" value={stats.total} Icon={HiOutlineUsers} tone="blue" />
+        <UserStatCard label="Aktif" value={stats.active} Icon={HiOutlineCheckCircle} tone="emerald" />
+        <UserStatCard label="Suspended" value={stats.suspended} Icon={HiOutlineNoSymbol} tone="rose" />
+        <UserStatCard label="Admin" value={stats.admin} Icon={HiOutlineShieldCheck} tone="violet" />
+      </section>
+
       <DataTable
         data={filteredUsers}
         columns={columns}
         loading={q.isLoading}
-        searchPlaceholder={`${t.common.search} nama, email…`}
+        searchPlaceholder="Cari nama, email, atau nomor telepon..."
         emptyTitle={t.common.empty}
         emptyAction={
           <Button onClick={() => { setEditing(null); setOpen(true) }} leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}>
@@ -204,11 +258,55 @@ export function AdminUsersPage() {
                 onChange={(v) => setStatusFilter((v as StatusFilter) ?? 'all')}
               />
             </div>
+            {roleFilter !== 'all' || statusFilter !== 'all' ? (
+              <Button
+                variant="outline"
+                className="border-rose-100 !bg-white text-rose-700 hover:!bg-rose-50"
+                onClick={() => {
+                  setRoleFilter('all')
+                  setStatusFilter('all')
+                }}
+              >
+                Reset Filter
+              </Button>
+            ) : null}
           </>
         }
       />
 
       <UserModal key={editing?.id ?? 'new'} open={open} onClose={() => setOpen(false)} editing={editing} />
+    </div>
+  )
+}
+
+function UserStatCard({
+  label,
+  value,
+  Icon,
+  tone,
+}: {
+  label: string
+  value: number
+  Icon: ComponentType<{ className?: string }>
+  tone: 'blue' | 'emerald' | 'rose' | 'violet'
+}) {
+  const styles = {
+    blue: 'border-blue-100 bg-blue-50/55 text-blue-700',
+    emerald: 'border-emerald-100 bg-emerald-50/55 text-emerald-700',
+    rose: 'border-rose-100 bg-rose-50/55 text-rose-700',
+    violet: 'border-violet-100 bg-violet-50/55 text-violet-700',
+  }
+  return (
+    <div className="rounded-2xl border border-white/80 bg-white/58 p-4 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-extrabold text-slate-950">{value}</p>
+        </div>
+        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl border', styles[tone])}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -264,7 +362,7 @@ function UserModal({
     >
       <div className="space-y-4">
         <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-emerald-500 text-lg font-semibold text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white">
             {(form.name?.trim()?.[0] ?? '?').toUpperCase()}
           </div>
           <div className="min-w-0">

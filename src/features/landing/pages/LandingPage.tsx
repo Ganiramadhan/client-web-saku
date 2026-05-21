@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   HiOutlineBars3,
   HiOutlineChevronDown,
@@ -9,7 +10,6 @@ import {
   HiOutlineCheckCircle,
   HiOutlineDocumentCheck,
   HiOutlineEye,
-  HiOutlinePencilSquare,
 } from 'react-icons/hi2'
 import {
   RiBarChartGroupedFill,
@@ -40,7 +40,9 @@ import {
 } from 'react-icons/ri'
 import { Logo } from '@/components/Logo'
 import { useAuthStore } from '@/stores/authStore'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { useLocale, useT } from '@/i18n'
+import { subscriptionApi } from '@/features/subscription/api'
 
 function smoothScrollTo(id: string) {
   const el = document.getElementById(id)
@@ -51,20 +53,21 @@ function smoothScrollTo(id: string) {
 /* ─── Language Switcher ─────────────────────────────────────── */
 const LANGUAGES = [
   { code: 'id', label: 'Indonesia', flag: '🇮🇩' },
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'zh', label: '中文', flag: '🇨🇳' },
-  { code: 'ja', label: '日本語', flag: '🇯🇵' },
+  { code: 'en', label: 'English', flag: '🇺🇸' }
 ]
-
 function LanguageSwitcher() {
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(LANGUAGES[0])
+  const { locale, setLocale } = useLocale()
+  const active = LANGUAGES.find((lang) => lang.code === locale) ?? LANGUAGES[0]
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
     }
+
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -72,38 +75,145 @@ function LanguageSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
+        aria-label="Change language"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 transition-all hover:bg-white/60"
-        style={{ background: 'rgba(255,255,255,0.40)', border: '1px solid rgba(255,255,255,0.60)', backdropFilter: 'blur(12px)' }}
+        className={cn(
+          'group relative inline-flex items-center gap-2 overflow-hidden rounded-2xl px-3 py-2',
+          'text-xs font-bold text-slate-600 transition-all duration-300',
+          'hover:-translate-y-0.5 hover:text-blue-700 active:translate-y-0',
+          open && 'text-blue-700'
+        )}
+        style={{
+          background: open
+            ? 'linear-gradient(135deg, rgba(239,246,255,0.96), rgba(255,255,255,0.88))'
+            : 'linear-gradient(135deg, rgba(255,255,255,0.74), rgba(248,250,252,0.56))',
+          border: open
+            ? '1px solid rgba(96,165,250,0.75)'
+            : '1px solid rgba(226,232,240,0.9)',
+          backdropFilter: 'blur(22px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+          boxShadow: open
+            ? '0 14px 36px rgba(37,99,235,0.16), inset 0 1px 0 rgba(255,255,255,0.95)'
+            : '0 8px 22px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.85)',
+        }}
       >
-        <span>{active.flag}</span>
-        <span>{active.code.toUpperCase()}</span>
-        <HiOutlineChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
+        <span className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-400/10" />
+
+        <span className="relative grid h-6 w-6 place-items-center rounded-full bg-white/85 text-sm shadow-sm ring-1 ring-slate-200/70">
+          {active.flag}
+        </span>
+
+        <span className="relative tracking-[0.14em]">
+          {active.code.toUpperCase()}
+        </span>
+
+        <HiOutlineChevronDown
+          className={cn(
+            'relative h-3.5 w-3.5 text-slate-400 transition-all duration-300 group-hover:text-blue-600',
+            open && 'rotate-180 text-blue-600'
+          )}
+        />
       </button>
+
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-2xl shadow-2xl shadow-slate-200/80 z-50"
-          style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}
+          className={cn(
+            'absolute right-0 top-full z-50 mt-3 w-56 overflow-hidden rounded-[1.4rem] p-2',
+            'origin-top-right animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200'
+          )}
+          style={{
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92))',
+            backdropFilter: 'blur(34px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(34px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.96)',
+            boxShadow:
+              '0 28px 80px rgba(15,23,42,0.16), inset 0 1px 0 rgba(255,255,255,0.95)',
+          }}
         >
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => { setActive(lang); setOpen(false) }}
-              className={cn('flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors', active.code === lang.code ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50')}
-            >
-              <span className="text-base">{lang.flag}</span>
-              <span>{lang.label}</span>
-              {active.code === lang.code && <RiCheckLine className="ml-auto h-3.5 w-3.5 text-blue-500" />}
-            </button>
-          ))}
+          <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-blue-500/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-cyan-400/10 blur-2xl" />
+
+          <div className="relative px-3 pb-2 pt-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+              Select Language
+            </p>
+          </div>
+
+          <div className="relative space-y-1">
+            {LANGUAGES.map((lang) => {
+              const isActive = active.code === lang.code
+
+              return (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => {
+                    setLocale(lang.code as typeof locale)
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    'group/item flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm',
+                    'transition-all duration-300',
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
+                      : 'text-slate-600 hover:bg-white hover:text-blue-700 hover:shadow-sm'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'grid h-9 w-9 place-items-center rounded-2xl text-base transition-all duration-300',
+                      isActive
+                        ? 'bg-white/20 ring-1 ring-white/20'
+                        : 'bg-slate-50 ring-1 ring-slate-200/70 group-hover/item:bg-blue-50'
+                    )}
+                  >
+                    {lang.flag}
+                  </span>
+
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate font-bold">
+                      {lang.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em]',
+                        isActive ? 'text-blue-100' : 'text-slate-400'
+                      )}
+                    >
+                      {lang.code}
+                    </span>
+                  </span>
+
+                  <span
+                    className={cn(
+                      'grid h-6 w-6 place-items-center rounded-full transition-all duration-300',
+                      isActive
+                        ? 'scale-100 bg-white/20 opacity-100'
+                        : 'scale-75 opacity-0 group-hover/item:scale-100 group-hover/item:opacity-100'
+                    )}
+                  >
+                    {isActive ? (
+                      <RiCheckLine className="h-4 w-4 text-white" />
+                    ) : (
+                      <RiArrowRightLine className="h-3.5 w-3.5 text-blue-500" />
+                    )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
   )
 }
-
 /* ─── Main Page ─────────────────────────────────────────────── */
 export function LandingPage() {
+  const t = useT()
+  const { locale } = useLocale()
   const isAuthed = useAuthStore((s) => Boolean(s.token))
   const [navOpen, setNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -124,14 +234,14 @@ export function LandingPage() {
 
   const navLinks = [
     { href: 'home', label: 'Home' },
-    { href: 'features', label: 'Features' },
-    { href: 'how-it-works', label: 'How It Works' },
-    { href: 'pricing', label: 'Pricing' },
-    { href: 'faq', label: 'FAQ' },
+    { href: 'features', label: t.nav.features },
+    { href: 'how-it-works', label: locale === 'id' ? 'Cara Kerja' : 'How It Works' },
+    { href: 'pricing', label: t.nav.pricing },
+    { href: 'faq', label: t.nav.faq },
   ]
 
   return (
-    <div className="min-h-screen font-sans antialiased overflow-x-hidden" style={{ background: 'linear-gradient(135deg, #e8f4ff 0%, #f0f4ff 30%, #f5f0ff 60%, #e8fff5 100%)' }}>
+    <div className="app-surface min-h-screen overflow-x-hidden font-sans antialiased">
       {/* Animated ambient blobs */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-40 -left-20 h-[700px] w-[700px] rounded-full animate-[pulse_8s_ease-in-out_infinite]" style={{ background: 'radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 65%)' }} />
@@ -142,152 +252,177 @@ export function LandingPage() {
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
       </div>
 
-   {/* ── Floating Pill Navbar ── */}
-<header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 py-4">
-  <div className={cn('w-full transition-all duration-500', scrolled ? 'max-w-4xl' : 'max-w-5xl')}>
-    <div
-      className="flex items-center justify-between rounded-3xl px-4 py-2.5 transition-all duration-500"
-      style={{
-        background: scrolled ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.68)',
-        backdropFilter: 'blur(36px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.88)',
-        boxShadow: scrolled
-          ? '0 16px 48px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
-          : '0 8px 28px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
-      }}
-    >
-      <Logo />
+      {/* ── Floating Pill Navbar ── */}
+      <header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 py-4">
+        <div
+          className={cn(
+            'mx-auto w-full transition-all duration-500',
+            scrolled ? 'max-w-4xl' : 'max-w-5xl'
+          )}
+        >
+          <div
+            className="flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-500"
+            style={{
+              background: scrolled
+                ? 'rgba(255,255,255,0.88)'
+                : 'rgba(255,255,255,0.72)',
+              backdropFilter: 'blur(30px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.9)',
+              boxShadow: scrolled
+                ? '0 12px 40px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
+                : '0 8px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
+            }}
+          >
+            {/* Logo */}
+            <Logo />
 
-      <nav className="hidden items-center gap-1 lg:flex">
-        {navLinks.map((item) => {
-          const isActive = activeSection === item.href
+            {/* Desktop Navigation */}
+            <nav className="hidden items-center gap-1 lg:flex">
+              {navLinks.map((item) => {
+                const isActive = activeSection === item.href
 
-          return (
-            <button
-              key={item.href}
-              type="button"
-              onClick={() => smoothScrollTo(item.href)}
-              className={cn(
-                'group relative cursor-pointer rounded-2xl px-4 py-2 text-sm font-semibold transition-all duration-300',
-                isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
-                  : 'text-slate-500 hover:bg-white/80 hover:text-blue-700'
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => smoothScrollTo(item.href)}
+                    className={cn(
+                      'group relative cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300',
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/60'
+                        : 'text-slate-600 hover:bg-white/80 hover:text-blue-700'
+                    )}
+                  >
+                    {item.label}
+
+                    {!isActive && (
+                      <span className="absolute inset-x-4 -bottom-0.5 h-px scale-x-0 rounded-full bg-blue-500 transition-transform duration-300 group-hover:scale-x-100" />
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* Desktop Actions */}
+            <div className="hidden items-center gap-2 lg:flex">
+              <LanguageSwitcher />
+
+              {isAuthed ? (
+                <Link to="/app" className="cursor-pointer">
+                  <PrimaryBtn>
+                    Dashboard
+                    <RiArrowRightLine className="h-3.5 w-3.5" />
+                  </PrimaryBtn>
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700"
+                  >
+                    {t.nav.login}
+                  </Link>
+
+                  <Link to="/register" className="cursor-pointer">
+                    <PrimaryBtn>
+                      {t.auth.submitRegister}
+                      <RiArrowRightLine className="h-3.5 w-3.5" />
+                    </PrimaryBtn>
+                  </Link>
+                </>
               )}
-            >
-              {item.label}
+            </div>
 
-              {!isActive && (
-                <span className="absolute inset-x-4 -bottom-0.5 h-px scale-x-0 rounded-full bg-blue-500 transition-transform duration-300 group-hover:scale-x-100" />
+            {/* Mobile Toggle */}
+            <button
+              type="button"
+              onClick={() => setNavOpen((v) => !v)}
+              className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 lg:hidden"
+              style={{
+                border: '1px solid rgba(226,232,240,0.80)',
+              }}
+            >
+              {navOpen ? (
+                <HiOutlineXMark className="h-5 w-5" />
+              ) : (
+                <HiOutlineBars3 className="h-5 w-5" />
               )}
             </button>
-          )
-        })}
-      </nav>
+          </div>
 
-      <div className="hidden items-center gap-2 lg:flex">
-        <LanguageSwitcher />
-
-        {isAuthed ? (
-          <Link to="/app" className="cursor-pointer">
-            <PrimaryBtn>
-              Dashboard <RiArrowRightLine className="h-3.5 w-3.5" />
-            </PrimaryBtn>
-          </Link>
-        ) : (
-          <>
-            <Link
-              to="/login"
-              className="cursor-pointer rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition-all duration-300 hover:bg-white/80 hover:text-blue-700"
+          {/* Mobile Menu */}
+          {navOpen && (
+            <div
+              className="mt-2 overflow-hidden rounded-2xl p-3 lg:hidden"
+              style={{
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(30px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                border: '1px solid rgba(255,255,255,0.92)',
+                boxShadow:
+                  '0 20px 60px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.95)',
+              }}
             >
-              Login
-            </Link>
+              <div className="space-y-1">
+                {navLinks.map((item) => {
+                  const isActive = activeSection === item.href
 
-            <Link to="/register" className="cursor-pointer">
-              <PrimaryBtn>
-                Get Started <RiArrowRightLine className="h-3.5 w-3.5" />
-              </PrimaryBtn>
-            </Link>
-          </>
-        )}
-      </div>
+                  return (
+                    <button
+                      key={item.href}
+                      type="button"
+                      onClick={() => {
+                        smoothScrollTo(item.href)
+                        setNavOpen(false)
+                      }}
+                      className={cn(
+                        'flex w-full cursor-pointer items-center rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300',
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/60'
+                          : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
 
-      <button
-        type="button"
-        onClick={() => setNavOpen((v) => !v)}
-        className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 lg:hidden"
-        style={{ border: '1px solid rgba(226,232,240,0.80)' }}
-      >
-        {navOpen ? <HiOutlineXMark className="h-5 w-5" /> : <HiOutlineBars3 className="h-5 w-5" />}
-      </button>
-    </div>
+              <div className="mt-3 grid gap-2 border-t border-slate-200/70 pt-3">
+                {isAuthed ? (
+                  <Link to="/app" className="cursor-pointer">
+                    <PrimaryBtn className="w-full justify-center">
+                      Dashboard
+                    </PrimaryBtn>
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/login" className="cursor-pointer">
+                      <button
+                        type="button"
+                        className="w-full cursor-pointer rounded-xl py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
+                        style={{
+                          border: '1px solid rgba(226,232,240,0.80)',
+                          background: 'rgba(255,255,255,0.80)',
+                        }}
+                      >
+                        {t.nav.login}
+                      </button>
+                    </Link>
 
-    {navOpen && (
-      <div
-        className="mt-2 overflow-hidden rounded-3xl p-3 lg:hidden"
-        style={{
-          background: 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(36px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.92)',
-          boxShadow: '0 20px 60px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.95)',
-        }}
-      >
-        <div className="space-y-1">
-          {navLinks.map((item) => {
-            const isActive = activeSection === item.href
-
-            return (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => {
-                  smoothScrollTo(item.href)
-                  setNavOpen(false)
-                }}
-                className={cn(
-                  'flex w-full cursor-pointer items-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300',
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
-                    : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                    <Link to="/register" className="cursor-pointer">
+                      <PrimaryBtn className="w-full justify-center">
+                        {t.auth.submitRegister}
+                      </PrimaryBtn>
+                    </Link>
+                  </>
                 )}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="mt-3 grid gap-2 border-t border-slate-200/70 pt-3">
-          {isAuthed ? (
-            <Link to="/app" className="cursor-pointer">
-              <PrimaryBtn className="w-full justify-center">Dashboard</PrimaryBtn>
-            </Link>
-          ) : (
-            <>
-              <Link to="/login" className="cursor-pointer">
-                <button
-                  type="button"
-                  className="w-full cursor-pointer rounded-2xl py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
-                  style={{
-                    border: '1px solid rgba(226,232,240,0.80)',
-                    background: 'rgba(255,255,255,0.80)',
-                  }}
-                >
-                  Login
-                </button>
-              </Link>
-
-              <Link to="/register" className="cursor-pointer">
-                <PrimaryBtn className="w-full justify-center">Get Started</PrimaryBtn>
-              </Link>
-            </>
+              </div>
+            </div>
           )}
         </div>
-      </div>
-    )}
-  </div>
-</header>
+      </header>
 
       <main className="relative z-10 pt-24">
         <Hero isAuthed={isAuthed} />
@@ -301,18 +436,13 @@ export function LandingPage() {
   )
 }
 
-// /* ─── Primitives ────────────────────────────────────────────── */
-// function GlassCard({ className, children, style }: { className?: string; children: React.ReactNode; style?: React.CSSProperties }) {
-//   return (
-//     <div className={cn('rounded-2xl', className)} style={{ background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)', border: '1px solid rgba(255,255,255,0.90)', boxShadow: '0 4px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95)', ...style }}>
-//       {children}
-//     </div>
-//   )
-// }
+function isActiveSub(sub: Awaited<ReturnType<typeof subscriptionApi.active>> | null | undefined) {
+  return sub?.status === 'active' || sub?.status === 'trialing'
+}
 
 function PrimaryBtn({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   return (
-    <button onClick={onClick} className={cn('group inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-sm font-bold text-white transition-all duration-200 shadow-md shadow-blue-200/60 hover:shadow-lg hover:shadow-blue-300/50 hover:-translate-y-px active:translate-y-0', className)}>
+    <button onClick={onClick} className={cn('group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-200/60 transition-all duration-200 hover:-translate-y-px hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-300/50 active:translate-y-0', className)}>
       {children}
     </button>
   )
@@ -320,34 +450,35 @@ function PrimaryBtn({ children, className, onClick }: { children: React.ReactNod
 
 /* ─── Hero ─────────────────────────────────────────────────── */
 function Hero({ isAuthed }: { isAuthed: boolean }) {
+  const t = useT()
   return (
-    <section id="home" className="relative py-16 sm:py-24 overflow-hidden">
+    <section id="home" className="relative overflow-hidden py-16 sm:py-24">
       <div className="relative mx-auto grid max-w-7xl gap-14 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-10 lg:px-8">
         <div className="animate-[fadeInUp_0.7s_ease_forwards]">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-blue-700" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.70)', boxShadow: '0 2px 12px rgba(59,130,246,0.10)' }}>
             <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
-            AI-Powered Personal Finance
+            {t.landing.heroEyebrow}
           </div>
           <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-[3.8rem] leading-[1.06]">
-            Smarter way to<br />
+            {t.landing.heroTitle.split(' ').slice(0, -2).join(' ')}<br />
             <span className="relative inline-block">
-              <span className="text-blue-600">manage money.</span>
+              <span className="text-brand-600">{t.landing.heroTitle.split(' ').slice(-2).join(' ')}</span>
               <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 280 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M2 7.5C50 3 100 1.5 140 3C180 4.5 230 6 278 4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.5"/>
               </svg>
             </span>
           </h1>
           <p className="mt-7 max-w-md text-base leading-7 text-slate-500 sm:text-[17px]">
-            SAKU combines AI chat recording, receipt scanning, split bills, budget tracking, and spending insights — all in one beautifully designed dashboard.
+            {t.landing.heroDesc}
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link to={isAuthed ? '/app' : '/register'}>
-              <button className="group inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-7 py-3.5 text-sm font-bold text-white transition-all duration-200 shadow-xl shadow-blue-200/60 hover:-translate-y-0.5">
-                Start for Free <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <button className="group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-brand-200/60 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-500">
+                {t.landing.ctaPrimary} <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </button>
             </Link>
             <button onClick={() => smoothScrollTo('how-it-works')} className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all duration-200" style={{ background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(16px)', border: '1px solid rgba(226,232,240,0.80)' }}>
-              See How It Works
+              {t.landing.ctaSecondary}
             </button>
           </div>
           <div className="mt-10 flex flex-wrap gap-3">
@@ -387,7 +518,7 @@ function HeroPreview() {
   return (
     <div className="relative" style={{ animation: 'floatY 6s ease-in-out infinite' }}>
       <div className="pointer-events-none absolute inset-[-40px] -z-10 rounded-[3rem] opacity-60 blur-3xl" style={{ background: 'radial-gradient(ellipse, #bfdbfe 0%, #e0e7ff 50%, transparent 75%)' }} />
-      <div className="rounded-3xl p-1.5" style={{ background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(0,0,0,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
+      <div className="rounded-2xl p-1.5" style={{ background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(0,0,0,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
         <div className="rounded-[1.4rem] p-5" style={{ background: 'rgba(248,250,255,0.88)' }}>
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
@@ -479,6 +610,7 @@ function TxRow({ icon, title, cat, amount, positive = false }: { icon: string; t
 
 /* ─── Features ──────────────────────────────────────────────── */
 function Features() {
+  const t = useT()
   const features = [
     {
       Icon: RiChatSmile3Line,
@@ -572,9 +704,9 @@ function Features() {
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          label="Features"
-          title="Everything you need"
-          description="Modern AI tools designed to simplify your financial management experience."
+          label={t.nav.features}
+          title={t.landing.featuresTitle}
+          description={t.landing.featuresSubtitle}
         />
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -650,6 +782,7 @@ function Features() {
 
 /* ─── How It Works ──────────────────────────────────────────── */
 function HowItWorks() {
+  const { locale } = useLocale()
   const [activeTab, setActiveTab] = useState<'nlp' | 'chat' | 'receipt'>('nlp')
 
   const tabs = [
@@ -667,9 +800,9 @@ function HowItWorks() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          label="How It Works"
-          title="Track your money in smarter ways"
-          description="Use AI chat, financial insights, or receipt scanning to record and understand your spending faster."
+          label={locale === 'id' ? 'Cara Kerja' : 'How It Works'}
+          title={locale === 'id' ? 'Catat uang dengan cara yang lebih pintar' : 'Track your money in smarter ways'}
+          description={locale === 'id' ? 'Gunakan chat AI, insight keuangan, atau scan struk untuk mencatat dan memahami pengeluaran lebih cepat.' : 'Use AI chat, financial insights, or receipt scanning to record and understand your spending faster.'}
         />
 
         <div className="mt-10 flex justify-center">
@@ -1363,62 +1496,133 @@ function ReceiptSection() {
 }
 
 /* ─── Pricing ───────────────────────────────────────────────── */
+function translatePlanFeature(feature: string, locale: string): string {
+  if (locale === 'id') return feature
+  const map: Record<string, string> = {
+    'Pencatatan transaksi manual': 'Manual transaction tracking',
+    '2 dompet': '2 wallets',
+    'Kategori dasar': 'Basic categories',
+    'Semua fitur Free': 'Everything in Free',
+    'Scan struk dengan AI': 'AI receipt scanning',
+    'Catat via AI (free text)': 'AI free-text transaction entry',
+    'Dompet & kategori tanpa batas': 'Unlimited wallets and categories',
+    'Kantong Tujuan': 'Savings goals',
+    'Anggaran bulanan': 'Monthly budgets',
+    'Semua fitur Pro': 'Everything in Pro',
+    'Budget Tracker lanjutan': 'Advanced budget tracker',
+    'Lampiran & arsip': 'Attachments and archive',
+    'Export Excel': 'Excel export',
+    'Prioritas support': 'Priority support',
+  }
+  return map[feature] ?? feature
+}
+
 function Pricing({ isAuthed }: { isAuthed: boolean }) {
-  const plans = [
+  const t = useT()
+  const { locale } = useLocale()
+  const navigate = useNavigate()
+  const plansQ = useQuery({
+    queryKey: ['landing', 'subscription-plans'],
+    queryFn: subscriptionApi.listPlans,
+  })
+  const activeQ = useQuery({
+    queryKey: ['subscription', 'active'],
+    queryFn: subscriptionApi.active,
+    enabled: isAuthed,
+    staleTime: 60 * 1000,
+  })
+  const checkoutM = useMutation({
+    mutationFn: (planCode: string) => subscriptionApi.checkout(planCode),
+    onSuccess: (checkout) => {
+      window.location.href = checkout.redirect_url
+    },
+  })
+  const fallbackPlans = [
     {
-      name: 'Free',
-      price: 'Rp 0',
+      name: t.landing.planFreeName,
+      price: t.landing.planFreePrice,
       period: '',
       badge: null,
-      desc: 'Basic tools to start tracking your money.',
-      features: [
-        'Manual transaction recording',
-        'Basic wallet management',
-        'Monthly spending summary',
-        'Web & mobile access',
-      ],
-      cta: 'Get Started Free',
+      desc: locale === 'id' ? 'Fitur dasar untuk mulai mencatat arus kas harian.' : 'Core tools to start tracking daily cashflow.',
+      features: locale === 'id'
+        ? ['Input transaksi manual', 'Dompet utama', 'Ringkasan bulanan', 'Akses web responsif']
+        : ['Manual transaction entry', 'Primary wallet', 'Monthly summary', 'Responsive web access'],
+      cta: t.landing.ctaPrimary,
       tier: 'free',
     },
     {
       name: 'Pro',
-      price: 'Rp 29.000',
-      period: '/ month',
-      badge: 'Most Popular',
-      desc: 'AI-powered finance tracking for daily use.',
-      features: [
-        'Everything in Free',
-        'AI chat recording',
-        'Receipt scanning',
-        'Auto-categorization',
-        'Budget alerts',
-        'Split bills',
-        'AI insights',
-        'Unlimited wallets',
-      ],
-      cta: 'Start Pro',
+      price: t.landing.planProPrice,
+      period: t.landing.perMonth,
+      badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
+      desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
+      features: locale === 'id'
+        ? ['Semua fitur Starter', 'Catat transaksi via AI', 'Scan struk', 'Bantu kategori otomatis', 'Budget dan target', 'Split bill', 'Insight pengeluaran', 'Dompet lebih fleksibel']
+        : ['Everything in Starter', 'AI transaction entry', 'Receipt scanning', 'Assisted categorization', 'Budgets and goals', 'Split bills', 'Spending insights', 'More flexible wallets'],
+      cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
       tier: 'pro',
     },
     {
       name: 'Premium',
-      price: 'Rp 99.000',
-      period: '/ month',
+      price: t.landing.planBizPrice,
+      period: t.landing.perMonth,
       badge: null,
-      desc: 'Advanced tools for deeper financial control.',
-      features: [
-        'Everything in Pro',
-        'Family sharing',
-        'Advanced analytics',
-        'Custom reports',
-        'Tax export',
-        'Investment tracking',
-        'Priority support',
-        'Early access',
-      ],
-      cta: 'Start Premium',
+      desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
+      features: locale === 'id'
+        ? ['Semua fitur Pro', 'Kolaborasi keluarga atau tim', 'Analitik lanjutan', 'Laporan kustom', 'Ekspor data', 'Dukungan prioritas', 'Akses fitur awal']
+        : ['Everything in Pro', 'Family or team collaboration', 'Advanced analytics', 'Custom reports', 'Data export', 'Priority support', 'Early feature access'],
+      cta: locale === 'id' ? 'Mulai Premium' : 'Start Premium',
       tier: 'premium',
     },
   ]
+  const planCopy: Record<string, { desc: string; cta: string; badge: string | null }> = {
+    free: {
+      desc: locale === 'id' ? 'Fitur dasar untuk mulai mencatat arus kas harian.' : 'Core tools to start tracking daily cashflow.',
+      cta: t.landing.ctaPrimary,
+      badge: null,
+    },
+    pro: {
+      desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
+      cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
+      badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
+    },
+    premium: {
+      desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
+      cta: locale === 'id' ? 'Mulai Premium' : 'Start Premium',
+      badge: null,
+    },
+  }
+  const plans = plansQ.data && plansQ.data.length > 0
+    ? plansQ.data
+        .filter((plan) => plan.period === 'monthly' && plan.is_active)
+        .map((plan) => ({
+          name: plan.name,
+          price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(plan.price, plan.currency),
+          period: plan.price <= 0 ? '' : t.landing.perMonth,
+          badge: planCopy[plan.code]?.badge ?? null,
+          desc: planCopy[plan.code]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
+          features: plan.features.map((feature) => translatePlanFeature(feature, locale)),
+          cta: planCopy[plan.code]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
+          tier: plan.code,
+        }))
+    : fallbackPlans
+
+  const handlePlanClick = (plan: (typeof plans)[number]) => {
+    if (String(plan.tier).includes('premium')) return
+    if (!isAuthed) {
+      navigate('/register')
+      return
+    }
+    if (isActiveSub(activeQ.data)) {
+      navigate('/app/profile')
+      return
+    }
+    if (plan.tier === 'free') {
+      navigate('/app/profile')
+      return
+    }
+    checkoutM.mutate(String(plan.tier))
+  }
 
   return (
     <section id="pricing" className="relative overflow-hidden py-20 sm:py-28">
@@ -1429,14 +1633,15 @@ function Pricing({ isAuthed }: { isAuthed: boolean }) {
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          label="Pricing"
-          title="Pick the perfect plan for your financial journey"
-          description="Start free, upgrade anytime, and only pay when you need more power."
+          label={t.nav.pricing}
+          title={t.landing.pricingTitle}
+          description={t.landing.pricingSubtitle}
         />
 
         <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
           {plans.map((plan) => {
             const isPro = plan.tier === 'pro'
+            const isPremium = String(plan.tier).includes('premium')
 
             return (
               <div
@@ -1512,25 +1717,30 @@ function Pricing({ isAuthed }: { isAuthed: boolean }) {
                   ))}
                 </ul>
 
-                <Link
-                  to={isAuthed ? '/app/subscription' : '/register'}
+                <button
+                  type="button"
+                  disabled={isPremium || checkoutM.isPending}
+                  onClick={() => handlePlanClick(plan)}
                   className={cn(
                     'relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
+                    isPremium && 'cursor-not-allowed opacity-60',
                     isPro
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-500 hover:shadow-blue-300'
                       : 'border border-slate-200 bg-white/80 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
                   )}
                 >
                   {isPro && <RiFlashlightLine className="h-4 w-4" />}
-                  {plan.cta}
-                </Link>
+                  {checkoutM.isPending && isPro
+                    ? (locale === 'id' ? 'Memproses...' : 'Processing...')
+                    : isPremium ? (locale === 'id' ? 'Belum Tersedia' : 'Coming Soon') : plan.cta}
+                </button>
               </div>
             )
           })}
         </div>
 
         <div className="mt-10 flex flex-wrap justify-center gap-5 text-sm text-slate-500">
-          {['No credit card', 'Cancel anytime', 'Instant access'].map((item) => (
+          {(locale === 'id' ? ['Mulai dari gratis', 'Upgrade kapan saja', 'Akses langsung'] : ['Start for free', 'Upgrade anytime', 'Instant access']).map((item) => (
             <span key={item} className="inline-flex items-center gap-2">
               <RiCheckLine className="h-4 w-4 text-emerald-500" />
               {item}
@@ -1543,30 +1753,32 @@ function Pricing({ isAuthed }: { isAuthed: boolean }) {
 }
 /* ─── FAQ ───────────────────────────────────────────────────── */
 function FAQ() {
+  const t = useT()
+  const { locale } = useLocale()
   const items = [
     {
-      q: 'Is SAKU free?',
-      a: 'Yes. You can use the Free plan to track transactions manually. Upgrade anytime for AI chat, receipt scanning, and deeper insights.',
+      q: t.landing.faq4q,
+      a: t.landing.faq4a,
     },
     {
-      q: 'How does AI chat recording work?',
-      a: "Type naturally, like 'coffee 25k' or 'gojek 18 ribu'. SAKU extracts the details and shows a preview before saving.",
+      q: t.landing.faq2q,
+      a: t.landing.faq2a,
     },
     {
-      q: 'Is my financial data secure?',
-      a: 'Yes. SAKU is built with secure infrastructure, encrypted communication, and privacy-focused data protection.',
+      q: t.landing.faq1q,
+      a: t.landing.faq1a,
     },
     {
-      q: 'Can I manage multiple wallets?',
-      a: 'Yes. You can manage cash, bank accounts, e-wallets, and other wallets from one dashboard.',
+      q: t.landing.faq3q,
+      a: t.landing.faq3a,
     },
     {
-      q: 'How do split bills work?',
-      a: 'Add shared expenses, let SAKU calculate who owes what, and track each settlement clearly.',
+      q: locale === 'id' ? 'Bagaimana cara kerja split bill?' : 'How do split bills work?',
+      a: locale === 'id' ? 'Masukkan pengeluaran bersama, lalu SAKU membantu membagi nominal dan melacak status pembayaran setiap peserta.' : 'Add shared expenses, let SAKU calculate who owes what, and track each settlement clearly.',
     },
     {
-      q: 'Can I cancel anytime?',
-      a: 'Yes. You can stay on Free or upgrade when needed. There is no long-term lock-in.',
+      q: locale === 'id' ? 'Apakah bisa upgrade kapan saja?' : 'Can I upgrade anytime?',
+      a: locale === 'id' ? 'Bisa. Kamu dapat memakai Starter dulu, lalu upgrade ke Pro saat membutuhkan fitur AI dan kapasitas tambahan.' : 'Yes. You can stay on Starter first, then upgrade to Pro when you need AI features and extra capacity.',
     },
   ]
 
@@ -1581,9 +1793,9 @@ function FAQ() {
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          label="FAQ"
-          title="Frequently asked questions"
-          description="Clear answers about SAKU features, pricing, security, and daily usage."
+          label={t.nav.faq}
+          title={t.landing.faqTitle}
+          description={t.landing.featuresSubtitle}
         />
 
         <div className="mt-10 space-y-4">
@@ -1677,11 +1889,13 @@ function FAQ() {
 
 /* ─── Footer ────────────────────────────────────────────────── */
 function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
+  const t = useT()
+  const { locale } = useLocale()
   const productLinks = [
-    { label: 'Features', id: 'features' },
-    { label: 'How It Works', id: 'how-it-works' },
-    { label: 'Pricing', id: 'pricing' },
-    { label: 'FAQ', id: 'faq' },
+    { label: t.nav.features, id: 'features' },
+    { label: locale === 'id' ? 'Cara Kerja' : 'How It Works', id: 'how-it-works' },
+    { label: t.nav.pricing, id: 'pricing' },
+    { label: t.nav.faq, id: 'faq' },
   ]
 
   const supportLinks = [
@@ -1721,8 +1935,7 @@ function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
             <Logo />
 
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-500">
-              SAKU helps you track transactions, scan receipts, monitor budgets,
-              split bills, and understand your spending with AI-powered insights.
+              {t.landing.footerTagline}
             </p>
 
             <div className="mt-6 flex items-center gap-2">
@@ -1743,7 +1956,7 @@ function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
             </div>
           </div>
 
-          <FooterColumn title="Product">
+          <FooterColumn title={t.landing.footerProduct}>
             {productLinks.map((link) => (
               <button
                 key={link.label}
@@ -1768,7 +1981,7 @@ function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
             ))}
           </FooterColumn>
 
-          <FooterColumn title="Legal">
+          <FooterColumn title={t.landing.footerLegal}>
             {legalLinks.map((link) => (
               <a
                 key={link.label}
@@ -1782,8 +1995,8 @@ function Footer({ onNavClick }: { onNavClick: (id: string) => void }) {
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-4 border-t border-slate-200/70 pt-6 text-xs text-slate-400 md:flex-row">
-          <p>© {new Date().getFullYear()} SAKU. All rights reserved.</p>
-          <p>Built for smarter personal finance management.</p>
+          <p>{t.landing.footerRights}</p>
+          <p>{t.landing.footerTagline}</p>
         </div>
       </div>
     </footer>

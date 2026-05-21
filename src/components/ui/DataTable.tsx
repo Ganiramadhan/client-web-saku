@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -49,15 +49,22 @@ export function DataTable<T>({
   onRowClick,
 }: DataTableProps<T>) {
   const [globalFilter, setGlobalFilter] = useState('')
+  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState('')
   const [sorting, setSorting] = useState<SortingState>([])
 
   const safeData = useMemo(() => data ?? [], [data])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedGlobalFilter(globalFilter), 250)
+    return () => window.clearTimeout(timer)
+  }, [globalFilter])
+
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: safeData,
     columns,
-    state: { globalFilter, sorting },
-    onGlobalFilterChange: setGlobalFilter,
+    state: { globalFilter: debouncedGlobalFilter, sorting },
+    onGlobalFilterChange: setDebouncedGlobalFilter,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -74,22 +81,22 @@ export function DataTable<T>({
   const end = Math.min(totalRows, (pageIndex + 1) * pageSize)
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-2xl border border-white/80 bg-white/58 shadow-lg shadow-slate-200/40 backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 border-b border-white/70 bg-white/35 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="w-full rounded-xl border border-white/80 bg-white/75 py-2 pl-9 pr-9 text-sm shadow-sm transition focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
           {globalFilter ? (
             <button
               type="button"
               onClick={() => setGlobalFilter('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-white hover:text-slate-700"
             >
               <HiOutlineXMark className="h-4 w-4" />
             </button>
@@ -113,7 +120,7 @@ export function DataTable<T>({
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="border-b border-slate-100 bg-slate-50/60 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="border-b border-white/70 bg-white/45 text-left text-xs uppercase tracking-wide text-slate-500">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((h) => {
@@ -146,13 +153,13 @@ export function DataTable<T>({
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/65">
               {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
                   className={cn(
-                    'hover:bg-slate-50/60',
-                    onRowClick && 'cursor-pointer transition-colors hover:bg-brand-50/40',
+                    'transition-colors hover:bg-white/35',
+                    onRowClick && 'cursor-pointer hover:bg-brand-50/45',
                   )}
                   onClick={
                     onRowClick
@@ -177,14 +184,14 @@ export function DataTable<T>({
       )}
 
       {!disablePagination && totalRows > 0 ? (
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-white/70 bg-white/30 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-slate-500">
               <span>Tampilkan</span>
               <select
                 value={pageSize}
                 onChange={(e) => table.setPageSize(Number(e.target.value))}
-                className="rounded-md border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="rounded-md border border-white/80 bg-white/80 px-1.5 py-1 text-xs text-slate-700 shadow-sm focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               >
                 {[5, 10, 25, 50, 100].map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -283,7 +290,7 @@ function PageBtn({
         'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-xs font-medium transition',
         active
           ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
-          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+          : 'border-white/80 bg-white/70 text-slate-600 hover:bg-white',
         disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
       )}
     >

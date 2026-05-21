@@ -81,7 +81,7 @@ export function PlansPage() {
   const snapLoadedRef = useRef(false)
 
 
-  const allowedPrefixes = ['free', 'pro']
+  const allowedPrefixes = ['free', 'pro', 'premium']
   const allPlans = useMemo(
     () => (plansQ.data ?? []).filter((p) => allowedPrefixes.some((pref) => p.code === pref || p.code.startsWith(pref + '_'))),
     [plansQ.data],
@@ -95,6 +95,10 @@ export function PlansPage() {
   }, [])
 
   async function handleSubscribe(plan: Plan) {
+    if (plan.code.includes('premium')) {
+      toast.info('Paket Premium belum tersedia untuk checkout.')
+      return
+    }
     if (plan.price <= 0) {
       toast.info('Paket gratis aktif otomatis')
       return
@@ -116,7 +120,7 @@ export function PlansPage() {
       }
 
       window.snap.pay(checkout.snap_token, {
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           // Surface a dedicated confirmation screen instead of just a toast so
           // the user has a clear "done" moment after returning from Snap.
@@ -125,6 +129,7 @@ export function PlansPage() {
               ? String((result as { order_id?: unknown }).order_id ?? '')
               : ''
           const qs = orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''
+          if (orderId) await subscriptionApi.confirm(orderId)
           navigate(`/app/subscription/thanks${qs}`)
         },
         onPending: () => {
@@ -144,14 +149,25 @@ export function PlansPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-10 sm:py-10">
+      <section
+        className="relative overflow-hidden rounded-3xl px-6 py-8 sm:px-10 sm:py-10"
+        style={{
+          background: 'rgba(255,255,255,0.68)',
+          backdropFilter: 'blur(32px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.9)',
+          boxShadow: '0 16px 48px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.95)',
+        }}
+      >
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 h-64 w-64 rounded-full bg-emerald-300/20 blur-3xl" />
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
             <HiOutlineSparkles className="h-4 w-4" />
             SAKU Pro — semua fitur dalam satu paket
           </div>
 
-          <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
             Pilih paket yang sesuai untuk kebutuhan finansialmu
           </h1>
 
@@ -214,15 +230,15 @@ export function PlansPage() {
 
       {hasYearly && (
         <div className="flex justify-center">
-          <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-2xl border border-white/80 bg-white/70 p-1 shadow-sm backdrop-blur-xl">
             <button
               type="button"
               onClick={() => setPeriod('monthly')}
               className={cn(
                 'rounded-xl px-5 py-2 text-sm font-semibold transition',
                 period === 'monthly'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950',
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                  : 'text-slate-600 hover:bg-white/80 hover:text-blue-700',
               )}
             >
               Bulanan
@@ -234,8 +250,8 @@ export function PlansPage() {
               className={cn(
                 'rounded-xl px-5 py-2 text-sm font-semibold transition',
                 period === 'yearly'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950',
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                  : 'text-slate-600 hover:bg-white/80 hover:text-blue-700',
               )}
             >
               Tahunan
@@ -268,21 +284,32 @@ export function PlansPage() {
             const isActive = active?.plan_code === plan.code
             const isFree = plan.price <= 0
             const isPro = plan.code === 'pro' || plan.code === 'pro_yearly'
+            const isPremium = plan.code.includes('premium')
             const isBusy = busyCode === plan.code
 
             return (
               <article
                 key={plan.id}
-                className={cn(
-                  'relative flex h-full flex-col rounded-3xl border bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md',
-                  isPro ? 'border-slate-900' : 'border-slate-200',
-                )}
+                className="relative flex h-full flex-col overflow-hidden rounded-3xl p-6 transition duration-300 hover:-translate-y-2"
+                style={{
+                  background: isPro ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.64)',
+                  backdropFilter: 'blur(32px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+                  border: isPro ? '1px solid rgba(59,130,246,0.35)' : '1px solid rgba(255,255,255,0.90)',
+                  boxShadow: isPro
+                    ? '0 24px 70px rgba(59,130,246,0.18), inset 0 1px 0 rgba(255,255,255,0.95)'
+                    : '0 8px 28px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
+                }}
               >
-                {isPro && (
+                <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-blue-300/20 blur-3xl" />
+                {(isPro || isPremium) && (
                   <div className="absolute right-5 top-5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-lg',
+                      isPremium ? 'bg-slate-500 shadow-slate-200' : 'bg-blue-600 shadow-blue-200',
+                    )}>
                       <HiOutlineStar className="h-3.5 w-3.5" />
-                      Populer
+                      {isPremium ? 'Segera' : 'Populer'}
                     </span>
                   </div>
                 )}
@@ -294,7 +321,7 @@ export function PlansPage() {
                       isFree
                         ? 'bg-slate-100 text-slate-600'
                         : isPro
-                        ? 'bg-brand-50 text-brand-700'
+                        ? 'bg-blue-50 text-blue-700'
                         : 'bg-amber-50 text-amber-600',
                     )}
                   >
@@ -332,12 +359,12 @@ export function PlansPage() {
 
                   {!isFree && !isActive && (
                     <p className="mt-2 text-xs text-slate-500">
-                      Aktif segera setelah pembayaran berhasil. Batal kapan saja.
+                      {isPremium ? 'Paket ini sedang disiapkan dan belum bisa dipilih.' : 'Aktif segera setelah pembayaran berhasil. Batal kapan saja.'}
                     </p>
                   )}
                 </div>
 
-                <div className="my-6 h-px bg-slate-100" />
+                <div className="my-6 h-px bg-slate-200/70" />
 
                 <ul className="flex-1 space-y-3 text-sm text-slate-700">
                   {plan.features.map((feature) => (
@@ -352,16 +379,18 @@ export function PlansPage() {
 
                 <Button
                   onClick={() => handleSubscribe(plan)}
-                  disabled={isActive || isBusy}
+                  disabled={isActive || isBusy || isPremium}
                   className={cn(
                     'mt-7 w-full justify-center gap-2 rounded-xl',
                     isPro
-                      ? 'bg-slate-900 text-white hover:bg-slate-800'
+                      ? '!bg-blue-600 text-white shadow-lg shadow-blue-200/70 hover:!bg-blue-500'
                       : 'bg-white text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50',
                   )}
                 >
                   {isActive
                     ? 'Paket Saat Ini'
+                    : isPremium
+                    ? 'Belum Tersedia'
                     : isBusy
                     ? 'Memproses…'
                     : isFree
@@ -378,7 +407,7 @@ export function PlansPage() {
         </div>
       )}
 
-      <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-3">
+      <section className="grid gap-4 rounded-3xl border border-white/80 bg-white/60 p-6 shadow-sm backdrop-blur-xl md:grid-cols-3">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
             <HiOutlineShieldCheck className="h-5 w-5" />

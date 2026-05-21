@@ -1,16 +1,16 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brand-50:  #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
 }
 
 html, body, #root { height: 100%; }
@@ -18,10 +18,26 @@ html, body, #root { height: 100%; }
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  background: #f8fafc;
+  background: #eef6ff;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.app-surface {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(147, 197, 253, 0.30), transparent 34rem),
+    radial-gradient(circle at 92% 18%, rgba(196, 181, 253, 0.22), transparent 32rem),
+    radial-gradient(circle at 35% 100%, rgba(167, 243, 208, 0.20), transparent 30rem),
+    linear-gradient(135deg, #eaf4ff 0%, #f6f8ff 46%, #effdf7 100%);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(30px) saturate(170%);
+  -webkit-backdrop-filter: blur(30px) saturate(170%);
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -117,18 +133,18 @@ body {
   transition: background 120ms;
 }
 .react-datepicker__day:hover {
-  background: #ecfdf5;
-  color: #047857;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
-  background: #10b981 !important;
+  background: #2563eb !important;
   color: white !important;
   font-weight: 600;
 }
 .react-datepicker__day--today {
   font-weight: 700;
-  color: #047857;
+  color: #1d4ed8;
 }
 .react-datepicker__day--outside-month { color: #cbd5e1; }
 .react-datepicker__navigation { top: 14px; }
@@ -144,7 +160,7 @@ body {
   color: #334155;
 }
 .react-datepicker__time-list-item--selected {
-  background: #10b981 !important;
+  background: #2563eb !important;
   color: white !important;
   font-weight: 600;
 }

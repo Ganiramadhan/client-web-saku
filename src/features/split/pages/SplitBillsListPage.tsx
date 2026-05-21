@@ -84,10 +84,10 @@ function SplitBillCard({ bill, onDelete }: { bill: SplitBill; onDelete: () => vo
   const total = bill.participants.length
   const pct = total > 0 ? Math.round((paidCount / total) * 100) : 0
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/80 bg-white/64 p-5 shadow-md shadow-slate-200/25 backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-white/78 hover:shadow-lg">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/70 text-brand-700 shadow-sm">
             <HiOutlineUserGroup className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -115,25 +115,25 @@ function SplitBillCard({ bill, onDelete }: { bill: SplitBill; onDelete: () => vo
       </div>
 
       <div className="mt-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-white/80">
           <div
-            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+            className="h-full rounded-full bg-brand-600"
             style={{ width: `${pct}%` }}
           />
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+      <div className="mt-4 flex items-center justify-end gap-1 border-t border-white/80 pt-3">
         <Link
           to={`/app/split-bills/${bill.id}/edit`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-50 hover:text-brand-700"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-brand-700"
           title="Edit"
         >
           <HiOutlinePencilSquare className="h-4 w-4" />
         </Link>
         <button
           onClick={onDelete}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-rose-600"
           title="Hapus"
         >
           <HiOutlineTrash className="h-4 w-4" />

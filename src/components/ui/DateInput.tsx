@@ -11,6 +11,7 @@ export interface DateInputProps {
   value?: Date | string | null
   onChange: (d: Date | null) => void
   showTime?: boolean
+  picker?: 'date' | 'month'
   className?: string
   placeholderText?: string
   minDate?: Date
@@ -20,7 +21,7 @@ export interface DateInputProps {
 
 
 export const DateInput = forwardRef<HTMLDivElement, DateInputProps>(function DateInput(
-  { label, hint, error, value, onChange, showTime, className, placeholderText, minDate, maxDate, disabled },
+  { label, hint, error, value, onChange, showTime, picker = 'date', className, placeholderText, minDate, maxDate, disabled },
   ref,
 ) {
   const selected = value ? (typeof value === 'string' ? new Date(value) : value) : null
@@ -34,25 +35,28 @@ export const DateInput = forwardRef<HTMLDivElement, DateInputProps>(function Dat
         <ReactDatePicker
           selected={selected}
           onChange={(d: Date | null) => onChange(d)}
-          dateFormat={showTime ? 'dd MMM yyyy HH:mm' : 'dd MMM yyyy'}
+          dateFormat={picker === 'month' ? 'MMMM yyyy' : showTime ? 'dd MMM yyyy HH:mm' : 'dd MMM yyyy'}
+          showMonthYearPicker={picker === 'month'}
           showTimeSelect={showTime}
           timeFormat="HH:mm"
           timeIntervals={15}
           showPopperArrow={false}
-          placeholderText={placeholderText ?? (showTime ? 'Pilih tanggal & waktu' : 'Pilih tanggal')}
+          placeholderText={placeholderText ?? (picker === 'month' ? 'Pilih bulan' : showTime ? 'Pilih tanggal & waktu' : 'Pilih tanggal')}
           autoComplete="off"
           minDate={minDate}
           maxDate={maxDate}
           disabled={disabled}
           wrapperClassName="block w-full"
           className={cn(
-            'w-full rounded-lg border bg-white py-2 pl-9 pr-3 text-sm shadow-sm transition focus:outline-none focus:ring-2',
+            'w-full rounded-xl border bg-white/72 py-2.5 pl-9 pr-3 text-sm shadow-sm backdrop-blur-xl transition focus:outline-none focus:ring-2',
             error
               ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-              : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+              : 'border-white/80 focus:border-brand-300 focus:ring-brand-500/20',
             disabled && 'cursor-not-allowed bg-slate-50 text-slate-400',
           )}
-          popperClassName="!z-50"
+          popperClassName="!z-[9999]"
+          popperProps={{ strategy: 'fixed' }}
+          portalId="root"
         />
       </div>
       {error ? (

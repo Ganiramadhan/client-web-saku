@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   HiOutlinePlus,
   HiOutlineTrash,
-  HiOutlineArrowLeft,
+  HiOutlineArrowPath,
   HiOutlineCalculator,
+  HiOutlinePhoto,
   HiOutlineUserGroup,
 } from 'react-icons/hi2'
 import {
@@ -15,8 +16,11 @@ import {
   Input,
   PageHeader,
   Spinner,
+  Modal,
 } from '@/components/ui'
 import { splitBillApi, type SplitBillParticipantInput } from '../api'
+import { aiApi, fileToBase64 } from '@/features/ai/api'
+import type { AIScanReceiptResponse } from '@/types/api'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
@@ -45,21 +49,28 @@ export function SplitBillFormPage() {
   const [total, setTotal] = useState<number>(0)
   const [notes, setNotes] = useState('')
   const [rows, setRows] = useState<Row[]>([newRow(), newRow()])
+  const [receiptPreview, setReceiptPreview] = useState('')
+  const [receiptDetailOpen, setReceiptDetailOpen] = useState(false)
+  const [receiptDetail, setReceiptDetail] = useState<AIScanReceiptResponse | null>(null)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (existing.data) {
-      setTitle(existing.data.title)
-      setTotal(existing.data.total_amount)
-      setNotes(existing.data.notes ?? '')
-      setRows(
-        existing.data.participants.map((p) => ({
-          _key: p.id,
-          id: p.id,
-          name: p.name,
-          phone: p.phone,
-          amount: p.amount,
-        })),
-      )
+      const timer = window.setTimeout(() => {
+        setTitle(existing.data?.title ?? '')
+        setTotal(existing.data?.total_amount ?? 0)
+        setNotes(existing.data?.notes ?? '')
+        setRows(
+          existing.data?.participants.map((p) => ({
+            _key: p.id,
+            id: p.id,
+            name: p.name,
+            phone: p.phone,
+            amount: p.amount,
+          })) ?? [newRow(), newRow()],
+        )
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
   }, [existing.data])
 
@@ -120,6 +131,47 @@ export function SplitBillFormPage() {
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
+  const scanReceipt = useMutation({
+    mutationFn: async (file: File) => {
+      const base64 = await fileToBase64(file)
+      return aiApi.scanReceipt({ image_base64: base64, media_type: file.type })
+    },
+    onSuccess: (data) => {
+      const merchant = data.merchant_name?.trim()
+      setReceiptDetail(data)
+      setTotal(Number(data.amount || 0))
+      if (!title.trim()) setTitle(merchant ? `Split bill - ${merchant}` : 'Split bill dari struk')
+      setNotes((prev) => {
+        const next = [
+          prev.trim(),
+          merchant ? `Merchant: ${merchant}` : '',
+          data.date ? `Tanggal: ${data.date}` : '',
+        ].filter(Boolean)
+        return Array.from(new Set(next)).join(' · ')
+      })
+      toast.success('Struk berhasil dibaca. Cek kembali total sebelum dibagi.')
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const handleReceiptFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pilih file gambar struk.')
+      return
+    }
+    setReceiptPreview(URL.createObjectURL(file))
+    scanReceipt.mutate(file)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview)
+    }
+  }, [receiptPreview])
+
   const canSubmit =
     title.trim().length > 0 &&
     total > 0 &&
@@ -140,13 +192,6 @@ export function SplitBillFormPage() {
       <PageHeader
         title={isEdit ? 'Edit Split Bill' : 'Buat Split Bill'}
         subtitle="Bagi tagihan secara adil dan kirim ke teman via WhatsApp."
-        action={
-          <Link to="/app/split-bills">
-            <Button variant="secondary" leftIcon={<HiOutlineArrowLeft className="h-4 w-4" />}>
-              Kembali
-            </Button>
-          </Link>
-        }
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -187,24 +232,79 @@ export function SplitBillFormPage() {
               </div>
             </div>
 
-            <div className="mt-2 border-t border-slate-100 pt-4">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+              <input
+                ref={receiptInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleReceiptFile}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
+                    <HiOutlinePhoto className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Scan struk untuk isi total</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                      Upload foto struk, lalu SAKU AI akan membaca total dan merchant untuk split bill ini.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer transition hover:-translate-y-0.5 hover:border-blue-200 hover:!bg-white hover:text-blue-700 hover:shadow-md active:scale-[0.98]"
+                  loading={scanReceipt.isPending}
+                  leftIcon={
+                    scanReceipt.isPending
+                      ? <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
+                      : <HiOutlinePhoto className="h-4 w-4" />
+                  }
+                  onClick={() => receiptInputRef.current?.click()}
+                >
+                  Scan Struk
+                </Button>
+              </div>
+              {receiptPreview ? (
+                <button
+                  type="button"
+                  onClick={() => setReceiptDetailOpen(true)}
+                  className="mt-4 block w-full cursor-pointer overflow-hidden rounded-2xl border border-white/80 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg active:scale-[0.99]"
+                >
+                  <img
+                    src={receiptPreview}
+                    alt="Preview struk"
+                    className="max-h-72 w-full object-contain"
+                  />
+                  <div className="border-t border-slate-100 px-4 py-3 text-xs font-semibold text-blue-700">
+                    Klik untuk melihat detail hasil scan struk
+                  </div>
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-2 border-t border-white/80 pt-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-slate-900">Peserta</h4>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     leftIcon={<HiOutlineCalculator className="h-4 w-4" />}
                     onClick={splitEven}
                     disabled={total <= 0 || rows.length === 0}
+                    className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
                   >
                     Bagi Rata
                   </Button>
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     leftIcon={<HiOutlinePlus className="h-4 w-4" />}
                     onClick={() => setRows((p) => [...p, newRow()])}
+                    className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
                   >
                     Tambah
                   </Button>
@@ -215,7 +315,7 @@ export function SplitBillFormPage() {
                 {rows.map((r, idx) => (
                   <div
                     key={r._key}
-                    className="grid grid-cols-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/40 p-2"
+                    className="grid grid-cols-12 items-center gap-2 rounded-2xl border border-white/80 bg-white/52 p-3 shadow-sm backdrop-blur-xl"
                   >
                     <div className="col-span-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:hidden">
                       Peserta {idx + 1}
@@ -262,7 +362,7 @@ export function SplitBillFormPage() {
                             p.length > 2 ? p.filter((x) => x._key !== r._key) : p,
                           )
                         }
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30"
+                        className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-400 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
                         disabled={rows.length <= 2}
                         title="Hapus peserta"
                       >
@@ -315,6 +415,44 @@ export function SplitBillFormPage() {
           </Button>
         </Card>
       </div>
+
+      <Modal
+        open={receiptDetailOpen}
+        onClose={() => setReceiptDetailOpen(false)}
+        title="Detail Struk"
+        footer={<Button onClick={() => setReceiptDetailOpen(false)}>Tutup</Button>}
+      >
+        <div className="space-y-4">
+          {receiptPreview ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+              <img src={receiptPreview} alt="Detail struk" className="max-h-[55vh] w-full object-contain" />
+            </div>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ReceiptInfo label="Merchant" value={receiptDetail?.merchant_name || '-'} />
+            <ReceiptInfo label="Tanggal" value={receiptDetail?.date || '-'} />
+            <ReceiptInfo label="Total" value={formatCurrency(Number(receiptDetail?.amount || total || 0))} />
+            <ReceiptInfo label="Kategori" value={receiptDetail?.category || '-'} />
+          </div>
+          {receiptDetail?.ocr_text ? (
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">OCR Text</p>
+              <p className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-600">
+                {receiptDetail.ocr_text}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+function ReceiptInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +11,7 @@ import {
   HiOutlineFunnel,
   HiOutlineXMark,
   HiOutlineArrowDownTray,
+  HiOutlineEye,
 } from 'react-icons/hi2'
 import {
   IoFastFoodOutline,
@@ -124,6 +125,7 @@ export function TransactionsListPage() {
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
 
   // filters
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
@@ -186,6 +188,14 @@ export function TransactionsListPage() {
     })
   }, [q.data, typeFilter, categoryFilter, dateFrom, dateTo])
 
+  useEffect(() => {
+    const available = new Set(filteredTx.map((tx) => tx.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => available.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [filteredTx])
+
   const summary = useMemo(() => {
     let income = 0,
       expense = 0
@@ -197,10 +207,46 @@ export function TransactionsListPage() {
     return { income, expense, net: income - expense, count: filteredTx.length }
   }, [filteredTx])
 
+  const todaySummary = useMemo(() => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(now)
+    end.setHours(23, 59, 59, 999)
+
+    let income = 0
+    let expense = 0
+
+    for (const tx of q.data?.data ?? []) {
+      const ts = new Date(tx.transaction_date).getTime()
+      if (ts < start.getTime() || ts > end.getTime()) continue
+
+      const amount = Number(tx.amount) || 0
+      if (tx.type === 'income') income += amount
+      else expense += amount
+    }
+
+    return { income, expense }
+  }, [q.data])
+
   const remove = useMutation({
     mutationFn: transactionApi.remove,
     onSuccess: () => {
       toast.success('Transaksi dihapus')
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['savings-goals'] })
+      qc.invalidateQueries({ queryKey: ['wallets'] })
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const bulkRemove = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => transactionApi.remove(id)))
+    },
+    onSuccess: (_, ids) => {
+      toast.success(`${ids.length} transaksi dihapus`)
+      setSelectedIds(new Set())
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
@@ -218,6 +264,38 @@ export function TransactionsListPage() {
     if (ok) remove.mutate(tx.id)
   }
 
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAllVisible = () => {
+    setSelectedIds((prev) => {
+      const allIds = filteredTx.map((tx) => tx.id)
+      const allSelected = allIds.length > 0 && allIds.every((id) => prev.has(id))
+      const next = new Set(prev)
+      if (allSelected) allIds.forEach((id) => next.delete(id))
+      else allIds.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  const onBulkDelete = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const ok = await confirm({
+      title: `Hapus ${ids.length} transaksi?`,
+      description: 'Semua transaksi terpilih akan dihapus dan saldo dompet akan dihitung ulang.',
+      tone: 'danger',
+      confirmLabel: 'Hapus Semua',
+    })
+    if (ok) bulkRemove.mutate(ids)
+  }
+
   const resetFilters = () => {
     setTypeFilter('all')
     setCategoryFilter('')
@@ -230,6 +308,37 @@ export function TransactionsListPage() {
 
   const columns = useMemo<ColumnDef<Transaction>[]>(
     () => [
+      {
+        id: 'select',
+        header: () => {
+          const allSelected = filteredTx.length > 0 && filteredTx.every((tx) => selectedIds.has(tx.id))
+          return (
+            <div className="flex justify-center">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAllVisible}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Pilih semua transaksi"
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
+              />
+            </div>
+          )
+        },
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <input
+              type="checkbox"
+              checked={selectedIds.has(row.original.id)}
+              onChange={() => toggleSelected(row.original.id)}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="Pilih transaksi"
+              className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
+            />
+          </div>
+        ),
+      },
       {
         id: 'no',
         header: () => <span className="block text-center">#</span>,
@@ -305,15 +414,23 @@ export function TransactionsListPage() {
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <button
+              onClick={() => setViewing(row.original)}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-brand-50 hover:text-brand-700"
+              title="Detail"
+              aria-label="Detail transaksi"
+            >
+              <HiOutlineEye className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => setEditing(row.original)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-brand-700"
               title={t.common.edit}
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(row.original)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
               title={t.common.delete}
             >
               <HiOutlineTrash className="h-4 w-4" />
@@ -323,7 +440,7 @@ export function TransactionsListPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [walletMap, categoryMap, t],
+    [walletMap, categoryMap, t, filteredTx, selectedIds],
   )
 
   return (
@@ -346,14 +463,20 @@ export function TransactionsListPage() {
       />
 
       {/* Summary cards */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SummaryCard label="Pemasukan" value={summary.income} tone="emerald" />
-        <SummaryCard label="Pengeluaran" value={summary.expense} tone="rose" />
-        <SummaryCard label="Net Cashflow" value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <SummaryCard label="Pemasukan" helper="Sesuai filter aktif" value={summary.income} tone="emerald" />
+          <SummaryCard label="Pengeluaran" helper="Sesuai filter aktif" value={summary.expense} tone="rose" />
+          <SummaryCard label="Net Cashflow" helper={`${summary.count} transaksi`} value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SummaryCard label="Pemasukan Hari Ini" helper="Total hari ini" value={todaySummary.income} tone="emerald" compact />
+          <SummaryCard label="Pengeluaran Hari Ini" helper="Total hari ini" value={todaySummary.expense} tone="rose" compact />
+        </div>
       </div>
 
       {/* Filter bar */}
-      <Card className="mb-4">
+      <Card className="mb-4 bg-white/60">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -430,6 +553,42 @@ export function TransactionsListPage() {
         </div>
       </Card>
 
+      {selectedIds.size > 0 ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-rose-100 bg-rose-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-rose-600 shadow-sm">
+              <HiOutlineTrash className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-rose-950">
+                {selectedIds.size} transaksi dipilih
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-rose-700">
+                Hapus massal akan menghitung ulang saldo dompet setelah transaksi dihapus.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-rose-100 !bg-white text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-rose-50"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Batal Pilih
+            </Button>
+            <Button
+              variant="danger"
+              onClick={onBulkDelete}
+              loading={bulkRemove.isPending}
+              leftIcon={<HiOutlineTrash className="h-4 w-4" />}
+            >
+              Hapus Terpilih
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Desktop / tablet table */}
       <div className="hidden md:block">
         <DataTable
@@ -446,7 +605,7 @@ export function TransactionsListPage() {
           }
           getRowId={(r) => r.id}
           initialPageSize={10}
-onRowClick={(r) => setViewing(r)}
+          onRowClick={(r) => setViewing(r)}
         />
       </div>
 
@@ -459,6 +618,8 @@ onRowClick={(r) => setViewing(r)}
         onView={(tx) => setViewing(tx)}
         onEdit={setEditing}
         onDelete={onDelete}
+        selectedIds={selectedIds}
+        onToggleSelected={toggleSelected}
       />
 
       <DetailModal
@@ -487,26 +648,80 @@ onRowClick={(r) => setViewing(r)}
 
 function SummaryCard({
   label,
+  helper,
   value,
   tone,
+  compact,
 }: {
   label: string
+  helper?: string
   value: number
   tone: 'emerald' | 'rose' | 'slate'
+  compact?: boolean
 }) {
-  const colour =
-    tone === 'emerald'
-      ? 'text-emerald-700'
-      : tone === 'rose'
-      ? 'text-rose-700'
-      : 'text-slate-900'
+  const isNet = tone === 'slate'
+  const isIncome = tone === 'emerald' || (isNet && value >= 0)
+  const signedValue = isNet && value > 0 ? `+${formatCurrency(value)}` : formatCurrency(value)
+  
+  const glassStyle = isNet
+    ? value >= 0
+      ? {
+          background: 'rgba(255, 255, 255, 0.68)',
+          border: '1px solid rgba(255, 255, 255, 0.86)',
+          backdropFilter: 'blur(28px) saturate(170%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(170%)',
+        }
+      : {
+          background: 'rgba(255, 255, 255, 0.68)',
+          border: '1px solid rgba(255, 255, 255, 0.86)',
+          backdropFilter: 'blur(28px) saturate(170%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(170%)',
+        }
+    : isIncome
+    ? {
+        background: 'rgba(255, 255, 255, 0.68)',
+        border: '1px solid rgba(255, 255, 255, 0.86)',
+        backdropFilter: 'blur(28px) saturate(170%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(170%)',
+      }
+    : {
+        background: 'rgba(255, 255, 255, 0.68)',
+        border: '1px solid rgba(255, 255, 255, 0.86)',
+        backdropFilter: 'blur(28px) saturate(170%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(170%)',
+      }
+
+  const colour = isIncome
+    ? 'text-emerald-700'
+    : 'text-rose-700'
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        {label}
+    <div
+      style={glassStyle}
+      className={cn(
+        'group relative overflow-hidden rounded-2xl px-5 py-4 shadow-lg shadow-slate-200/30 transition-all duration-300 hover:translate-y-[-2px] hover:shadow-md',
+        compact && 'lg:px-4',
+      )}
+    >
+      <div className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-white/35 blur-2xl transition group-hover:scale-125" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            {label}
+          </div>
+          {helper ? <p className="mt-1 text-[11px] font-medium text-slate-400">{helper}</p> : null}
+        </div>
+        <span
+          className={cn(
+            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-black',
+            isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700',
+          )}
+        >
+          {isIncome ? '+' : '-'}
+        </span>
       </div>
-      <div className={'mt-1 text-lg font-bold ' + colour}>
-        {formatCurrency(value)}
+      <div className={cn('relative mt-3 font-black tracking-tight tabular-nums', colour, compact ? 'text-lg' : 'text-xl')}>
+        {signedValue}
       </div>
     </div>
   )
@@ -521,6 +736,8 @@ function MobileTransactionList({
   onView,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelected,
 }: {
   loading: boolean
   items: Transaction[]
@@ -529,6 +746,8 @@ function MobileTransactionList({
   onView: (tx: Transaction) => void
   onEdit: (tx: Transaction) => void
   onDelete: (tx: Transaction) => void
+  selectedIds: Set<string>
+  onToggleSelected: (id: string) => void
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -561,13 +780,13 @@ function MobileTransactionList({
           setPage(1)
         }}
         placeholder="Cari…"
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+        className="w-full rounded-xl border border-white/60 bg-white/40 px-3.5 py-2.5 text-sm shadow-sm backdrop-blur-md focus:border-brand-500/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all duration-300"
       />
 
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/30 border border-white/40" />
           ))}
         </div>
       ) : (
@@ -580,16 +799,23 @@ function MobileTransactionList({
             return (
               <div
                 key={tx.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                className="rounded-2xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md hover:bg-white/60 transition-all duration-300"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className={'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ' + catTone}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(tx.id)}
+                      onChange={() => onToggleSelected(tx.id)}
+                      aria-label="Pilih transaksi"
+                      className="mt-3 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
+                    />
+                    <div className={'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/10 ' + catTone}>
                       <CatIcon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-slate-400">
+                        <span className="text-[10px] font-bold text-slate-400">
                           #{start + i + 1}
                         </span>
                         <Badge tone={isIncome ? 'green' : 'red'}>
@@ -598,7 +824,7 @@ function MobileTransactionList({
                           ) : (
                             <HiOutlineArrowUpCircle className="h-3 w-3" />
                           )}
-                          <span className="ml-1">{isIncome ? 'Masuk' : 'Keluar'}</span>
+                          <span className="ml-1 font-semibold">{isIncome ? 'Masuk' : 'Keluar'}</span>
                         </Badge>
                       </div>
                       <p className="mt-1.5 truncate text-sm font-bold text-slate-900">{cat}</p>
@@ -614,7 +840,7 @@ function MobileTransactionList({
                   </div>
                   <div
                     className={
-                      'shrink-0 text-right text-base font-bold ' +
+                      'shrink-0 text-right text-base font-black ' +
                       (isIncome ? 'text-emerald-700' : 'text-rose-700')
                     }
                   >
@@ -622,24 +848,25 @@ function MobileTransactionList({
                     {formatCurrency(Number(tx.amount))}
                   </div>
                 </div>
-                <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                <div className="mt-3 flex justify-end gap-1 border-t border-white/60 pt-2">
                   <button
                     onClick={() => onView(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white/80 transition-all"
                   >
-                    Detail
+                    <HiOutlineEye className="h-4 w-4" />
+                    <span className="sr-only">Detail</span>
                   </button>
                   <button
                     onClick={() => onEdit(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white/80 transition-all"
                   >
-                    <HiOutlinePencilSquare className="h-4 w-4" /> Edit
+                    <HiOutlinePencilSquare className="h-3.5 w-3.5" /> Edit
                   </button>
                   <button
                     onClick={() => onDelete(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-all"
                   >
-                    <HiOutlineTrash className="h-4 w-4" /> Hapus
+                    <HiOutlineTrash className="h-3.5 w-3.5" /> Hapus
                   </button>
                 </div>
               </div>
@@ -717,7 +944,7 @@ function DetailModal({
       onClose={onClose}
       title="Detail Transaksi"
       description="Ringkasan lengkap transaksi"
-      size="lg"
+      size="md"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Tutup</Button>
@@ -727,7 +954,7 @@ function DetailModal({
               leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />}
               onClick={() => onEdit(tx)}
             >
-              Edit
+              <span className="sr-only">Edit</span>
             </Button>
           ) : null}
           {onDelete ? (
@@ -736,7 +963,7 @@ function DetailModal({
               leftIcon={<HiOutlineTrash className="h-4 w-4" />}
               onClick={() => onDelete(tx)}
             >
-              Hapus
+              <span className="sr-only">Hapus</span>
             </Button>
           ) : null}
         </>
@@ -745,19 +972,19 @@ function DetailModal({
       {/* Hero — softer gradient */}
       <div
         className={cn(
-          'relative overflow-hidden rounded-2xl p-5 ring-1',
+          'relative overflow-hidden rounded-2xl border p-4 shadow-inner backdrop-blur-md',
           isIncome
-            ? 'bg-linear-to-br from-emerald-50 via-white to-white ring-emerald-100'
-            : 'bg-linear-to-br from-rose-50 via-white to-white ring-rose-100',
+            ? 'bg-gradient-to-br from-emerald-500/10 via-white/40 to-white/10 border-emerald-500/20'
+            : 'bg-gradient-to-br from-rose-500/10 via-white/40 to-white/10 border-rose-500/20',
         )}
       >
         <div className="flex items-start gap-4">
           <div
             className={cn(
-              'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1',
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm backdrop-blur-sm',
               isIncome
-                ? 'bg-white text-emerald-700 ring-emerald-200'
-                : 'bg-white text-rose-700 ring-rose-200',
+                ? 'bg-white/80 text-emerald-700 border-emerald-200/50'
+                : 'bg-white/80 text-rose-700 border-rose-200/50',
             )}
           >
             <CatIcon className="h-7 w-7" />
@@ -770,23 +997,23 @@ function DetailModal({
                 ) : (
                   <HiOutlineArrowUpCircle className="h-3.5 w-3.5" />
                 )}
-                <span className="ml-1">{isIncome ? 'Pemasukan' : 'Pengeluaran'}</span>
+                <span className="ml-1 font-semibold">{isIncome ? 'Pemasukan' : 'Pengeluaran'}</span>
               </Badge>
               {sourceLabel ? <Badge tone="violet">{sourceLabel}</Badge> : null}
             </div>
-            <div className="mt-1.5 truncate text-sm font-semibold text-slate-700">
+            <div className="mt-1.5 truncate text-xs font-bold uppercase tracking-wider text-slate-500">
               {categoryName ?? '—'}
             </div>
             <div
               className={cn(
-                'mt-1 text-3xl font-bold tabular-nums sm:text-4xl',
+                'mt-1 text-2xl font-black tabular-nums sm:text-3xl',
                 isIncome ? 'text-emerald-700' : 'text-rose-700',
               )}
             >
               {isIncome ? '+ ' : '- '}
               {formatCurrency(Number(tx.amount))}
             </div>
-            <div className="mt-1 text-xs text-slate-500">
+            <div className="mt-1 text-xs font-medium text-slate-500">
               {formatDate(tx.transaction_date)}
             </div>
           </div>
@@ -849,15 +1076,15 @@ function InfoTile({
 }) {
   return (
     <div
-      className={
-        'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 ' +
-        (className ?? '')
-      }
+      className={cn(
+        'rounded-2xl border border-white/60 bg-white/40 px-4 py-3 shadow-inner backdrop-blur-md transition-all duration-300 hover:bg-white/60',
+        className
+      )}
     >
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
         {label}
       </div>
-      <div className="mt-1 text-sm font-medium text-slate-900">{value}</div>
+      <div className="mt-1.5 text-sm font-semibold text-slate-900">{value}</div>
     </div>
   )
 }
@@ -1021,9 +1248,9 @@ function ExportModal({
   categoryOptions: SelectOption[]
 }) {
   const [mode, setMode] = useState<ExportMode>('month')
-  const [month, setMonth] = useState<string>(() => {
+  const [month, setMonth] = useState<Date | null>(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
@@ -1036,7 +1263,9 @@ function ExportModal({
     try {
       const params: Record<string, string> = {}
       if (mode === 'month') {
-        params.month = month
+        if (month) {
+          params.month = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`
+        }
       } else {
         if (from) params.from = from.toISOString()
         if (to) {
@@ -1052,7 +1281,8 @@ function ExportModal({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const stamp = mode === 'month' ? month : `${(from ?? new Date()).toISOString().slice(0, 10)}_${(to ?? new Date()).toISOString().slice(0, 10)}`
+      const monthStamp = month ? `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}` : 'bulan'
+      const stamp = mode === 'month' ? monthStamp : `${(from ?? new Date()).toISOString().slice(0, 10)}_${(to ?? new Date()).toISOString().slice(0, 10)}`
       a.download = `transaksi-${stamp}.xlsx`
       document.body.appendChild(a)
       a.click()
@@ -1072,9 +1302,10 @@ function ExportModal({
       open={open}
       onClose={onClose}
       title="Export Transaksi ke Excel"
+      description="Pilih periode dan filter sebelum mengunduh data transaksi."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Batal</Button>
+          <Button variant="outline" onClick={onClose} disabled={busy}>Batal</Button>
           <Button onClick={onExport} loading={busy}>
             <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
             Download .xlsx
@@ -1088,10 +1319,10 @@ function ExportModal({
             type="button"
             onClick={() => setMode('month')}
             className={cn(
-              'rounded-lg border px-3 py-2 text-sm font-medium transition',
+              'rounded-xl border px-3 py-2.5 text-sm font-semibold transition',
               mode === 'month'
-                ? 'border-brand-300 bg-brand-50 text-brand-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                ? 'border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-200/50'
+                : 'border-white/80 bg-white/62 text-slate-600 shadow-sm backdrop-blur-xl hover:bg-white',
             )}
           >
             Per Bulan
@@ -1100,10 +1331,10 @@ function ExportModal({
             type="button"
             onClick={() => setMode('range')}
             className={cn(
-              'rounded-lg border px-3 py-2 text-sm font-medium transition',
+              'rounded-xl border px-3 py-2.5 text-sm font-semibold transition',
               mode === 'range'
-                ? 'border-brand-300 bg-brand-50 text-brand-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                ? 'border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-200/50'
+                : 'border-white/80 bg-white/62 text-slate-600 shadow-sm backdrop-blur-xl hover:bg-white',
             )}
           >
             Range Tanggal
@@ -1111,11 +1342,12 @@ function ExportModal({
         </div>
 
         {mode === 'month' ? (
-          <Input
-            type="month"
+          <DateInput
+            picker="month"
             label="Pilih Bulan"
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={setMonth}
+            placeholderText="Pilih bulan"
           />
         ) : (
           <div className="grid grid-cols-2 gap-3">

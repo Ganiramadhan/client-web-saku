@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 
-import { Badge, DataTable, PageHeader } from '@/components/ui'
+import { Badge, Button, DataTable, PageHeader } from '@/components/ui'
 import { RSelect } from '@/components/ui/RSelect'
 import { subscriptionApi, type AdminSubscription } from '@/features/subscription/api'
 import { useT } from '@/i18n'
@@ -95,7 +95,7 @@ export function SubscribersPage() {
           const initial = (r.user_name || r.user_email || '?').charAt(0).toUpperCase()
           return (
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-brand-400/80 to-emerald-400/80 text-sm font-semibold text-white">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
                 {initial}
               </div>
               <div className="min-w-0">
@@ -214,6 +214,18 @@ export function SubscribersPage() {
                 onChange={(v) => setPlan((v as PlanFilter) ?? 'all')}
               />
             </div>
+            {status !== 'all' || plan !== 'all' ? (
+              <Button
+                variant="outline"
+                className="border-rose-100 !bg-white text-rose-700 hover:!bg-rose-50"
+                onClick={() => {
+                  setStatus('all')
+                  setPlan('all')
+                }}
+              >
+                Reset Filter
+              </Button>
+            ) : null}
           </>
         }
       />

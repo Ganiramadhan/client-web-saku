@@ -59,6 +59,11 @@ export const subscriptionApi = {
   },
   checkout: async (plan_code: string, with_trial = false): Promise<CheckoutResponse> =>
     unwrap<CheckoutResponse>(await api.post('/subscriptions/checkout', { plan_code, with_trial })),
+  confirm: async (order_id: string): Promise<Subscription> =>
+    unwrap<Subscription>(await api.post('/subscriptions/confirm', { order_id })),
+  cancel: async (id: string): Promise<void> => {
+    await api.post(`/subscriptions/${id}/cancel`)
+  },
   listAllAdmin: async (params: { page?: number; limit?: number } = {}): Promise<AdminSubscription[]> => {
     const res = await api.get('/admin/subscriptions', { params })
     return (res.data?.data ?? []) as AdminSubscription[]

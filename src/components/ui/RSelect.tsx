@@ -29,31 +29,35 @@ interface RSelectProps<V = string>
 const styles: StylesConfig<SelectOption<unknown>, false> = {
   control: (base, s) => ({
     ...base,
-    minHeight: 38,
-    borderRadius: 8,
-    borderColor: s.isFocused ? 'rgb(99 102 241)' : 'rgb(203 213 225)',
-    boxShadow: s.isFocused ? '0 0 0 2px rgb(99 102 241 / 0.25)' : 'none',
-    backgroundColor: 'white',
+    minHeight: 44,
+    borderRadius: 12,
+    borderColor: s.isFocused ? 'rgb(147 197 253)' : 'rgba(255,255,255,0.88)',
+    boxShadow: s.isFocused
+      ? '0 0 0 3px rgb(37 99 235 / 0.16), 0 10px 28px rgb(15 23 42 / 0.06)'
+      : '0 8px 22px rgb(15 23 42 / 0.04)',
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(18px) saturate(170%)',
     fontSize: 14,
     transition: 'all 0.15s',
-    ':hover': { borderColor: s.isFocused ? 'rgb(99 102 241)' : 'rgb(148 163 184)' },
+    ':hover': { borderColor: s.isFocused ? 'rgb(147 197 253)' : 'rgba(191,219,254,0.9)' },
   }),
   menu: (base) => ({
     ...base,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    boxShadow: '0 12px 32px -8px rgb(15 23 42 / 0.18)',
-    border: '1px solid rgb(226 232 240)',
-    zIndex: 50,
+    boxShadow: '0 22px 50px -16px rgb(15 23 42 / 0.24)',
+    border: '1px solid rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    zIndex: 9999,
   }),
-  menuPortal: (base) => ({ ...base, zIndex: 60 }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
   option: (base, s) => ({
     ...base,
     fontSize: 14,
     backgroundColor: s.isSelected
-      ? 'rgb(99 102 241)'
+      ? 'rgb(37 99 235)'
       : s.isFocused
-      ? 'rgb(238 242 255)'
+      ? 'rgb(239 246 255)'
       : 'transparent',
     color: s.isSelected ? 'white' : 'rgb(15 23 42)',
     cursor: 'pointer',
@@ -64,8 +68,8 @@ const styles: StylesConfig<SelectOption<unknown>, false> = {
   placeholder: (base) => ({ ...base, color: 'rgb(148 163 184)' }),
   input: (base) => ({ ...base, color: 'rgb(15 23 42)' }),
   indicatorSeparator: () => ({ display: 'none' }),
-  dropdownIndicator: (base) => ({ ...base, color: 'rgb(100 116 139)', padding: 4 }),
-  clearIndicator: (base) => ({ ...base, color: 'rgb(100 116 139)', padding: 4 }),
+  dropdownIndicator: (base) => ({ ...base, color: 'rgb(100 116 139)', padding: 6 }),
+  clearIndicator: (base) => ({ ...base, color: 'rgb(100 116 139)', padding: 6 }),
 }
 
 export function RSelect<V extends string | number = string>({
@@ -83,7 +87,7 @@ export function RSelect<V extends string | number = string>({
   return (
     <label className="block" htmlFor={id}>
       {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+        <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
       ) : null}
       <ReactSelect<SelectOption<V>, false>
         inputId={id}
