@@ -20,6 +20,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
+import { TransactionInfoRow } from '../components/TransactionInfoRow'
 
 export function TransactionDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -159,15 +160,15 @@ export function TransactionDetailPage() {
       {/* Info grid */}
       <Card className="border border-white/80 bg-white/55 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
-          <InfoRow Icon={HiOutlineHashtag} label="Kategori" value={categoryName} />
-          <InfoRow Icon={HiOutlineWallet} label="Dompet" value={walletName} />
-          <InfoRow Icon={HiOutlineCalendarDays} label="Tanggal" value={formatDate(tx.transaction_date)} />
+          <TransactionInfoRow Icon={HiOutlineHashtag} label="Kategori" value={categoryName} />
+          <TransactionInfoRow Icon={HiOutlineWallet} label="Dompet" value={walletName} />
+          <TransactionInfoRow Icon={HiOutlineCalendarDays} label="Tanggal" value={formatDate(tx.transaction_date)} />
           {tx.merchant_name ? (
-            <InfoRow Icon={HiOutlineBuildingStorefront} label="Merchant" value={tx.merchant_name} />
+            <TransactionInfoRow Icon={HiOutlineBuildingStorefront} label="Merchant" value={tx.merchant_name} />
           ) : null}
           {tx.description ? (
             <div className="sm:col-span-2">
-              <InfoRow Icon={HiOutlineDocumentText} label="Deskripsi" value={tx.description} multiline />
+              <TransactionInfoRow Icon={HiOutlineDocumentText} label="Deskripsi" value={tx.description} multiline />
             </div>
           ) : null}
         </div>
@@ -195,32 +196,6 @@ export function TransactionDetailPage() {
           </p>
         </Card>
       ) : null}
-    </div>
-  )
-}
-
-function InfoRow({
-  Icon,
-  label,
-  value,
-  multiline,
-}: {
-  Icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-  multiline?: boolean
-}) {
-  return (
-    <div className="flex gap-3 items-start">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/85 bg-white/70 text-slate-600 shadow-sm">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
-        <div className={cn('mt-0.5 text-sm text-slate-900', multiline ? 'whitespace-pre-wrap font-medium' : 'truncate font-bold')}>
-          {value}
-        </div>
-      </div>
     </div>
   )
 }

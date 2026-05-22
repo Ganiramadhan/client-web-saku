@@ -202,12 +202,12 @@ export function DashboardPage() {
         subtitle="Ringkasan kondisi keuangan, transaksi terbaru, dan performa bulanan kamu."
         action={
           <Link to="/app/transactions">
-            <Button
+            {/* <Button
               className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
               leftIcon={<HiOutlinePlus className="h-4 w-4" />}
             >
               {t.transactions.newTransaction}
-            </Button>
+            </Button> */}
           </Link>
         }
       />

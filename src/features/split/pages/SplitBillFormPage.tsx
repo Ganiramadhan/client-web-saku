@@ -1,37 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  HiOutlinePlus,
-  HiOutlineTrash,
-  HiOutlineArrowPath,
-  HiOutlineCalculator,
-  HiOutlinePhoto,
-  HiOutlineUserGroup,
-} from 'react-icons/hi2'
-import {
-  Button,
-  Card,
-  CurrencyInput,
-  Input,
-  PageHeader,
-  Spinner,
-  Modal,
-} from '@/components/ui'
-import { splitBillApi, type SplitBillParticipantInput } from '../api'
+import { HiOutlineUserGroup } from 'react-icons/hi2'
+import { Card, CurrencyInput, Input, PageHeader, Spinner } from '@/components/ui'
+import { splitBillApi } from '../api'
 import { aiApi, fileToBase64 } from '@/features/ai/api'
 import type { AIScanReceiptResponse } from '@/types/api'
-import { formatCurrency } from '@/lib/utils'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
-
-interface Row extends SplitBillParticipantInput {
-  _key: string
-}
-
-function newRow(name = '', amount = 0): Row {
-  return { _key: Math.random().toString(36).slice(2), name, amount, phone: '' }
-}
+import {
+  ParticipantsEditor,
+  ReceiptDetailModal,
+  ReceiptScanPanel,
+  SplitSummaryCard,
+} from '../components/SplitBillFormPanels'
+import { newParticipantRow, type SplitParticipantRow } from '../utils/participants'
 
 export function SplitBillFormPage() {
   const nav = useNavigate()
@@ -48,7 +31,7 @@ export function SplitBillFormPage() {
   const [title, setTitle] = useState('')
   const [total, setTotal] = useState<number>(0)
   const [notes, setNotes] = useState('')
-  const [rows, setRows] = useState<Row[]>([newRow(), newRow()])
+  const [rows, setRows] = useState<SplitParticipantRow[]>([newParticipantRow(), newParticipantRow()])
   const [receiptPreview, setReceiptPreview] = useState('')
   const [receiptDetailOpen, setReceiptDetailOpen] = useState(false)
   const [receiptDetail, setReceiptDetail] = useState<AIScanReceiptResponse | null>(null)
@@ -67,7 +50,7 @@ export function SplitBillFormPage() {
             name: p.name,
             phone: p.phone,
             amount: p.amount,
-          })) ?? [newRow(), newRow()],
+          })) ?? [newParticipantRow(), newParticipantRow()],
         )
       }, 0)
       return () => window.clearTimeout(timer)
@@ -232,227 +215,43 @@ export function SplitBillFormPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-              <input
-                ref={receiptInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleReceiptFile}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
-                    <HiOutlinePhoto className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Scan struk untuk isi total</p>
-                    <p className="mt-0.5 text-xs leading-5 text-slate-500">
-                      Upload foto struk, lalu SAKU AI akan membaca total dan merchant untuk split bill ini.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer transition hover:-translate-y-0.5 hover:border-blue-200 hover:!bg-white hover:text-blue-700 hover:shadow-md active:scale-[0.98]"
-                  loading={scanReceipt.isPending}
-                  leftIcon={
-                    scanReceipt.isPending
-                      ? <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
-                      : <HiOutlinePhoto className="h-4 w-4" />
-                  }
-                  onClick={() => receiptInputRef.current?.click()}
-                >
-                  Scan Struk
-                </Button>
-              </div>
-              {receiptPreview ? (
-                <button
-                  type="button"
-                  onClick={() => setReceiptDetailOpen(true)}
-                  className="mt-4 block w-full cursor-pointer overflow-hidden rounded-2xl border border-white/80 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg active:scale-[0.99]"
-                >
-                  <img
-                    src={receiptPreview}
-                    alt="Preview struk"
-                    className="max-h-72 w-full object-contain"
-                  />
-                  <div className="border-t border-slate-100 px-4 py-3 text-xs font-semibold text-blue-700">
-                    Klik untuk melihat detail hasil scan struk
-                  </div>
-                </button>
-              ) : null}
-            </div>
+            <ReceiptScanPanel
+              inputRef={receiptInputRef}
+              preview={receiptPreview}
+              isScanning={scanReceipt.isPending}
+              onFileChange={handleReceiptFile}
+              onPickFile={() => receiptInputRef.current?.click()}
+              onOpenDetail={() => setReceiptDetailOpen(true)}
+            />
 
-            <div className="mt-2 border-t border-white/80 pt-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-900">Peserta</h4>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<HiOutlineCalculator className="h-4 w-4" />}
-                    onClick={splitEven}
-                    disabled={total <= 0 || rows.length === 0}
-                    className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
-                  >
-                    Bagi Rata
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    leftIcon={<HiOutlinePlus className="h-4 w-4" />}
-                    onClick={() => setRows((p) => [...p, newRow()])}
-                    className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
-                  >
-                    Tambah
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {rows.map((r, idx) => (
-                  <div
-                    key={r._key}
-                    className="grid grid-cols-12 items-center gap-2 rounded-2xl border border-white/80 bg-white/52 p-3 shadow-sm backdrop-blur-xl"
-                  >
-                    <div className="col-span-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:hidden">
-                      Peserta {idx + 1}
-                    </div>
-                    <div className="col-span-12 sm:col-span-4">
-                      <Input
-                        placeholder="Nama"
-                        value={r.name}
-                        onChange={(e) =>
-                          setRows((p) =>
-                            p.map((x) => (x._key === r._key ? { ...x, name: e.target.value } : x)),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-7 sm:col-span-4">
-                      <Input
-                        placeholder="62812xxxx (opsional)"
-                        value={r.phone ?? ''}
-                        onChange={(e) =>
-                          setRows((p) =>
-                            p.map((x) =>
-                              x._key === r._key ? { ...x, phone: e.target.value } : x,
-                            ),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-4 sm:col-span-3">
-                      <CurrencyInput
-                        value={r.amount}
-                        onChange={(v) =>
-                          setRows((p) =>
-                            p.map((x) => (x._key === r._key ? { ...x, amount: v } : x)),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setRows((p) =>
-                            p.length > 2 ? p.filter((x) => x._key !== r._key) : p,
-                          )
-                        }
-                        className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-400 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
-                        disabled={rows.length <= 2}
-                        title="Hapus peserta"
-                      >
-                        <HiOutlineTrash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ParticipantsEditor
+              rows={rows}
+              total={total}
+              onRowsChange={setRows}
+              onSplitEven={splitEven}
+              onAddRow={() => setRows((prev) => [...prev, newParticipantRow()])}
+            />
           </div>
         </Card>
 
-        <Card className="h-fit">
-          <h3 className="text-sm font-semibold text-slate-900">Ringkasan</h3>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total tagihan</dt>
-              <dd className="font-semibold tabular-nums">{formatCurrency(total)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total dibagi</dt>
-              <dd className="font-semibold tabular-nums">{formatCurrency(sumRows)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-slate-100 pt-2">
-              <dt className="text-slate-500">Selisih</dt>
-              <dd
-                className={
-                  Math.abs(diff) < 0.01
-                    ? 'font-bold tabular-nums text-emerald-600'
-                    : 'font-bold tabular-nums text-rose-600'
-                }
-              >
-                {formatCurrency(diff)}
-              </dd>
-            </div>
-          </dl>
-          {Math.abs(diff) >= 0.01 ? (
-            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              Total per peserta belum sama dengan total tagihan.
-            </p>
-          ) : null}
-          <Button
-            className="mt-5 w-full"
-            onClick={() => (isEdit ? update.mutate() : create.mutate())}
-            loading={create.isPending || update.isPending}
-            disabled={!canSubmit}
-          >
-            {isEdit ? 'Simpan Perubahan' : 'Buat Split Bill'}
-          </Button>
-        </Card>
+        <SplitSummaryCard
+          total={total}
+          sumRows={sumRows}
+          diff={diff}
+          isEdit={isEdit}
+          canSubmit={canSubmit}
+          isSubmitting={create.isPending || update.isPending}
+          onSubmit={() => (isEdit ? update.mutate() : create.mutate())}
+        />
       </div>
 
-      <Modal
+      <ReceiptDetailModal
         open={receiptDetailOpen}
+        preview={receiptPreview}
+        detail={receiptDetail}
+        total={total}
         onClose={() => setReceiptDetailOpen(false)}
-        title="Detail Struk"
-        footer={<Button onClick={() => setReceiptDetailOpen(false)}>Tutup</Button>}
-      >
-        <div className="space-y-4">
-          {receiptPreview ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
-              <img src={receiptPreview} alt="Detail struk" className="max-h-[55vh] w-full object-contain" />
-            </div>
-          ) : null}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ReceiptInfo label="Merchant" value={receiptDetail?.merchant_name || '-'} />
-            <ReceiptInfo label="Tanggal" value={receiptDetail?.date || '-'} />
-            <ReceiptInfo label="Total" value={formatCurrency(Number(receiptDetail?.amount || total || 0))} />
-            <ReceiptInfo label="Kategori" value={receiptDetail?.category || '-'} />
-          </div>
-          {receiptDetail?.ocr_text ? (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">OCR Text</p>
-              <p className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-600">
-                {receiptDetail.ocr_text}
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </Modal>
-    </div>
-  )
-}
-
-function ReceiptInfo({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
+      />
     </div>
   )
 }

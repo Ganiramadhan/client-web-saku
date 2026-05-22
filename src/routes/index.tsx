@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProRoute } from '@/components/ProRoute'
 import { AppLayout } from '@/layouts/AppLayout'
 
-import { LandingPage } from '@/features/landing/pages/LandingPage'
+import { HomePage } from '@/features/home/pages/HomePage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
@@ -31,7 +31,7 @@ export function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
