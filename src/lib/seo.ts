@@ -6,6 +6,7 @@ export interface SEOOptions {
   canonical?: string
   image?: string
   keywords?: string
+  locale?: string
   noIndex?: boolean
 }
 
@@ -41,13 +42,15 @@ export function useSEO({
   description = DEFAULT_DESCRIPTION,
   canonical,
   image = '/logo.png',
-  keywords = 'SAKU, aplikasi keuangan pribadi, catat transaksi, scan struk, budget, dompet digital',
+  keywords = 'SAKU, personal finance app, AI finance tracker, receipt scanner, budget tracker, digital wallet, split bill',
+  locale = 'en_US',
   noIndex,
 }: SEOOptions) {
   useEffect(() => {
     const fullTitle = title.includes('SAKU') ? title : `${title} | SAKU`
-    const currentUrl = canonical ?? window.location.href
+    const currentUrl = canonical ? absoluteUrl(canonical) : window.location.origin + window.location.pathname
     const imageUrl = absoluteUrl(image)
+    document.documentElement.lang = locale.startsWith('id') ? 'id' : 'en'
     document.title = fullTitle
 
     upsertMeta('meta[name="description"]', { name: 'description', content: description })
@@ -55,6 +58,7 @@ export function useSEO({
     upsertMeta('meta[property="og:title"]', { property: 'og:title', content: fullTitle })
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: description })
     upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' })
+    upsertMeta('meta[property="og:locale"]', { property: 'og:locale', content: locale })
     upsertMeta('meta[property="og:url"]', { property: 'og:url', content: currentUrl })
     upsertMeta('meta[property="og:image"]', { property: 'og:image', content: imageUrl })
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'SAKU' })
@@ -67,5 +71,5 @@ export function useSEO({
       content: noIndex ? 'noindex,nofollow,noarchive' : 'index,follow,max-image-preview:large',
     })
     upsertLink('canonical', currentUrl)
-  }, [canonical, description, image, keywords, noIndex, title])
+  }, [canonical, description, image, keywords, locale, noIndex, title])
 }

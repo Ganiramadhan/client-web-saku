@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Transaction } from '@/types/api'
 import { resolveCategoryIcon } from './TransactionCategoryCell'
+import type { TransactionCopy } from '../constants/copy'
 
 export function MobileTransactionList({
   loading,
@@ -15,6 +16,7 @@ export function MobileTransactionList({
   onDelete,
   selectedIds,
   onToggleSelected,
+  copy,
 }: {
   loading: boolean
   items: Transaction[]
@@ -25,6 +27,7 @@ export function MobileTransactionList({
   onDelete: (tx: Transaction) => void
   selectedIds: Set<string>
   onToggleSelected: (id: string) => void
+  copy: TransactionCopy
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -56,7 +59,7 @@ export function MobileTransactionList({
           setSearch(e.target.value)
           setPage(1)
         }}
-        placeholder="Cari…"
+        placeholder={copy.searchPlaceholder}
         className="w-full rounded-xl border border-white/60 bg-white/40 px-3.5 py-2.5 text-sm shadow-sm backdrop-blur-md focus:border-brand-500/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all duration-300"
       />
 
@@ -84,7 +87,7 @@ export function MobileTransactionList({
                       type="checkbox"
                       checked={selectedIds.has(tx.id)}
                       onChange={() => onToggleSelected(tx.id)}
-                      aria-label="Pilih transaksi"
+                      aria-label={copy.detail}
                       className="mt-3 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
                     />
                     <div className={'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-500/10 ' + catTone}>
@@ -101,7 +104,7 @@ export function MobileTransactionList({
                           ) : (
                             <HiOutlineArrowUpCircle className="h-3 w-3" />
                           )}
-                          <span className="ml-1 font-semibold">{isIncome ? 'Masuk' : 'Keluar'}</span>
+                          <span className="ml-1 font-semibold">{isIncome ? copy.income : copy.expense}</span>
                         </Badge>
                       </div>
                       <p className="mt-1.5 truncate text-sm font-bold text-slate-900">{cat}</p>
@@ -131,19 +134,19 @@ export function MobileTransactionList({
                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white/80 transition-all"
                   >
                     <HiOutlineEye className="h-4 w-4" />
-                    <span className="sr-only">Detail</span>
+                    <span className="sr-only">{copy.detail}</span>
                   </button>
                   <button
                     onClick={() => onEdit(tx)}
                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white/80 transition-all"
                   >
-                    <HiOutlinePencilSquare className="h-3.5 w-3.5" /> Edit
+                    <HiOutlinePencilSquare className="h-3.5 w-3.5" /> {copy.edit}
                   </button>
                   <button
                     onClick={() => onDelete(tx)}
                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-all"
                   >
-                    <HiOutlineTrash className="h-3.5 w-3.5" /> Hapus
+                    <HiOutlineTrash className="h-3.5 w-3.5" /> {copy.delete}
                   </button>
                 </div>
               </div>
@@ -152,14 +155,14 @@ export function MobileTransactionList({
 
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
-              Tidak ada transaksi yang cocok.
+              {copy.emptyTitle}
             </div>
           ) : null}
 
           {filtered.length > pageSize ? (
             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
               <span>
-                Hal. {safePage}/{totalPages}
+                {safePage}/{totalPages}
               </span>
               <div className="flex gap-1">
                 <button

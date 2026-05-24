@@ -1,4 +1,5 @@
 import { HiOutlineClock, HiOutlinePencilSquare, HiOutlineStar, HiOutlineTrash } from 'react-icons/hi2'
+import { useLocale } from '@/i18n'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { Wallet } from '@/types/api'
 import { TYPE_THEME, normalizeWalletType, labelForType, getTargetProgress, formatRelativeFromMs } from '../utils'
@@ -25,6 +26,36 @@ export function WalletCard({
   onSetDefault: () => void
   setDefaultLoading?: boolean
 }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        default: 'Default',
+        setDefault: 'Jadikan dompet utama',
+        edit: 'Edit',
+        delete: 'Hapus',
+        balance: 'Saldo',
+        income30d: 'Masuk 30d',
+        expense30d: 'Keluar 30d',
+        net: 'net',
+        tx30d: 'tx 30d',
+        targetPocket: 'Kantong Tujuan',
+        until: 's/d',
+        noTarget: 'Target nominal belum ditetapkan.',
+      }
+    : {
+        default: 'Default',
+        setDefault: 'Set as default wallet',
+        edit: 'Edit',
+        delete: 'Delete',
+        balance: 'Balance',
+        income30d: 'Income 30d',
+        expense30d: 'Spending 30d',
+        net: 'net',
+        tx30d: 'tx 30d',
+        targetPocket: 'Target Pocket',
+        until: 'until',
+        noTarget: 'Target amount has not been set.',
+      }
   const type = normalizeWalletType(wallet.type)
   const theme = TYPE_THEME[type]
   const Icon = theme.Icon
@@ -32,12 +63,12 @@ export function WalletCard({
   const expense = stat?.expense ?? 0
   const count = stat?.count ?? 0
   const net = income - expense
-  const lastActivity = formatRelativeFromMs(stat?.lastAt ?? null)
+  const lastActivity = formatRelativeFromMs(stat?.lastAt ?? null, locale)
   const targetProgress = getTargetProgress(wallet)
 
   return (
     <article className="overflow-hidden rounded-xl border border-white/80 bg-white/72 shadow-sm backdrop-blur-2xl transition hover:-translate-y-0.5 hover:border-brand-100 hover:bg-white hover:shadow-md">
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
@@ -55,12 +86,12 @@ export function WalletCard({
                 {wallet.is_default ? (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200">
                     <HiOutlineStar className="h-3 w-3" />
-                    Default
+                    {copy.default}
                   </span>
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs uppercase tracking-wide text-slate-500">
-                {labelForType(wallet.type)}
+                {labelForType(wallet.type, locale)}
               </p>
             </div>
           </div>
@@ -72,7 +103,7 @@ export function WalletCard({
                 onClick={onSetDefault}
                 disabled={setDefaultLoading}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-amber-50 hover:text-amber-700 disabled:opacity-40"
-                title="Jadikan dompet utama"
+                title={copy.setDefault}
               >
                 <HiOutlineStar className="h-4 w-4" />
               </button>
@@ -82,7 +113,7 @@ export function WalletCard({
               type="button"
               onClick={onEdit}
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-brand-50 hover:text-brand-700"
-              title="Edit"
+              title={copy.edit}
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
             </button>
@@ -91,7 +122,7 @@ export function WalletCard({
               type="button"
               onClick={onDelete}
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
-              title="Hapus"
+              title={copy.delete}
             >
               <HiOutlineTrash className="h-4 w-4" />
             </button>
@@ -99,32 +130,32 @@ export function WalletCard({
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-medium text-slate-500">Saldo</p>
-          <p className="mt-1 truncate text-3xl font-bold tabular-nums text-slate-950">
+          <p className="text-xs font-medium text-slate-500">{copy.balance}</p>
+          <p className="mt-1 truncate text-2xl font-bold tabular-nums text-slate-950 sm:text-3xl">
             {formatCurrency(Number(wallet.balance ?? 0), wallet.currency)}
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <MiniStat label="Masuk 30d" value={formatCurrency(income, wallet.currency)} tone="emerald" />
-          <MiniStat label="Keluar 30d" value={formatCurrency(expense, wallet.currency)} tone="rose" />
+        <div className="mt-5 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+          <MiniStat label={copy.income30d} value={formatCurrency(income, wallet.currency)} tone="emerald" />
+          <MiniStat label={copy.expense30d} value={formatCurrency(expense, wallet.currency)} tone="rose" />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <span className={cn('font-semibold tabular-nums', net >= 0 ? 'text-emerald-700' : 'text-rose-600')}>
             {net >= 0 ? '+' : ''}
-            {formatCurrency(net, wallet.currency)} net
+            {formatCurrency(net, wallet.currency)} {copy.net}
           </span>
           <span className="inline-flex items-center gap-1">
             <HiOutlineClock className="h-3.5 w-3.5" />
-            {count} tx 30d · {lastActivity}
+            {count} {copy.tx30d} · {lastActivity}
           </span>
         </div>
       </div>
 
       {targetProgress !== null ? (
         <div className="border-t border-emerald-50 bg-linear-to-b from-emerald-50/45 to-white/60 px-5 pb-4 pt-1">
-          <TargetProgressSection wallet={wallet} progress={targetProgress} />
+          <TargetProgressSection wallet={wallet} progress={targetProgress} copy={copy} locale={locale} />
         </div>
       ) : null}
     </article>
@@ -153,9 +184,17 @@ function MiniStat({
 function TargetProgressSection({
   wallet,
   progress,
+  copy,
+  locale,
 }: {
   wallet: Wallet
   progress: number
+  copy: {
+    targetPocket: string
+    until: string
+    noTarget: string
+  }
+  locale: 'id' | 'en'
 }) {
   const targetAmount = Number(wallet.target_amount ?? 0)
   const hasTargetAmount = targetAmount > 0
@@ -163,7 +202,7 @@ function TargetProgressSection({
   return (
     <div className="mt-4 rounded-xl border border-emerald-100 bg-white/86 p-4 shadow-sm shadow-emerald-100/30">
       <div className="flex items-center justify-between gap-3 text-xs">
-        <p className="font-semibold text-slate-800">{wallet.target_name || 'Kantong Tujuan'}</p>
+        <p className="font-semibold text-slate-800">{wallet.target_name || copy.targetPocket}</p>
 
         <p className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold tabular-nums text-emerald-700">
           {progress}%
@@ -184,8 +223,8 @@ function TargetProgressSection({
 
             {wallet.target_deadline ? (
               <span>
-                s/d{' '}
-                {new Date(wallet.target_deadline).toLocaleDateString('id-ID', {
+                {copy.until}{' '}
+                {new Date(wallet.target_deadline).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric',
@@ -195,7 +234,7 @@ function TargetProgressSection({
           </div>
         </>
       ) : (
-        <p className="mt-3 text-sm text-slate-600">Target nominal belum ditetapkan.</p>
+        <p className="mt-3 text-sm text-slate-600">{copy.noTarget}</p>
       )}
     </div>
   )

@@ -51,6 +51,7 @@ export interface CategorizeRequest {
   text: string
   user_categories?: string[]
   session_id?: string
+  language?: 'id' | 'en'
 }
 
 export interface ScanReceiptRequest {
@@ -80,6 +81,7 @@ export interface ChatRequest {
   include_context?: boolean
   history?: ChatHistoryTurn[]
   session_id?: string
+  language?: 'id' | 'en'
 }
 
 export const aiApi = {

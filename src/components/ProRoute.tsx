@@ -7,6 +7,7 @@ import {
 } from 'react-icons/hi2'
 import { Spinner } from '@/components/ui'
 import { subscriptionApi } from '@/features/subscription/api'
+import { useLocale } from '@/i18n'
 
 type ProFeature = 'chat' | 'scan' | 'targets' | 'splitbill' | 'default'
 
@@ -74,6 +75,7 @@ const FEATURE_COPY: Record<ProFeature, {
 }
 
 export function ProRoute({ children, feature = 'default' }: { children: ReactNode; feature?: ProFeature }) {
+  const { locale } = useLocale()
   const activeQ = useQuery({
     queryKey: ['subscription', 'active'],
     queryFn: subscriptionApi.active,
@@ -91,7 +93,7 @@ export function ProRoute({ children, feature = 'default' }: { children: ReactNod
   }
 
   if (!hasPro) {
-    const copy = FEATURE_COPY[feature]
+    const copy = locale === 'id' ? FEATURE_COPY[feature] : PRO_FEATURE_COPY_EN[feature]
     return (
       <div className="mx-auto grid min-h-[520px] max-w-5xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="hidden lg:block">
@@ -136,7 +138,7 @@ export function ProRoute({ children, feature = 'default' }: { children: ReactNod
                 to="/app/profile"
                 className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
               >
-                Cek Status Langganan
+                {locale === 'id' ? 'Cek Status Langganan' : 'Check Subscription Status'}
               </Link>
           </div>
         </div>
@@ -145,6 +147,64 @@ export function ProRoute({ children, feature = 'default' }: { children: ReactNod
   }
 
   return <>{children}</>
+}
+
+const PRO_FEATURE_COPY_EN: typeof FEATURE_COPY = {
+  chat: {
+    eyebrow: 'Chat with AI',
+    title: 'Record transactions from natural sentences.',
+    description: 'Turn notes like "coffee 35k with BCA" into transactions ready to review and save.',
+    benefits: [
+      ['Faster input', 'Write like a normal chat without opening a long form.'],
+      ['Assisted categories', 'AI helps read transaction context.'],
+      ['Review first', 'Amount, wallet, and category can be checked before saving.'],
+      ['Cleaner history', 'Daily notes become structured SAKU transactions.'],
+    ],
+  },
+  scan: {
+    eyebrow: 'Scan Receipt',
+    title: 'Extract receipt data without retyping.',
+    description: 'Upload or capture a receipt photo, then SAKU helps read merchant, date, amount, and key items.',
+    benefits: [
+      ['Automatic merchant', 'Store names are read when available.'],
+      ['Practical totals', 'The total is prepared for review before saving.'],
+      ['Good for routines', 'Minimarket, restaurant, and household receipts are easier to record.'],
+      ['You stay in control', 'Scan results can always be edited before becoming transactions.'],
+    ],
+  },
+  targets: {
+    eyebrow: 'Target Pockets',
+    title: 'Build financial targets with clearer progress.',
+    description: 'Manage savings goals, progress, and contributions so plans become easier to follow.',
+    benefits: [
+      ['Clear progress', 'Track target completion from collected balance.'],
+      ['Neater priorities', 'Separate funds for trips, emergency savings, gadgets, or other needs.'],
+      ['Connected flow', 'Target contributions stay inside the SAKU ecosystem.'],
+      ['Easier consistency', 'Targets help daily spending decisions.'],
+    ],
+  },
+  splitbill: {
+    eyebrow: 'Split Bill',
+    title: 'Split shared expenses clearly.',
+    description: 'Track shared spending, who paid, and who still owes. SAKU helps with payment progress and reminders.',
+    benefits: [
+      ['Transparent tracking', 'Everyone can see who paid and what remains.'],
+      ['Share via WhatsApp', 'Send payment details directly to friends.'],
+      ['Mark as paid', 'Update payment progress in real time.'],
+      ['Flexible participants', 'Add, edit, or remove participants as needed.'],
+    ],
+  },
+  default: {
+    eyebrow: 'Pro Access',
+    title: 'This feature requires a Pro subscription.',
+    description: 'Upgrade to unlock advanced workflows in SAKU.',
+    benefits: [
+      ['AI transaction entry', 'Review before saving.'],
+      ['Receipt scanning', 'Totals and merchants are read automatically.'],
+      ['Spending insight', 'Monthly patterns are easier to understand.'],
+      ['More capacity', 'Use higher limits for active finance routines.'],
+    ],
+  },
 }
 
 function ProIllustration({ feature }: { feature: ProFeature }) {

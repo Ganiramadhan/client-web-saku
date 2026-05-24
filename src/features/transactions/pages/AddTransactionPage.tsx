@@ -29,14 +29,17 @@ import { transactionApi, type TransactionPayload } from '@/features/transactions
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import { Button, Card, CurrencyInput, Input, Textarea, PageHeader, DateInput } from '@/components/ui'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import type { TransactionType } from '@/types/api'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
+import { getTransactionCopy } from '../constants/copy'
 
 export function AddTransactionPage() {
   const t = useT()
+  const { locale } = useLocale()
+  const txCopy = getTransactionCopy(locale)
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -93,7 +96,7 @@ export function AddTransactionPage() {
       return transactionApi.create(payload)
     },
     onSuccess: () => {
-      toast.success('Transaksi tersimpan')
+      toast.success(txCopy.saved)
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
@@ -155,8 +158,8 @@ export function AddTransactionPage() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="Tambah Transaksi" 
-        subtitle="Catat pemasukan dan pengeluaran secara manual."
+        title={txCopy.addTitle}
+        subtitle={txCopy.addSubtitle}
       />
 
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_320px]">
@@ -284,7 +287,7 @@ export function AddTransactionPage() {
                   transaction_date: d ? d.toISOString().slice(0, 10) : '',
                 })
               }
-              placeholderText="Pilih tanggal transaksi"
+              placeholderText={txCopy.pickDate}
             />
           </div>
 
@@ -333,7 +336,7 @@ export function AddTransactionPage() {
                 <Input
                   value={form.merchant_name ?? ''}
                   onChange={(e) => setForm({ ...form, merchant_name: e.target.value })}
-                  placeholder="Nama toko lainnya (opsional)"
+                  placeholder={txCopy.merchantPlaceholder}
                   className="rounded-xl"
                 />
               </div>
@@ -342,15 +345,15 @@ export function AddTransactionPage() {
 
           <div className="mb-6">
             <Textarea
-              label="Deskripsi"
+              label={txCopy.description}
               value={form.description ?? ''}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Contoh: makan siang di Warteg Bahari, transfer ke Budi, gaji freelance Mei"
+              placeholder={locale === 'id' ? 'Contoh: makan siang di Warteg Bahari, transfer ke Budi, gaji freelance Mei' : 'Example: lunch at Warteg Bahari, transfer to Budi, May freelance salary'}
               rows={3}
               className="rounded-xl"
             />
             <p className="mt-1.5 text-xs text-slate-500">
-              Wajib diisi agar laporan dan pencarian transaksi lebih jelas.
+              {locale === 'id' ? 'Wajib diisi agar laporan dan pencarian transaksi lebih jelas.' : 'Required so reports and transaction search stay clear.'}
             </p>
           </div>
 
@@ -361,7 +364,7 @@ export function AddTransactionPage() {
               onClick={() => navigate('/app/transactions')}
               className="rounded-xl"
             >
-              Batal
+              {txCopy.cancel}
             </Button>
             <Button
               onClick={() => m.mutate()}
@@ -374,7 +377,7 @@ export function AddTransactionPage() {
                   : 'bg-rose-600 hover:bg-rose-700 text-white border-0'
               )}
             >
-              Simpan Transaksi
+              {t.common.save}
             </Button>
           </div>
         </Card>
@@ -383,24 +386,24 @@ export function AddTransactionPage() {
         <Card className="h-fit">
           <div className="flex items-center gap-2 border-b border-white/60 pb-4">
             <span className={cn('h-2.5 w-2.5 rounded-full', activeTab === 'income' ? 'bg-emerald-500' : 'bg-rose-500')} />
-            <h3 className="text-sm font-semibold text-slate-900">Ringkasan</h3>
+            <h3 className="text-sm font-semibold text-slate-900">{txCopy.summary}</h3>
           </div>
           <dl className="mt-3 space-y-2 text-sm">
-            <SummaryRow label="Tipe" value={activeTab === 'income' ? t.transactions.income : t.transactions.expense} />
-            <SummaryRow label="Nominal" value={`Rp ${Number(form.amount || 0).toLocaleString('id-ID')}`} />
+            <SummaryRow label={txCopy.type} value={activeTab === 'income' ? txCopy.income : txCopy.expense} />
+            <SummaryRow label={txCopy.amount} value={`Rp ${Number(form.amount || 0).toLocaleString('id-ID')}`} />
             <SummaryRow
-              label="Dompet"
-              value={(wallets.data ?? []).find((w) => w.id === form.wallet_id)?.name ?? 'Belum dipilih'}
+              label={txCopy.wallet}
+              value={(wallets.data ?? []).find((w) => w.id === form.wallet_id)?.name ?? txCopy.notSelected}
             />
             <SummaryRow
-              label="Kategori"
-              value={filteredCats.find((c) => c.id === form.category_id)?.name ?? 'Belum dipilih'}
+              label={txCopy.category}
+              value={filteredCats.find((c) => c.id === form.category_id)?.name ?? txCopy.notSelected}
             />
-            <SummaryRow label="Tanggal" value={form.transaction_date || 'Belum dipilih'} />
-            <SummaryRow label="Deskripsi" value={form.description?.trim() || 'Wajib diisi'} />
+            <SummaryRow label={txCopy.date} value={form.transaction_date || txCopy.notSelected} />
+            <SummaryRow label={txCopy.description} value={form.description?.trim() || (locale === 'id' ? 'Wajib diisi' : 'Required')} />
           </dl>
           <p className="mt-5 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-slate-500">
-            Pastikan dompet, kategori, nominal, dan tanggal sudah benar sebelum menyimpan transaksi.
+            {locale === 'id' ? 'Pastikan dompet, kategori, nominal, dan tanggal sudah benar sebelum menyimpan transaksi.' : 'Make sure wallet, category, amount, and date are correct before saving.'}
           </p>
         </Card>
       </div>

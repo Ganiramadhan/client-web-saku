@@ -14,13 +14,14 @@ import {
   sanitizeEmail,
 } from '@/features/auth/components/AuthFormParts'
 import { GoogleButton } from '@/features/auth/components/GoogleButton'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/authStore'
 
 export function RegisterPage() {
   const t = useT()
+  const { locale } = useLocale()
   const navigate = useNavigate()
   const setSession = useAuthStore((s) => s.setSession)
 
@@ -31,7 +32,7 @@ export function RegisterPage() {
 
   const redirect = (data: { token: string; user: { role: string } }) => {
     setSession(data.token, data.user as never)
-    toast.success('Akun siap digunakan.')
+    toast.success(locale === 'id' ? 'Akun siap digunakan.' : 'Your account is ready.')
     navigate('/app', { replace: true })
   }
 

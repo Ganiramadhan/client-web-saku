@@ -10,10 +10,17 @@ interface I18nState {
 export const useI18nStore = create<I18nState>()(
   persist(
     (set) => ({
-      locale: 'id',
+      locale: 'en',
       setLocale: (locale) => set({ locale }),
     }),
-    { name: 'saku-locale' },
+    {
+      name: 'saku-locale',
+      version: 2,
+      migrate: (persisted) => ({
+        ...(persisted as I18nState),
+        locale: 'en',
+      }),
+    },
   ),
 )
 

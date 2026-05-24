@@ -10,13 +10,32 @@ import {
   EmptyState,
   Skeleton,
 } from '@/components/ui'
+import { useLocale } from '@/i18n'
 import { walletApi } from '@/features/wallets/api'
 import type { Wallet } from '@/types/api'
 import { TargetCard, TargetSummaryCard } from '../components/TargetPanels'
 
 
 export function TargetsPage() {
+  const { locale } = useLocale()
   const wallets = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
+  const copy = locale === 'id'
+    ? {
+        title: 'Kantong Tujuan',
+        subtitle: 'Kelola dompet khusus untuk menabung menuju target tertentu.',
+        manageWallet: 'Atur di Dompet',
+        emptyTitle: 'Belum ada Kantong Tujuan',
+        emptyDesc: 'Tandai salah satu dompet sebagai Kantong Tujuan untuk mulai menabung ke target tertentu, misalnya liburan atau DP rumah.',
+        openWallet: 'Buka Dompet',
+      }
+    : {
+        title: 'Target Pockets',
+        subtitle: 'Manage dedicated wallets for saving toward specific goals.',
+        manageWallet: 'Manage in Wallets',
+        emptyTitle: 'No Target Pockets yet',
+        emptyDesc: 'Mark a wallet as a Target Pocket to start saving toward a specific goal, such as a vacation or home down payment.',
+        openWallet: 'Open Wallets',
+      }
   const [now] = useState(() => Date.now())
 
   const pockets = useMemo<Wallet[]>(
@@ -35,12 +54,12 @@ export function TargetsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Kantong Tujuan"
-        subtitle="Kelola dompet khusus untuk menabung menuju target tertentu — gaya Bank Jago."
+        title={copy.title}
+        subtitle={copy.subtitle}
         action={
           <Link to="/app/wallets">
             <Button leftIcon={<HiOutlinePlus className="h-4 w-4" />}>
-              Atur di Dompet
+              {copy.manageWallet}
             </Button>
           </Link>
         }
@@ -66,12 +85,12 @@ export function TargetsPage() {
       ) : pockets.length === 0 ? (
         <Card>
           <EmptyState
-            title="Belum ada Kantong Tujuan"
-            description="Tandai salah satu dompet sebagai Kantong Tujuan untuk mulai menabung ke target tertentu (mis. Liburan, DP Rumah)."
+            title={copy.emptyTitle}
+            description={copy.emptyDesc}
             action={
               <Link to="/app/wallets">
                 <Button leftIcon={<HiOutlinePlus className="h-4 w-4" />}>
-                  Buka Dompet
+                  {copy.openWallet}
                 </Button>
               </Link>
             }

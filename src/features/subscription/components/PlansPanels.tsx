@@ -150,6 +150,7 @@ export function PlanCard({
   const isFree = plan.price <= 0
   const isPro = plan.code === 'pro' || plan.code === 'pro_yearly'
   const isPremium = plan.code.includes('premium')
+  const isYearly = plan.period === 'yearly'
 
   return (
     <article
@@ -174,7 +175,7 @@ export function PlanCard({
             )}
           >
             <HiOutlineStar className="h-3.5 w-3.5" />
-            {isPremium ? 'Segera' : 'Populer'}
+            {isYearly ? 'Hemat 20%' : isPremium ? 'Premium' : 'Populer'}
           </span>
         </div>
       )}
@@ -224,9 +225,7 @@ export function PlanCard({
 
         {!isFree && !isActive && (
           <p className="mt-2 text-xs text-slate-500">
-            {isPremium
-              ? 'Paket ini sedang disiapkan dan belum bisa dipilih.'
-              : 'Aktif segera setelah pembayaran berhasil. Batal kapan saja.'}
+            Aktif segera setelah pembayaran berhasil. Batal kapan saja.
           </p>
         )}
       </div>
@@ -246,7 +245,7 @@ export function PlanCard({
 
       <Button
         onClick={() => onSubscribe(plan)}
-        disabled={isActive || isBusy || isPremium}
+        disabled={isActive || isBusy}
         className={cn(
           'mt-7 w-full justify-center gap-2 rounded-xl',
           isPro
@@ -256,8 +255,6 @@ export function PlanCard({
       >
         {isActive
           ? 'Paket Saat Ini'
-          : isPremium
-          ? 'Belum Tersedia'
           : isBusy
           ? 'Memproses…'
           : isFree

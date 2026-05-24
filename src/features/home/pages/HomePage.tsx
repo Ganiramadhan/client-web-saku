@@ -47,12 +47,17 @@ export function HomePage() {
 
   return (
     <div className="app-surface min-h-screen overflow-x-hidden font-sans antialiased">
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-40 -left-20 h-[700px] w-[700px] rounded-full animate-[pulse_8s_ease-in-out_infinite]" style={{ background: 'radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 65%)' }} />
-        <div className="absolute top-1/3 -right-40 h-[600px] w-[600px] rounded-full animate-[pulse_10s_ease-in-out_infinite_2s]" style={{ background: 'radial-gradient(circle, rgba(196,181,253,0.28) 0%, transparent 65%)' }} />
-        <div className="absolute bottom-1/4 left-1/4 h-[500px] w-[500px] rounded-full animate-[pulse_9s_ease-in-out_infinite_1s]" style={{ background: 'radial-gradient(circle, rgba(167,243,208,0.22) 0%, transparent 65%)' }} />
-        <div className="absolute bottom-0 right-1/3 h-[400px] w-[400px] rounded-full animate-[pulse_11s_ease-in-out_infinite_3s]" style={{ background: 'radial-gradient(circle, rgba(253,230,138,0.18) 0%, transparent 65%)' }} />
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-slate-50" aria-hidden="true">
+        <div
+          className="absolute inset-0 opacity-[0.075]"
+          style={{
+            backgroundImage:
+              'linear-gradient(#475569 1px, transparent 1px), linear-gradient(90deg, #475569 1px, transparent 1px)',
+            backgroundSize: '36px 36px',
+          }}
+        />
+        <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-blue-50 via-white/80 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-80 bg-gradient-to-t from-white via-slate-50/90 to-transparent" />
       </div>
 
       <LandingNavbar

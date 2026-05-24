@@ -12,6 +12,13 @@ export interface WalletPayload {
   target_deadline?: string | null
 }
 
+export interface WalletTransferPayload {
+  from_wallet_id: string
+  to_wallet_id: string
+  amount: number
+  clear_source_target?: boolean
+}
+
 export const walletApi = {
   list: async (): Promise<Wallet[]> =>
     (await unwrapList<Wallet>(await api.get('/wallets'))).data,
@@ -21,6 +28,9 @@ export const walletApi = {
     unwrap<Wallet>(await api.post('/wallets', payload)),
   update: async (id: string, payload: Partial<WalletPayload>): Promise<Wallet> =>
     unwrap<Wallet>(await api.put(`/wallets/${id}`, payload)),
+  transfer: async (payload: WalletTransferPayload): Promise<void> => {
+    await api.post('/wallets/transfer', payload)
+  },
   remove: async (id: string): Promise<void> => {
     await api.delete(`/wallets/${id}`)
   },

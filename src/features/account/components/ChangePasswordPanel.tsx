@@ -9,6 +9,7 @@ import {
 } from 'react-icons/hi2'
 import { Button, Card, Input, PageHeader } from '@/components/ui'
 import { changePassword } from '@/features/auth/api'
+import { useLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -21,6 +22,7 @@ import {
 
 export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolean }) {
   const navigate = useNavigate()
+  const { locale } = useLocale()
   const clearSession = useAuthStore((s) => s.clear)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -29,6 +31,67 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
   const [showNext, setShowNext] = useState(false)
 
   const strength = scoreStrength(next)
+  const copy = locale === 'id'
+    ? {
+        pageTitle: 'Pengaturan Keamanan',
+        pageSubtitle: 'Kelola password dan preferensi keamanan akun.',
+        title: 'Ubah Password',
+        description: 'Pilih password yang kuat dan unik untuk akun ini.',
+        current: 'Password Sekarang',
+        next: 'Password Baru',
+        nextPlaceholder: 'Min. 8 karakter',
+        confirm: 'Konfirmasi Password Baru',
+        confirmPlaceholder: 'Ulangi password baru',
+        mismatch: 'Tidak cocok dengan password baru.',
+        reset: 'Reset',
+        save: 'Simpan Password Baru',
+        show: 'Tampilkan',
+        hide: 'Sembunyikan',
+        strength: 'Kekuatan',
+        strengthLabels: ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat'],
+        success: 'Password berhasil diubah.',
+        currentRequired: 'Password sekarang wajib diisi.',
+        invalidTitle: 'Password belum sesuai',
+        samePassword: 'Password baru harus berbeda dari yang sekarang.',
+        validation: {
+          minLength: 'Password baru minimal 8 karakter.',
+          uppercase: 'Password baru harus mengandung huruf besar.',
+          lowercase: 'Password baru harus mengandung huruf kecil.',
+          number: 'Password baru harus mengandung angka.',
+          confirmRequired: 'Konfirmasi password baru wajib diisi.',
+          mismatch: 'Konfirmasi password tidak cocok.',
+        },
+      }
+    : {
+        pageTitle: 'Security Settings',
+        pageSubtitle: 'Manage your account password and security preferences.',
+        title: 'Change Password',
+        description: 'Choose a strong and unique password for this account.',
+        current: 'Current Password',
+        next: 'New Password',
+        nextPlaceholder: 'Min. 8 characters',
+        confirm: 'Confirm New Password',
+        confirmPlaceholder: 'Repeat the new password',
+        mismatch: 'Does not match the new password.',
+        reset: 'Reset',
+        save: 'Save New Password',
+        show: 'Show',
+        hide: 'Hide',
+        strength: 'Strength',
+        strengthLabels: ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'],
+        success: 'Password updated successfully.',
+        currentRequired: 'Current password is required.',
+        invalidTitle: 'Password does not meet requirements',
+        samePassword: 'The new password must be different from the current one.',
+        validation: {
+          minLength: 'New password must be at least 8 characters.',
+          uppercase: 'New password must include an uppercase letter.',
+          lowercase: 'New password must include a lowercase letter.',
+          number: 'New password must include a number.',
+          confirmRequired: 'Please confirm your new password.',
+          mismatch: 'Password confirmation does not match.',
+        },
+      }
 
   const change = useMutation({
     mutationFn: () =>
@@ -37,7 +100,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
       setCurrent('')
       setNext('')
       setConfirm('')
-      toast.success('Password berhasil diubah.')
+      toast.success(copy.success)
       clearSession()
       navigate('/login', { replace: true })
     },
@@ -47,16 +110,16 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!current) {
-      toast.error('Password sekarang wajib diisi.')
+      toast.error(copy.currentRequired)
       return
     }
-    const passwordError = getPasswordValidationError(next, confirm)
+    const passwordError = getPasswordValidationError(next, confirm, copy.validation)
     if (passwordError) {
-      toast.error(passwordError, 'Password belum sesuai')
+      toast.error(passwordError, copy.invalidTitle)
       return
     }
     if (next === current) {
-      toast.error('Password baru harus berbeda dari yang sekarang.')
+      toast.error(copy.samePassword)
       return
     }
     change.mutate()
@@ -73,8 +136,8 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
     <div className={showHeader ? 'mx-auto max-w-5xl' : 'w-full'}>
       {showHeader ? (
         <PageHeader
-          title="Pengaturan Keamanan"
-          subtitle="Kelola password dan preferensi keamanan akun."
+          title={copy.pageTitle}
+          subtitle={copy.pageSubtitle}
         />
       ) : null}
 
@@ -84,9 +147,9 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
             <HiOutlineKey className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900">Ubah Password</h3>
+            <h3 className="text-base font-bold text-slate-900">{copy.title}</h3>
             <p className="text-xs text-slate-500">
-              Pilih password yang kuat dan unik untuk akun ini.
+              {copy.description}
             </p>
           </div>
         </div>
@@ -94,7 +157,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
           <div className="relative">
             <Input
-              label="Password Sekarang"
+              label={copy.current}
               type={showCurrent ? 'text' : 'password'}
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
@@ -102,25 +165,39 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
               autoComplete="current-password"
               required
             />
-            <EyeBtn show={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />
+            <EyeBtn
+              show={showCurrent}
+              labels={{ show: copy.show, hide: copy.hide }}
+              onToggle={() => setShowCurrent((v) => !v)}
+            />
           </div>
 
           <div>
             <div className="relative">
               <Input
-                label="Password Baru"
+                label={copy.next}
                 type={showNext ? 'text' : 'password'}
                 value={next}
                 onChange={(e) => setNext(e.target.value)}
-                placeholder="Min. 8 karakter"
+                placeholder={copy.nextPlaceholder}
                 autoComplete="new-password"
                 required
                 minLength={8}
               />
-              <EyeBtn show={showNext} onToggle={() => setShowNext((v) => !v)} />
+              <EyeBtn
+                show={showNext}
+                labels={{ show: copy.show, hide: copy.hide }}
+                onToggle={() => setShowNext((v) => !v)}
+              />
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
-              {next ? <StrengthMeter score={strength} /> : <div />}
+              {next ? (
+                <StrengthMeter
+                  score={strength}
+                  label={copy.strength}
+                  labels={copy.strengthLabels}
+                />
+              ) : <div />}
               <Button
                 type="button"
                 variant="outline"
@@ -135,16 +212,16 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
           </div>
 
           <Input
-            label="Konfirmasi Password Baru"
+            label={copy.confirm}
             type={showNext ? 'text' : 'password'}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            placeholder="Ulangi password baru"
+            placeholder={copy.confirmPlaceholder}
             autoComplete="new-password"
             required
             error={
               confirm && confirm !== next
-                ? 'Tidak cocok dengan password baru.'
+                ? copy.mismatch
                 : undefined
             }
           />
@@ -161,10 +238,10 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
               }}
               disabled={change.isPending}
             >
-              Reset
+              {copy.reset}
             </Button>
             <Button type="submit" loading={change.isPending}>
-              Simpan Password Baru
+              {copy.save}
             </Button>
           </div>
         </form>
@@ -173,13 +250,21 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
   )
 }
 
-function EyeBtn({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+function EyeBtn({
+  show,
+  labels,
+  onToggle,
+}: {
+  show: boolean
+  labels: { show: string; hide: string }
+  onToggle: () => void
+}) {
   return (
     <button
       type="button"
       onClick={onToggle}
       className="absolute right-3 top-8.5 text-slate-400 hover:text-slate-700"
-      aria-label={show ? 'Sembunyikan' : 'Tampilkan'}
+      aria-label={show ? labels.hide : labels.show}
       tabIndex={-1}
     >
       {show ? (
@@ -191,8 +276,15 @@ function EyeBtn({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   )
 }
 
-function StrengthMeter({ score }: { score: number }) {
-  const labels = ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat']
+function StrengthMeter({
+  score,
+  label,
+  labels,
+}: {
+  score: number
+  label: string
+  labels: string[]
+}) {
   const colors = [
     'bg-rose-500',
     'bg-orange-500',
@@ -214,7 +306,7 @@ function StrengthMeter({ score }: { score: number }) {
         ))}
       </div>
       <p className="mt-1.5 text-[11px] font-medium text-slate-500">
-        Kekuatan: <span className="text-slate-700">{labels[score]}</span>
+        {label}: <span className="text-slate-700">{labels[score]}</span>
       </p>
     </div>
   )

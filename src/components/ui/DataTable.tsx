@@ -21,6 +21,18 @@ import {
 import { Skeleton, EmptyState } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
+export interface DataTableLabels {
+  clearSearch?: string
+  show?: string
+  rows?: string
+  showing?: string
+  of?: string
+  entries?: string
+  previous?: string
+  next?: string
+  page?: string
+}
+
 export interface DataTableProps<T> {
   data: T[]
   columns: ColumnDef<T, unknown>[]
@@ -33,6 +45,7 @@ export interface DataTableProps<T> {
   disablePagination?: boolean
   initialPageSize?: number
   onRowClick?: (row: T) => void
+  labels?: DataTableLabels
 }
 
 export function DataTable<T>({
@@ -47,6 +60,7 @@ export function DataTable<T>({
   disablePagination,
   initialPageSize = 10,
   onRowClick,
+  labels,
 }: DataTableProps<T>) {
   const [globalFilter, setGlobalFilter] = useState('')
   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState('')
@@ -95,7 +109,7 @@ export function DataTable<T>({
             <button
               type="button"
               onClick={() => setGlobalFilter('')}
-              aria-label="Clear search"
+              aria-label={labels?.clearSearch ?? 'Clear search'}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-white hover:text-slate-700"
             >
               <HiOutlineXMark className="h-4 w-4" />
@@ -187,7 +201,7 @@ export function DataTable<T>({
         <div className="flex flex-col gap-3 border-t border-white/70 bg-white/30 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span>Tampilkan</span>
+              <span>{labels?.show ?? 'Tampilkan'}</span>
               <select
                 value={pageSize}
                 onChange={(e) => table.setPageSize(Number(e.target.value))}
@@ -197,13 +211,13 @@ export function DataTable<T>({
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <span>data</span>
+              <span>{labels?.rows ?? 'data'}</span>
             </label>
             <span className="hidden sm:inline text-slate-300">·</span>
             <span>
-              Menampilkan <span className="font-medium text-slate-700">{start}</span>–
+              {labels?.showing ?? 'Menampilkan'} <span className="font-medium text-slate-700">{start}</span>–
               <span className="font-medium text-slate-700">{end}</span> dari{' '}
-              <span className="font-medium text-slate-700">{totalRows}</span> entri
+              <span className="font-medium text-slate-700">{totalRows}</span> {labels?.entries ?? 'entri'}
             </span>
           </div>
           <NumberedPagination
@@ -212,6 +226,7 @@ export function DataTable<T>({
             onChange={(p) => table.setPageIndex(p - 1)}
             canPrev={table.getCanPreviousPage()}
             canNext={table.getCanNextPage()}
+            labels={labels}
           />
         </div>
       ) : null}
@@ -221,13 +236,14 @@ export function DataTable<T>({
 
 
 function NumberedPagination({
-  page, totalPages, onChange, canPrev, canNext,
+  page, totalPages, onChange, canPrev, canNext, labels,
 }: {
   page: number
   totalPages: number
   onChange: (p: number) => void
   canPrev: boolean
   canNext: boolean
+  labels?: DataTableLabels
 }) {
   const pages = buildPageList(page, totalPages)
   return (
@@ -235,7 +251,7 @@ function NumberedPagination({
       <PageBtn
         onClick={() => onChange(page - 1)}
         disabled={!canPrev}
-        aria="Sebelumnya"
+        aria={labels?.previous ?? 'Sebelumnya'}
       >
         <HiOutlineChevronLeft className="h-3.5 w-3.5" />
       </PageBtn>
@@ -253,7 +269,7 @@ function NumberedPagination({
             key={p}
             active={p === page}
             onClick={() => onChange(p)}
-            aria={`Halaman ${p}`}
+            aria={`${labels?.page ?? 'Halaman'} ${p}`}
           >
             {p}
           </PageBtn>
@@ -262,7 +278,7 @@ function NumberedPagination({
       <PageBtn
         onClick={() => onChange(page + 1)}
         disabled={!canNext}
-        aria="Berikutnya"
+        aria={labels?.next ?? 'Berikutnya'}
       >
         <HiOutlineChevronRight className="h-3.5 w-3.5" />
       </PageBtn>

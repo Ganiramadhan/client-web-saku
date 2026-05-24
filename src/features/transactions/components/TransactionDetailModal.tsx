@@ -3,6 +3,7 @@ import { Badge, Button, Modal } from '@/components/ui'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import type { Transaction } from '@/types/api'
 import { resolveCategoryIcon } from './TransactionCategoryCell'
+import type { TransactionCopy } from '../constants/copy'
 
 export function DetailModal({
   tx,
@@ -11,6 +12,7 @@ export function DetailModal({
   onClose,
   onEdit,
   onDelete,
+  copy,
 }: {
   tx: Transaction | null
   walletName?: string
@@ -18,71 +20,97 @@ export function DetailModal({
   onClose: () => void
   onEdit?: (tx: Transaction) => void
   onDelete?: (tx: Transaction) => void
+  copy: TransactionCopy
 }) {
   if (!tx) return null
+
   const isIncome = tx.type === 'income'
   const { Icon: CatIcon } = resolveCategoryIcon(categoryName)
+
   const sourceLabel =
     tx.source && tx.source !== 'manual'
       ? tx.source === 'ai_ocr'
         ? 'Hasil Scan AI'
         : tx.source === 'import'
-        ? 'Impor'
-        : tx.source === 'api'
-        ? 'API'
-        : tx.source
+          ? 'Impor'
+          : tx.source === 'api'
+            ? 'API'
+            : tx.source
       : null
+
   return (
     <Modal
       open={Boolean(tx)}
       onClose={onClose}
-      title="Detail Transaksi"
-      description="Ringkasan lengkap transaksi"
+      title={`${copy.detail} ${copy.add.replace(/^Tambah |^Add /i, '')}`}
+      description={copy.summary}
       size="md"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>Tutup</Button>
           {onEdit ? (
             <Button
               variant="outline"
               leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />}
               onClick={() => onEdit(tx)}
             >
-              <span className="sr-only">Edit</span>
+              {copy.edit}
             </Button>
           ) : null}
+
           {onDelete ? (
             <Button
               variant="danger"
               leftIcon={<HiOutlineTrash className="h-4 w-4" />}
               onClick={() => onDelete(tx)}
             >
-              <span className="sr-only">Hapus</span>
+              {copy.delete}
             </Button>
           ) : null}
         </>
       }
     >
-      {/* Hero — softer gradient */}
       <div
         className={cn(
-          'relative overflow-hidden rounded-2xl border p-4 shadow-inner backdrop-blur-md',
+          `
+          relative
+          overflow-hidden
+          rounded-3xl
+          border
+          p-5
+          backdrop-blur-xl
+          `,
           isIncome
-            ? 'bg-gradient-to-br from-emerald-500/10 via-white/40 to-white/10 border-emerald-500/20'
-            : 'bg-gradient-to-br from-rose-500/10 via-white/40 to-white/10 border-rose-500/20',
+            ? 'border-emerald-100 bg-emerald-50/60'
+            : 'border-rose-100 bg-rose-50/60',
         )}
+        style={{
+          boxShadow:
+            '0 10px 32px rgba(15,23,42,.04), inset 0 1px 0 rgba(255,255,255,.9)',
+        }}
       >
         <div className="flex items-start gap-4">
           <div
             className={cn(
-              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm backdrop-blur-sm',
+              `
+              flex
+              h-14
+              w-14
+              shrink-0
+              items-center
+              justify-center
+              rounded-2xl
+              border
+              bg-white
+              shadow-sm
+              `,
               isIncome
-                ? 'bg-white/80 text-emerald-700 border-emerald-200/50'
-                : 'bg-white/80 text-rose-700 border-rose-200/50',
+                ? 'border-emerald-100 text-emerald-700'
+                : 'border-rose-100 text-rose-700',
             )}
           >
             <CatIcon className="h-7 w-7" />
           </div>
+
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge tone={isIncome ? 'green' : 'red'}>
@@ -91,13 +119,18 @@ export function DetailModal({
                 ) : (
                   <HiOutlineArrowUpCircle className="h-3.5 w-3.5" />
                 )}
-                <span className="ml-1 font-semibold">{isIncome ? 'Pemasukan' : 'Pengeluaran'}</span>
+                <span className="ml-1 font-semibold">
+                  {isIncome ? copy.income : copy.expense}
+                </span>
               </Badge>
+
               {sourceLabel ? <Badge tone="violet">{sourceLabel}</Badge> : null}
             </div>
+
             <div className="mt-1.5 truncate text-xs font-bold uppercase tracking-wider text-slate-500">
               {categoryName ?? '—'}
             </div>
+
             <div
               className={cn(
                 'mt-1 text-2xl font-black tabular-nums sm:text-3xl',
@@ -107,6 +140,7 @@ export function DetailModal({
               {isIncome ? '+ ' : '- '}
               {formatCurrency(Number(tx.amount))}
             </div>
+
             <div className="mt-1 text-xs font-medium text-slate-500">
               {formatDate(tx.transaction_date)}
             </div>
@@ -114,12 +148,13 @@ export function DetailModal({
         </div>
       </div>
 
-      {/* Info grid */}
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <InfoTile label="Dompet" value={walletName ?? '—'} />
-        <InfoTile label="Merchant" value={tx.merchant_name || '—'} />
+        <InfoTile label={copy.wallet} value={walletName ?? '—'} />
+
+        <InfoTile label={copy.merchant} value={tx.merchant_name || '—'} />
+
         <InfoTile
-          label="Deskripsi"
+          label={copy.description}
           value={
             <span className="block whitespace-pre-wrap text-slate-700">
               {tx.description || '—'}
@@ -127,6 +162,7 @@ export function DetailModal({
           }
           className="col-span-2"
         />
+
         {typeof tx.confidence_score === 'number' ? (
           <InfoTile
             label="AI Confidence"
@@ -139,13 +175,16 @@ export function DetailModal({
                       tx.confidence_score >= 0.8
                         ? 'bg-emerald-500'
                         : tx.confidence_score >= 0.5
-                        ? 'bg-amber-500'
-                        : 'bg-rose-500',
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500',
                     )}
                     data-pct={(tx.confidence_score * 100).toFixed(0)}
-                    style={{ width: `${(tx.confidence_score * 100).toFixed(0)}%` }}
+                    style={{
+                      width: `${(tx.confidence_score * 100).toFixed(0)}%`,
+                    }}
                   />
                 </div>
+
                 <span className="text-xs font-bold text-slate-700">
                   {(tx.confidence_score * 100).toFixed(0)}%
                 </span>

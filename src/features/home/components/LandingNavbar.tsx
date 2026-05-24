@@ -46,6 +46,9 @@ export function LandingNavbar({
           >
             {/* Logo */}
             <Logo />
+            <div className="ml-auto mr-2 lg:hidden">
+              <LanguageSwitcher />
+            </div>
 
             {/* Desktop Navigation */}
             <nav className="hidden items-center gap-1 lg:flex">

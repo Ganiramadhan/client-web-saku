@@ -9,7 +9,8 @@ import {
 import { cn } from '@/lib/utils'
 import { formatRupiah, parseRupiah } from '@/lib/utils'
 
-export { DataTable, type DataTableProps } from './DataTable'
+export { DataTable, type DataTableProps, type DataTableLabels } from './DataTable'
+export { DataListPagination } from './DataListPagination'
 export { RSelect, type SelectOption } from './RSelect'
 export { DateInput, type DateInputProps } from './DateInput'
 
@@ -24,28 +25,46 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: ReactNode
   rightIcon?: ReactNode
 }
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, leftIcon, rightIcon, className, children, disabled, ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    leftIcon,
+    rightIcon,
+    className,
+    children,
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]'
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold cursor-pointer transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 hover:-translate-y-[1px] hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:active:scale-100'
+
   const sizes: Record<ButtonSize, string> = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
     lg: 'px-5 py-2.5 text-base',
   }
+
   const variants: Record<ButtonVariant, string> = {
     primary:
-      'bg-brand-600 text-white shadow-lg shadow-brand-200/50 hover:bg-brand-700 focus:ring-brand-500/40',
+      'bg-brand-600 text-white shadow-lg shadow-brand-200/50 hover:bg-brand-700 hover:shadow-xl focus:ring-brand-500/40',
+
     secondary:
-      'bg-slate-900 text-white shadow-lg shadow-slate-200/50 hover:bg-slate-800 focus:ring-slate-500/40',
+      'bg-slate-900 text-white shadow-lg shadow-slate-200/50 hover:bg-slate-800 hover:shadow-xl focus:ring-slate-500/40',
+
     outline:
-      'border border-white/80 bg-white/70 text-slate-700 shadow-sm backdrop-blur-xl hover:bg-white focus:ring-slate-300/40',
-    ghost: 'bg-white/0 text-slate-700 hover:bg-white/70 focus:ring-slate-300/40',
-    danger: 'bg-rose-600 text-white shadow-lg shadow-rose-200/50 hover:bg-rose-700 focus:ring-rose-500/40',
+      'border border-white/80 bg-white/70 text-slate-700 shadow-sm backdrop-blur-xl hover:border-slate-300 hover:bg-white hover:shadow-md focus:ring-slate-300/40',
+
+    ghost:
+      'bg-transparent text-slate-700 hover:bg-white/70 hover:shadow-sm focus:ring-slate-300/40',
+
+    danger:
+      'bg-rose-600 text-white shadow-lg shadow-rose-200/50 hover:bg-rose-700 hover:shadow-xl focus:ring-rose-500/40',
   }
+
   return (
     <button
       ref={ref}
@@ -58,12 +77,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ) : (
         leftIcon
       )}
+
       {children}
+
       {!loading && rightIcon ? rightIcon : null}
     </button>
   )
 })
-
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -78,20 +98,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <label className="block">
       {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+        <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+          {label}
+        </span>
       ) : null}
+
       <input
         ref={ref}
         className={cn(
-          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition placeholder:text-slate-400',
-          'focus:outline-none focus:ring-2',
+          'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 shadow-sm backdrop-blur-xl transition-all duration-150 placeholder:text-slate-400',
+          'bg-white/80 hover:border-slate-300 hover:bg-white/90 focus:outline-none focus:ring-2',
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
+            : 'border-slate-200 focus:border-brand-400 focus:ring-brand-500/20',
           className,
         )}
         {...rest}
       />
+
       {error ? (
         <span className="mt-1 block text-xs text-rose-600">{error}</span>
       ) : hint ? (
@@ -142,33 +166,74 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: string
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { label, error, className, ...rest },
-  ref,
-) {
-  return (
-    <label className="block">
-      {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
-      ) : null}
-      <textarea
-        ref={ref}
-        rows={3}
-        className={cn(
-          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition',
-          'focus:outline-none focus:ring-2',
-          error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
-          className,
-        )}
-        {...rest}
-      />
-      {error ? <span className="mt-1 block text-xs text-rose-600">{error}</span> : null}
-    </label>
-  )
-})
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  function Textarea(
+    { label, error, className, ...rest },
+    ref,
+  ) {
+    return (
+      <label className="block">
+        {label ? (
+          <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+            {label}
+          </span>
+        ) : null}
 
+        <textarea
+          ref={ref}
+          rows={3}
+          className={cn(
+            `
+            w-full
+            rounded-xl
+            border
+            px-3
+            py-2.5
+            text-sm
+            text-slate-900
+            shadow-sm
+            backdrop-blur-xl
+            transition-all
+            duration-150
+
+            placeholder:text-slate-400
+
+            hover:border-slate-300
+            hover:bg-white/90
+
+            focus:outline-none
+            focus:ring-2
+            resize-none
+            `,
+
+            error
+              ? `
+                border-rose-300
+                bg-white/80
+                focus:border-rose-500
+                focus:ring-rose-500/30
+              `
+              : `
+                border-slate-200
+                bg-white/80
+                focus:border-brand-400
+                focus:ring-brand-500/20
+              `,
+
+            className,
+          )}
+          {...rest}
+        />
+
+        {error ? (
+          <span className="mt-1 block text-xs text-rose-600">
+            {error}
+          </span>
+        ) : null}
+      </label>
+    )
+  },
+)
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (

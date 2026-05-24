@@ -15,12 +15,13 @@ import {
   getPasswordValidationError,
   scorePasswordStrength,
 } from '@/features/auth/components/AuthFormParts'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 
 export function ForgotPasswordPage() {
   const t = useT()
+  const { locale } = useLocale()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
@@ -50,7 +51,7 @@ export function ForgotPasswordPage() {
       toast.success(t.auth.otpSentMessage, t.auth.otpSentTitle)
     },
     onError: (error) => {
-      toast.error(toErrorMessage(error) || t.auth.emailNotRegisteredMessage, t.auth.emailNotRegisteredTitle)
+      toast.error(localizedForgotError(toErrorMessage(error), locale) || t.auth.emailNotRegisteredMessage, t.auth.emailNotRegisteredTitle)
     },
   })
 
@@ -61,7 +62,7 @@ export function ForgotPasswordPage() {
       toast.success(t.auth.otpValidMessage, t.auth.otpValidTitle)
     },
     onError: (error) => {
-      toast.error(toErrorMessage(error) || t.auth.otpInvalidMessage, t.auth.otpInvalidTitle)
+      toast.error(localizedForgotError(toErrorMessage(error), locale) || t.auth.otpInvalidMessage, t.auth.otpInvalidTitle)
     },
   })
 
@@ -72,7 +73,7 @@ export function ForgotPasswordPage() {
       navigate('/login', { replace: true })
     },
     onError: (error) => {
-      toast.error(toErrorMessage(error) || t.auth.passwordUpdateFailedMessage, t.auth.passwordUpdateFailedTitle)
+      toast.error(localizedForgotError(toErrorMessage(error), locale) || t.auth.passwordUpdateFailedMessage, t.auth.passwordUpdateFailedTitle)
     },
   })
 
@@ -208,4 +209,18 @@ export function ForgotPasswordPage() {
       </p>
     </AuthShell>
   )
+}
+
+function localizedForgotError(message: string, locale: 'id' | 'en') {
+  if (!message) return ''
+  const normalized = message.toLowerCase()
+  if (normalized.includes('otp') && (normalized.includes('invalid') || normalized.includes('kedaluwarsa') || normalized.includes('expired'))) {
+    return locale === 'id'
+      ? 'Kode OTP tidak valid atau sudah kedaluwarsa.'
+      : 'The OTP code is invalid or has expired.'
+  }
+  if (normalized.includes('email') && (normalized.includes('tidak terdaftar') || normalized.includes('not registered') || normalized.includes('not found'))) {
+    return locale === 'id' ? 'Email tidak terdaftar.' : 'Email is not registered.'
+  }
+  return message
 }

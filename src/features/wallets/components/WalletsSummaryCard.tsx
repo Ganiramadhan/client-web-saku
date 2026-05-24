@@ -1,4 +1,5 @@
 import { HiOutlineBanknotes } from 'react-icons/hi2'
+import { useLocale } from '@/i18n'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { Wallet, WalletType } from '@/types/api'
 
@@ -22,6 +23,24 @@ export function WalletsSummaryCard({
   byType?: Record<WalletType, number>
   walletStats?: Map<string, WalletStat>
 }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        totalBalance: 'Total Saldo',
+        activeWallets: (count: number) => `Total saldo dari ${count} dompet aktif.`,
+        net30d: 'Net 30 hari',
+        income30d: 'Pemasukan 30d',
+        expense30d: 'Pengeluaran 30d',
+        savingRate: 'Saving Rate',
+      }
+    : {
+        totalBalance: 'Total Balance',
+        activeWallets: (count: number) => `Total balance from ${count} active wallets.`,
+        net30d: '30-day net',
+        income30d: 'Income 30d',
+        expense30d: 'Spending 30d',
+        savingRate: 'Saving Rate',
+      }
   const net30d = totalIncome30d - totalExpense30d
   const savingRate =
     totalIncome30d > 0 ? Math.max(0, Math.min(100, Math.round((net30d / totalIncome30d) * 100))) : 0
@@ -32,7 +51,7 @@ export function WalletsSummaryCard({
         <div>
           <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
             <HiOutlineBanknotes className="h-4 w-4 text-slate-700" />
-            Total Saldo
+            {copy.totalBalance}
           </div>
 
           <p className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
@@ -40,7 +59,7 @@ export function WalletsSummaryCard({
           </p>
 
           <p className="mt-3 text-sm text-slate-500">
-            Total saldo dari {wallets.length} dompet aktif.
+            {copy.activeWallets(wallets.length)}
           </p>
 
           <div
@@ -51,15 +70,15 @@ export function WalletsSummaryCard({
                 : 'border-rose-200 bg-rose-50 text-rose-700',
             ].join(' ')}
           >
-            Net 30 hari: {net30d >= 0 ? '+' : ''}
+            {copy.net30d}: {net30d >= 0 ? '+' : ''}
             {formatCurrency(net30d)}
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryMetric label="Pemasukan 30d" value={formatCurrency(totalIncome30d)} tone="emerald" />
-          <SummaryMetric label="Pengeluaran 30d" value={formatCurrency(totalExpense30d)} tone="rose" />
-          <SummaryMetric label="Saving Rate" value={`${savingRate}%`} tone="slate" />
+          <SummaryMetric label={copy.income30d} value={formatCurrency(totalIncome30d)} tone="emerald" />
+          <SummaryMetric label={copy.expense30d} value={formatCurrency(totalExpense30d)} tone="rose" />
+          <SummaryMetric label={copy.savingRate} value={`${savingRate}%`} tone="slate" />
         </div>
       </div>
     </section>

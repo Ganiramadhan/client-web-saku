@@ -5,6 +5,7 @@ import { Button, DateInput, Modal, RSelect, type SelectOption } from '@/componen
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
+import type { TransactionCopy } from '../constants/copy'
 
 type TypeFilter = 'all' | 'income' | 'expense'
 
@@ -14,10 +15,12 @@ export function ExportModal({
   open,
   onClose,
   categoryOptions,
+  copy,
 }: {
   open: boolean
   onClose: () => void
   categoryOptions: SelectOption[]
+  copy: TransactionCopy
 }) {
   const [mode, setMode] = useState<ExportMode>('month')
   const [month, setMonth] = useState<Date | null>(() => {
@@ -37,7 +40,7 @@ export function ExportModal({
 
   const onExport = async () => {
     if (invalidRange) {
-      toast.error('Tanggal selesai tidak boleh lebih kecil dari tanggal mulai.')
+      toast.error(copy.invalidRange)
       return
     }
     setBusy(true)
@@ -69,7 +72,7 @@ export function ExportModal({
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-      toast.success('File berhasil diunduh')
+      toast.success(copy.exportSuccess)
       onClose()
     } catch (e) {
       toast.error(toErrorMessage(e))
@@ -82,14 +85,14 @@ export function ExportModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Export Transaksi ke Excel"
-      description="Pilih periode dan filter sebelum mengunduh data transaksi."
+      title={copy.exportTitle}
+      description={copy.exportDescription}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={busy}>Batal</Button>
+          <Button variant="outline" onClick={onClose} disabled={busy}>{copy.cancel}</Button>
           <Button onClick={onExport} loading={busy} disabled={invalidRange}>
             <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
-            Download .xlsx
+            {copy.download}
           </Button>
         </>
       }
@@ -106,7 +109,7 @@ export function ExportModal({
                 : 'border-white/80 bg-white/62 text-slate-600 shadow-sm backdrop-blur-xl hover:bg-white',
             )}
           >
-            Per Bulan
+            {copy.byMonth}
           </button>
           <button
             type="button"
@@ -118,35 +121,35 @@ export function ExportModal({
                 : 'border-white/80 bg-white/62 text-slate-600 shadow-sm backdrop-blur-xl hover:bg-white',
             )}
           >
-            Range Tanggal
+            {copy.byRange}
           </button>
         </div>
 
         {mode === 'month' ? (
           <DateInput
             picker="month"
-            label="Pilih Bulan"
+            label={copy.pickMonth}
             value={month}
             onChange={setMonth}
-            placeholderText="Pilih bulan"
+            placeholderText={copy.pickMonth}
           />
         ) : (
           <div className="grid grid-cols-2 gap-3">
             <DateInput
-              label="Dari"
+              label={copy.fromDate}
               value={from}
               onChange={(date) => {
                 setFrom(date)
                 if (date && to && to < date) setTo(null)
               }}
-              placeholderText="Pilih tanggal"
+              placeholderText={copy.pickDate}
               maxDate={to ?? undefined}
             />
             <DateInput
-              label="Sampai"
+              label={copy.toDate}
               value={to}
               onChange={setTo}
-              placeholderText={from ? 'Pilih tanggal' : 'Pilih tanggal mulai dulu'}
+              placeholderText={from ? copy.pickDate : copy.pickStartFirst}
               minDate={from ?? undefined}
               disabled={!from}
             />
@@ -154,17 +157,17 @@ export function ExportModal({
         )}
 
         <RSelect
-          label="Jenis"
+          label={copy.type}
           value={typeF}
           options={[
-            { value: 'all', label: 'Semua' },
-            { value: 'income', label: 'Pemasukan' },
-            { value: 'expense', label: 'Pengeluaran' },
+            { value: 'all', label: copy.all },
+            { value: 'income', label: copy.income },
+            { value: 'expense', label: copy.expense },
           ]}
           onChange={(v) => setTypeF((v as TypeFilter) ?? 'all')}
         />
         <RSelect
-          label="Kategori"
+          label={copy.category}
           value={catF}
           options={categoryOptions}
           onChange={(v) => setCatF(v ?? '')}

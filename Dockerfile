@@ -8,9 +8,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline
+    pnpm install --frozen-lockfile
 
 # ─── 2. Build ─────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
@@ -32,16 +32,21 @@ ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 
 RUN pnpm run build && \
-    rm -rf node_modules src
+    rm -rf node_modules src .vite
 
 # ─── 3. Runtime ───────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runtime
 
-RUN rm -rf /usr/share/nginx/html/* && \
+RUN addgroup -S saku && adduser -S -G saku saku && \
+    rm -rf /usr/share/nginx/html/* && \
     rm /etc/nginx/conf.d/default.conf
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
+RUN chown -R saku:saku /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && chown saku:saku /var/run/nginx.pid
+
+USER saku
 
 EXPOSE 3301
 

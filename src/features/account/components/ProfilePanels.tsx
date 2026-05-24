@@ -1,47 +1,59 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import {
-  HiOutlineCalendarDays,
   HiOutlineCheckCircle,
-  HiOutlinePencilSquare,
+  HiOutlineClipboardDocument,
   HiOutlineStar,
-  HiOutlineTrash,
-  HiOutlineXMark,
-  HiPlus,
 } from 'react-icons/hi2'
 import {
   Badge,
   Button,
   Card,
-  CurrencyInput,
-  DateInput,
   Input,
-  Modal,
-  RSelect,
-  type SelectOption,
 } from '@/components/ui'
-import { upcomingBillingApi, type BillingCycle, type BillingStatus, type UpcomingBilling, type UpcomingBillingPayload } from '@/features/billing/api'
 import type { Plan, Subscription } from '@/features/subscription/api'
-import { toErrorMessage } from '@/lib/api'
-import { confirm } from '@/lib/confirm'
-import { toast } from '@/lib/toast'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { billingCycleLabel, nextBillingDate, sanitizeReferralCode } from '../utils/billing'
+import { useLocale } from '@/i18n'
+import { formatCurrency } from '@/lib/utils'
+import { sanitizeReferralCode } from '../utils/billing'
 
 export function ReferralCard({ code, reward }: { code?: string; reward: number }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        referralCode: 'Kode referal',
+        loginAgain: 'Login ulang untuk membuat kode',
+        reward: 'Reward',
+        title: 'Kode Referal',
+        desc: 'Bagikan kode ini. Reward masuk saat pengguna lain membayar langganan dengan kode kamu.',
+        copy: 'Salin kode referal',
+      }
+    : {
+        referralCode: 'Referral code',
+        loginAgain: 'Log in again to generate a code',
+        reward: 'Reward',
+        title: 'Referral Code',
+        desc: 'Share this code. Rewards are added when another user pays a subscription with your code.',
+        copy: 'Copy referral code',
+      }
+  const [copied, setCopied] = useState(false)
   const rows = [
-    { label: 'Kode referal', value: code || 'Login ulang untuk membuat kode' },
-    { label: 'Reward', value: formatCurrency(reward, 'IDR') },
+    { label: copy.referralCode, value: code || copy.loginAgain },
+    { label: copy.reward, value: formatCurrency(reward, 'IDR') },
   ]
+  const copyCode = async () => {
+    if (!code) return
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
 
   return (
     <Card>
       <div className="flex items-center gap-2">
         <HiOutlineStar className="h-5 w-5 text-amber-500" />
-        <h3 className="text-sm font-bold text-slate-900">Kode Referal</h3>
+        <h3 className="text-sm font-bold text-slate-900">{copy.title}</h3>
       </div>
       <p className="mt-2 text-xs leading-5 text-slate-500">
-        Bagikan kode ini. Reward masuk saat pengguna lain membayar langganan dengan kode kamu.
+        {copy.desc}
       </p>
       <div className="mt-4 overflow-hidden rounded-xl border border-white/80 bg-white/60 shadow-sm">
         <table className="w-full text-left text-xs">
@@ -52,8 +64,24 @@ export function ReferralCard({ code, reward }: { code?: string; reward: number }
                   {row.label}
                 </th>
                 <td className="px-3 py-2 font-semibold text-slate-900">
-                  <span className={row.label === 'Kode referal' ? 'font-mono tracking-wide' : undefined}>
-                    {row.value}
+                  <span className="flex items-center justify-between gap-2">
+                    <span className={row.label === copy.referralCode ? 'font-mono tracking-wide' : undefined}>
+                      {row.value}
+                    </span>
+                    {row.label === copy.referralCode && code ? (
+                      <button
+                        type="button"
+                        onClick={copyCode}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-brand-50 hover:text-brand-700"
+                        title={copy.copy}
+                      >
+                        {copied ? (
+                          <HiOutlineCheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <HiOutlineClipboardDocument className="h-4 w-4" />
+                        )}
+                      </button>
+                    ) : null}
                   </span>
                 </td>
               </tr>
@@ -88,6 +116,70 @@ export function SubscriptionCard({
   onCancel: (id: string) => void
   cancelLoading: boolean
 }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        info: 'Informasi Langganan',
+        loading: 'Memuat...',
+        pendingTitle: 'Pembayaran Belum Selesai',
+        pendingDesc: 'Selesaikan pembayaran untuk mengaktifkan paket',
+        continuePay: 'Lanjutkan Pembayaran',
+        freeDesc: 'Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.',
+        referral: 'Kode Referal',
+        referralPlaceholder: 'Opsional saat pembayaran',
+        loadingPlans: 'Memuat paket...',
+        noPlans: 'Paket berbayar belum tersedia.',
+        month: 'bulan',
+        year: 'tahun',
+        soon: 'Segera',
+        choose: 'Pilih',
+        active: 'Aktif',
+        trialEnds: 'Trial berakhir',
+        periodUntil: 'Periode hingga',
+        nextBilling: 'Tagihan berikutnya',
+        activeServices: 'Layanan aktif',
+        featureScan: 'Scan struk AI',
+        featureNlp: 'Catat transaksi lewat AI',
+        featureReports: 'Laporan lanjutan',
+        featureWallets: 'Multi wallet',
+        featureSupport: 'Dukungan prioritas',
+        featureFree: 'Semua fitur Free',
+        featureTarget: 'Kantong Tujuan',
+        featureBudget: 'Anggaran bulanan',
+        unavailable: 'Belum tersedia',
+        cancel: 'Batalkan Langganan',
+      }
+    : {
+        info: 'Subscription Information',
+        loading: 'Loading...',
+        pendingTitle: 'Payment Not Completed',
+        pendingDesc: 'Complete payment to activate plan',
+        continuePay: 'Continue Payment',
+        freeDesc: 'Your account is still on the Free plan. Choose a plan to unlock AI features, advanced reports, and richer financial workflows.',
+        referral: 'Referral Code',
+        referralPlaceholder: 'Optional during payment',
+        loadingPlans: 'Loading plans...',
+        noPlans: 'No paid plans are available yet.',
+        month: 'month',
+        year: 'year',
+        soon: 'Soon',
+        choose: 'Choose',
+        active: 'Active',
+        trialEnds: 'Trial ends',
+        periodUntil: 'Period until',
+        nextBilling: 'Next billing',
+        activeServices: 'Active services',
+        featureScan: 'AI receipt scanning',
+        featureNlp: 'AI transaction recording',
+        featureReports: 'Advanced reports',
+        featureWallets: 'Multi-wallet',
+        featureSupport: 'Priority support',
+        featureFree: 'All Free features',
+        featureTarget: 'Target Pockets',
+        featureBudget: 'Monthly budgets',
+        unavailable: 'Unavailable',
+        cancel: 'Cancel Subscription',
+      }
   const [referralCode, setReferralCode] = useState('')
   const cleanReferralCode = sanitizeReferralCode(referralCode)
 
@@ -96,9 +188,9 @@ export function SubscriptionCard({
       <Card>
         <div className="flex items-center gap-2">
           <HiOutlineStar className="h-5 w-5 text-brand-600" />
-          <h3 className="text-sm font-bold text-slate-900">Informasi Langganan</h3>
+          <h3 className="text-sm font-bold text-slate-900">{copy.info}</h3>
         </div>
-        <p className="mt-3 text-xs text-slate-500">Memuat…</p>
+        <p className="mt-3 text-xs text-slate-500">{copy.loading}</p>
       </Card>
     )
   }
@@ -109,9 +201,9 @@ export function SubscriptionCard({
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-extrabold text-amber-900">Pembayaran Belum Selesai</p>
+                <p className="text-sm font-extrabold text-amber-900">{copy.pendingTitle}</p>
                 <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Selesaikan pembayaran untuk mengaktifkan paket {pendingSub.plan_name}.
+                  {copy.pendingDesc} {pendingSub.plan_name}.
                 </p>
                 <p className="mt-1 text-xs font-semibold text-amber-900">
                   {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
@@ -125,7 +217,7 @@ export function SubscriptionCard({
               loading={busyPlan === pendingSub.plan_code}
               onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode)}
             >
-              Lanjutkan Pembayaran
+              {copy.continuePay}
             </Button>
           </div>
         ) : null}
@@ -133,18 +225,18 @@ export function SubscriptionCard({
           <div>
             <div className="flex items-center gap-2">
               <HiOutlineStar className="h-5 w-5 text-amber-500" />
-              <h3 className="text-sm font-bold text-slate-900">Informasi Langganan</h3>
+              <h3 className="text-sm font-bold text-slate-900">{copy.info}</h3>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.
+              {copy.freeDesc}
             </p>
           </div>
           <Badge tone="gray">Free</Badge>
         </div>
         <div className="mt-4">
           <Input
-            label="Kode Referal"
-            placeholder="Opsional saat pembayaran"
+            label={copy.referral}
+            placeholder={copy.referralPlaceholder}
             value={referralCode}
             onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
             maxLength={32}
@@ -153,11 +245,11 @@ export function SubscriptionCard({
         <div className="mt-4 space-y-2">
           {plansLoading ? (
             <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
-              Memuat paket...
+              {copy.loadingPlans}
             </p>
           ) : plans.length === 0 ? (
             <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
-              Paket berbayar belum tersedia.
+              {copy.noPlans}
             </p>
           ) : (
             plans.map((plan) => {
@@ -171,7 +263,7 @@ export function SubscriptionCard({
                   <div>
                     <p className="text-sm font-extrabold text-slate-950">{plan.name}</p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      {formatCurrency(Number(plan.price), plan.currency)}/{plan.period === 'monthly' ? 'bulan' : 'tahun'}
+                      {formatCurrency(Number(plan.price), plan.currency)}/{plan.period === 'monthly' ? copy.month : copy.year}
                     </p>
                   </div>
                   <Button
@@ -180,7 +272,7 @@ export function SubscriptionCard({
                     loading={busyPlan === plan.code}
                     onClick={() => onSubscribe(plan.code, cleanReferralCode)}
                   >
-                    {disabled ? 'Segera' : 'Pilih'}
+                    {disabled ? copy.soon : copy.choose}
                   </Button>
                 </div>
               </div>
@@ -201,10 +293,10 @@ export function SubscriptionCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <HiOutlineStar className="h-5 w-5 text-amber-500 animate-spin-slow" />
-          <h3 className="text-sm font-bold text-slate-900">Informasi Langganan</h3>
+          <h3 className="text-sm font-bold text-slate-900">{copy.info}</h3>
         </div>
         <Badge tone={tone}>
-          {isTrial ? 'Trial' : sub.status === 'active' ? 'Aktif' : sub.status}
+          {isTrial ? 'Trial' : sub.status === 'active' ? copy.active : sub.status}
         </Badge>
       </div>
       <div className="mt-3 space-y-1">
@@ -216,7 +308,7 @@ export function SubscriptionCard({
       <dl className="mt-4 space-y-2 border-t border-white/60 pt-3 text-xs">
         {isTrial && trialEnd ? (
           <div className="flex justify-between">
-            <dt className="text-slate-500">Trial berakhir</dt>
+            <dt className="text-slate-500">{copy.trialEnds}</dt>
             <dd className="font-semibold text-amber-700">
               {trialEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
             </dd>
@@ -224,7 +316,7 @@ export function SubscriptionCard({
         ) : null}
         {periodEnd ? (
           <div className="flex justify-between">
-            <dt className="text-slate-500">Periode hingga</dt>
+            <dt className="text-slate-500">{copy.periodUntil}</dt>
             <dd className="font-semibold text-slate-700">
               {periodEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
             </dd>
@@ -232,7 +324,7 @@ export function SubscriptionCard({
         ) : null}
         {sub.next_billing_at ? (
           <div className="flex justify-between">
-            <dt className="text-slate-500">Tagihan berikutnya</dt>
+            <dt className="text-slate-500">{copy.nextBilling}</dt>
             <dd className="font-semibold text-slate-700">
               {new Date(sub.next_billing_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
             </dd>
@@ -242,24 +334,24 @@ export function SubscriptionCard({
       {activePlan && activePlan.features.length > 0 ? (
         <div className="mt-4 border-t border-white/60 pt-3">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Layanan aktif
+            {copy.activeServices}
           </p>
           <ul className="space-y-1.5 text-xs text-slate-700">
             {activePlan.features.map((f) => (
               <li key={f} className="flex items-start gap-1.5">
                 <HiOutlineCheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                <span className="leading-snug">{f}</span>
+                <span className="leading-snug">{translatePlanFeature(f, copy)}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
       <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-700">
-        Upcoming billing: {sub.next_billing_at
+        {copy.nextBilling}: {sub.next_billing_at
           ? new Date(sub.next_billing_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
           : periodEnd
             ? periodEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-            : 'Belum tersedia'}
+            : copy.unavailable}
       </div>
       <div className="mt-3 flex justify-end">
         <Button
@@ -269,337 +361,34 @@ export function SubscriptionCard({
           loading={cancelLoading}
           onClick={() => onCancel(sub.id)}
         >
-          Batalkan Langganan
+          {copy.cancel}
         </Button>
       </div>
     </Card>
   )
 }
 
-export function UpcomingBillingManager({
-  items,
-  loading,
-  onCreate,
-  onEdit,
-}: {
-  items: UpcomingBilling[]
-  loading: boolean
-  onCreate: () => void
-  onEdit: (item: UpcomingBilling) => void
-}) {
-  const qc = useQueryClient()
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | BillingStatus>('all')
-  const [cycleFilter, setCycleFilter] = useState<'all' | BillingCycle>('all')
-  const remove = useMutation({
-    mutationFn: upcomingBillingApi.remove,
-    onSuccess: () => {
-      toast.success('Tagihan rutin dihapus.')
-      qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
-    },
-    onError: (e) => toast.error(toErrorMessage(e)),
-  })
-  const markPaid = useMutation({
-    mutationFn: (item: UpcomingBilling) =>
-      upcomingBillingApi.update(item.id, {
-        due_date: nextBillingDate(item).toISOString(),
-        status: 'active',
-      }),
-    onSuccess: () => {
-      toast.success('Tagihan ditandai sudah dibayar. Jatuh tempo berikutnya diperbarui.')
-      qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
-    },
-    onError: (e) => toast.error(toErrorMessage(e)),
-  })
-
-  const onDelete = async (item: UpcomingBilling) => {
-    const ok = await confirm({
-      title: 'Hapus tagihan rutin?',
-      description: `${item.name} akan dihapus dari daftar upcoming billing.`,
-      tone: 'danger',
-      confirmLabel: 'Hapus',
-    })
-    if (ok) remove.mutate(item.id)
-  }
-
-  const onMarkPaid = async (item: UpcomingBilling) => {
-    const ok = await confirm({
-      title: 'Tandai tagihan sudah dibayar?',
-      description: `${item.name} akan dipindahkan ke jatuh tempo berikutnya sesuai siklus ${billingCycleLabel(item.cycle).toLowerCase()}.`,
-      tone: 'primary',
-      confirmLabel: 'Sudah Dibayar',
-    })
-    if (ok) markPaid.mutate(item)
-  }
-
-  const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return items.filter((item) => {
-      if (statusFilter !== 'all' && item.status !== statusFilter) return false
-      if (cycleFilter !== 'all' && item.cycle !== cycleFilter) return false
-      if (!query) return true
-      const haystack = [item.name, item.provider, item.notes, item.currency]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return haystack.includes(query)
-    })
-  }, [items, search, statusFilter, cycleFilter])
-
-  return (
-    <Card className="overflow-hidden bg-white/60">
-      <div className="flex flex-col gap-3 border-b border-white/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700">
-            <HiOutlineCalendarDays className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Upcoming Billing</h3>
-            <p className="mt-0.5 text-xs text-slate-500">Catat tagihan rutin agar tidak terlewat saat jatuh tempo.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 rounded-xl border border-white/80 bg-white/55 p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_160px_160px]">
-        <div className="relative">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari nama, provider, atau catatan..."
-            className="pr-10"
-          />
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-white hover:text-slate-700"
-              aria-label="Bersihkan pencarian"
-              title="Bersihkan pencarian"
-            >
-              <HiOutlineXMark className="h-4 w-4" />
-            </button>
-          ) : null}
-        </div>
-        <RSelect
-          value={statusFilter}
-          options={[
-            { value: 'all', label: 'Semua Status' },
-            { value: 'active', label: 'Aktif' },
-            { value: 'paused', label: 'Paused' },
-          ]}
-          onChange={(value) => setStatusFilter((value as 'all' | BillingStatus) ?? 'all')}
-        />
-        <RSelect
-          value={cycleFilter}
-          options={[
-            { value: 'all', label: 'Semua Siklus' },
-            { value: 'weekly', label: 'Mingguan' },
-            { value: 'monthly', label: 'Bulanan' },
-            { value: 'yearly', label: 'Tahunan' },
-          ]}
-          onChange={(value) => setCycleFilter((value as 'all' | BillingCycle) ?? 'all')}
-        />
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {loading ? (
-          <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
-            Memuat tagihan...
-          </p>
-        ) : items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-6 text-center">
-            <p className="text-sm text-slate-500">
-              Belum ada tagihan rutin. Tambahkan VPS, domain, software, atau layanan berulang agar cashflow mendatang lebih mudah dipantau.
-            </p>
-            <Button className="mt-4" onClick={onCreate}>
-              <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Billing
-            </Button>
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-5 text-sm text-slate-500">
-            Tidak ada tagihan rutin yang cocok dengan filter.
-          </div>
-        ) : (
-          <>
-          <p className="px-1 text-xs font-semibold text-slate-400">
-            Menampilkan {filteredItems.length} dari {items.length} tagihan
-          </p>
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl border border-white/80 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-950">{item.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
-                    {item.provider || 'Tanpa provider'} · {billingCycleLabel(item.cycle)}
-                  </p>
-                </div>
-                <Badge tone={item.status === 'active' ? 'green' : 'amber'}>
-                  {item.status === 'active' ? 'Aktif' : 'Paused'}
-                </Badge>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nominal</p>
-                    <p className="mt-1 text-sm font-extrabold text-slate-950">
-                      {formatCurrency(Number(item.amount), item.currency)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-blue-50 px-3 py-2 ring-1 ring-blue-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Jatuh Tempo</p>
-                    <p className="mt-1 text-sm font-extrabold text-blue-800">{formatDate(item.due_date)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    size="sm"
-                    className="!bg-emerald-600 shadow-emerald-200/60 hover:!bg-emerald-700 focus:ring-emerald-500/40"
-                    leftIcon={<HiOutlineCheckCircle className="h-4 w-4" />}
-                    onClick={() => onMarkPaid(item)}
-                    loading={markPaid.isPending}
-                    disabled={item.status !== 'active'}
-                  >
-                    Sudah Dibayar
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => onEdit(item)}
-                    className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-700"
-                    title="Edit"
-                  >
-                    <HiOutlinePencilSquare className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(item)}
-                    className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700"
-                    title="Hapus"
-                  >
-                    <HiOutlineTrash className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-          </>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-export function BillingModal({
-  open,
-  editing,
-  onClose,
-}: {
-  open: boolean
-  editing: UpcomingBilling | null
-  onClose: () => void
-}) {
-  const qc = useQueryClient()
-  const [form, setForm] = useState<UpcomingBillingPayload>(() => ({
-    name: editing?.name ?? '',
-    provider: editing?.provider ?? '',
-    amount: editing ? Number(editing.amount) : 0,
-    currency: editing?.currency ?? 'IDR',
-    cycle: editing?.cycle ?? 'monthly',
-    due_date: editing?.due_date ? editing.due_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
-    status: editing?.status ?? 'active',
-    notes: editing?.notes ?? '',
-  }))
-
-  const saveBilling = useMutation({
-    mutationFn: () => {
-      const payload: UpcomingBillingPayload = {
-        ...form,
-        due_date: new Date(`${form.due_date}T00:00:00`).toISOString(),
-      }
-      return editing
-        ? upcomingBillingApi.update(editing.id, payload)
-        : upcomingBillingApi.create(payload)
-    },
-    onSuccess: () => {
-      toast.success(editing ? 'Tagihan rutin diperbarui.' : 'Tagihan rutin ditambahkan.')
-      qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
-      onClose()
-    },
-    onError: (e) => toast.error(toErrorMessage(e)),
-  })
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={editing ? 'Edit Upcoming Billing' : 'Tambah Upcoming Billing'}
-      description="Catat tagihan rutin agar pengeluaran mendatang lebih mudah dipantau."
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button loading={saveBilling.isPending} onClick={() => saveBilling.mutate()}>
-            Simpan
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            label="Nama Tagihan"
-            placeholder="Netflix, VPS, Domain"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <Input
-            label="Provider"
-            placeholder="AWS, Netflix, Niagahoster"
-            value={form.provider ?? ''}
-            onChange={(e) => setForm({ ...form, provider: e.target.value })}
-          />
-        </div>
-        <CurrencyInput
-          label="Nominal (IDR)"
-          value={Number(form.amount) || 0}
-          onChange={(value) => setForm({ ...form, amount: value })}
-        />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <RSelect
-            label="Siklus"
-            value={form.cycle}
-            options={[
-              { value: 'weekly', label: 'Mingguan' },
-              { value: 'monthly', label: 'Bulanan' },
-              { value: 'yearly', label: 'Tahunan' },
-            ] as SelectOption[]}
-            onChange={(value) => setForm({ ...form, cycle: (value ?? 'monthly') as BillingCycle })}
-          />
-          <DateInput
-            label="Tanggal Jatuh Tempo"
-            value={form.due_date || null}
-            onChange={(date) => setForm({ ...form, due_date: date ? date.toISOString().slice(0, 10) : '' })}
-            placeholderText="Pilih tanggal jatuh tempo"
-          />
-          <RSelect
-            label="Status"
-            value={form.status ?? 'active'}
-            options={[
-              { value: 'active', label: 'Aktif' },
-              { value: 'paused', label: 'Paused' },
-            ] as SelectOption[]}
-            onChange={(value) => setForm({ ...form, status: (value ?? 'active') as BillingStatus })}
-          />
-        </div>
-        <Input
-          label="Catatan"
-          placeholder="Opsional"
-          value={form.notes ?? ''}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        />
-      </div>
-    </Modal>
-  )
+function translatePlanFeature(
+  feature: string,
+  copy: {
+    featureScan: string
+    featureNlp: string
+    featureReports: string
+    featureWallets: string
+    featureSupport: string
+    featureFree: string
+    featureTarget: string
+    featureBudget: string
+  },
+) {
+  const normalized = feature.toLowerCase()
+  if (normalized.includes('free')) return copy.featureFree
+  if (normalized.includes('scan') || normalized.includes('struk') || normalized.includes('receipt')) return copy.featureScan
+  if (normalized.includes('nlp') || normalized.includes('catat') || normalized.includes('recording')) return copy.featureNlp
+  if (normalized.includes('report') || normalized.includes('laporan')) return copy.featureReports
+  if (normalized.includes('wallet') || normalized.includes('dompet')) return copy.featureWallets
+  if (normalized.includes('kantong') || normalized.includes('tujuan') || normalized.includes('target')) return copy.featureTarget
+  if (normalized.includes('anggaran') || normalized.includes('budget')) return copy.featureBudget
+  if (normalized.includes('support') || normalized.includes('dukungan')) return copy.featureSupport
+  return feature
 }

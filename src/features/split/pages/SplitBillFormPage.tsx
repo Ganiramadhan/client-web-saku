@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HiOutlineUserGroup } from 'react-icons/hi2'
 import { Card, CurrencyInput, Input, PageHeader, Spinner } from '@/components/ui'
+import { useLocale } from '@/i18n'
 import { splitBillApi } from '../api'
 import { aiApi, fileToBase64 } from '@/features/ai/api'
 import type { AIScanReceiptResponse } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
+import { validateImageFile } from '@/lib/files'
 import {
   ParticipantsEditor,
   ReceiptDetailModal,
@@ -17,10 +19,46 @@ import {
 import { newParticipantRow, type SplitParticipantRow } from '../utils/participants'
 
 export function SplitBillFormPage() {
+  const { locale } = useLocale()
   const nav = useNavigate()
   const qc = useQueryClient()
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
+  const copy = locale === 'id'
+    ? {
+        created: 'Split bill berhasil dibuat',
+        updated: 'Split bill diperbarui',
+        receiptTitle: (merchant?: string) => merchant ? `Split bill - ${merchant}` : 'Split bill dari struk',
+        merchant: 'Merchant',
+        date: 'Tanggal',
+        receiptRead: 'Struk berhasil dibaca. Cek kembali total sebelum dibagi.',
+        pageEdit: 'Edit Split Bill',
+        pageCreate: 'Buat Split Bill',
+        subtitle: 'Bagi tagihan secara adil dan kirim ke teman via WhatsApp.',
+        detail: 'Detail Tagihan',
+        titleLabel: 'Judul tagihan',
+        titlePlaceholder: 'Makan malam, patungan kado, dll.',
+        totalLabel: 'Total tagihan',
+        notesLabel: 'Catatan (opsional)',
+        notesPlaceholder: 'Tempat, tanggal, dll.',
+      }
+    : {
+        created: 'Split bill created',
+        updated: 'Split bill updated',
+        receiptTitle: (merchant?: string) => merchant ? `Split bill - ${merchant}` : 'Split bill from receipt',
+        merchant: 'Merchant',
+        date: 'Date',
+        receiptRead: 'Receipt scanned. Review the total before splitting.',
+        pageEdit: 'Edit Split Bill',
+        pageCreate: 'Create Split Bill',
+        subtitle: 'Split bills fairly and send them to friends via WhatsApp.',
+        detail: 'Bill Details',
+        titleLabel: 'Bill title',
+        titlePlaceholder: 'Dinner, gift contribution, etc.',
+        totalLabel: 'Total bill',
+        notesLabel: 'Notes (optional)',
+        notesPlaceholder: 'Place, date, etc.',
+      }
 
   const existing = useQuery({
     queryKey: ['split-bill', id],
@@ -85,7 +123,7 @@ export function SplitBillFormPage() {
         })),
       }),
     onSuccess: (b) => {
-      toast.success('Split bill berhasil dibuat')
+      toast.success(copy.created)
       qc.invalidateQueries({ queryKey: ['split-bills'] })
       nav(`/app/split-bills/${b.id}`)
     },
@@ -106,7 +144,7 @@ export function SplitBillFormPage() {
         })),
       }),
     onSuccess: () => {
-      toast.success('Split bill diperbarui')
+      toast.success(copy.updated)
       qc.invalidateQueries({ queryKey: ['split-bills'] })
       qc.invalidateQueries({ queryKey: ['split-bill', id] })
       nav(`/app/split-bills/${id}`)
@@ -123,16 +161,16 @@ export function SplitBillFormPage() {
       const merchant = data.merchant_name?.trim()
       setReceiptDetail(data)
       setTotal(Number(data.amount || 0))
-      if (!title.trim()) setTitle(merchant ? `Split bill - ${merchant}` : 'Split bill dari struk')
+      if (!title.trim()) setTitle(copy.receiptTitle(merchant))
       setNotes((prev) => {
         const next = [
           prev.trim(),
-          merchant ? `Merchant: ${merchant}` : '',
-          data.date ? `Tanggal: ${data.date}` : '',
+          merchant ? `${copy.merchant}: ${merchant}` : '',
+          data.date ? `${copy.date}: ${data.date}` : '',
         ].filter(Boolean)
         return Array.from(new Set(next)).join(' · ')
       })
-      toast.success('Struk berhasil dibaca. Cek kembali total sebelum dibagi.')
+      toast.success(copy.receiptRead)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -141,8 +179,9 @@ export function SplitBillFormPage() {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      toast.error('Pilih file gambar struk.')
+    const validationError = validateImageFile(file, { maxSizeMb: 5 })
+    if (validationError) {
+      toast.error(validationError)
       return
     }
     setReceiptPreview(URL.createObjectURL(file))
@@ -173,44 +212,44 @@ export function SplitBillFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Edit Split Bill' : 'Buat Split Bill'}
-        subtitle="Bagi tagihan secara adil dan kirim ke teman via WhatsApp."
+        title={isEdit ? copy.pageEdit : copy.pageCreate}
+        subtitle={copy.subtitle}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
             <HiOutlineUserGroup className="h-5 w-5 text-brand-600" />
-            <h3 className="text-base font-semibold text-slate-900">Detail Tagihan</h3>
+            <h3 className="text-base font-semibold text-slate-900">{copy.detail}</h3>
           </div>
 
           <div className="mt-5 space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                Judul tagihan
+                {copy.titleLabel}
               </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Makan malam, patungan kado, dll."
+                placeholder={copy.titlePlaceholder}
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Total tagihan
+                  {copy.totalLabel}
                 </label>
                 <CurrencyInput value={total} onChange={setTotal} />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Catatan (opsional)
+                  {copy.notesLabel}
                 </label>
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Tempat, tanggal, dll."
+                  placeholder={copy.notesPlaceholder}
                 />
               </div>
             </div>

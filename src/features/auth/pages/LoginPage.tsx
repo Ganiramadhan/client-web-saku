@@ -13,7 +13,7 @@ import {
   sanitizeEmail,
 } from '@/features/auth/components/AuthFormParts'
 import { GoogleButton } from '@/features/auth/components/GoogleButton'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { getErrorStatus, getRetryAfterSeconds, toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/authStore'
@@ -22,6 +22,7 @@ const LOGIN_RETRY_KEY = 'saku-login-retry-until'
 
 export function LoginPage() {
   const t = useT()
+  const { locale } = useLocale()
   const navigate = useNavigate()
   const location = useLocation()
   const setSession = useAuthStore((s) => s.setSession)
@@ -58,7 +59,7 @@ export function LoginPage() {
     setRetryUntil(null)
     window.localStorage.removeItem(LOGIN_RETRY_KEY)
     setSession(data.token, data.user as never, remember)
-    toast.success('Selamat datang kembali.')
+    toast.success(locale === 'id' ? 'Selamat datang kembali.' : 'Welcome back.')
     navigate(from === '/login' ? '/app' : from, { replace: true })
   }
 
@@ -71,7 +72,10 @@ export function LoginPage() {
         const until = Date.now() + retryAfter * 1000
         setRetryUntil(until)
         window.localStorage.setItem(LOGIN_RETRY_KEY, String(until))
-        toast.error('Too many login attempts. Please wait.', 'Login temporarily blocked')
+        toast.error(
+          locale === 'id' ? 'Terlalu banyak percobaan login. Mohon tunggu.' : 'Too many login attempts. Please wait.',
+          locale === 'id' ? 'Login diblokir sementara' : 'Login temporarily blocked',
+        )
         return
       }
       toast.error(toErrorMessage(error) || t.auth.loginFailedMessage, t.auth.loginFailedTitle)

@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { RiCheckLine, RiFlashlightLine, RiSparklingLine } from 'react-icons/ri'
 import { useLocale, useT } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
 import { subscriptionApi } from '@/features/subscription/api'
+import { Button, Input, Modal } from '@/components/ui'
+import { sanitizeReferralCode } from '@/features/subscription/utils/referral'
 import { isActiveSub } from '../components/landingUtils'
 import { SectionHeading } from '../components/SectionHeading'
 
@@ -28,10 +31,81 @@ function translatePlanFeature(feature: string, locale: string): string {
   return map[feature] ?? feature
 }
 
+function planFeatures(code: string, locale: string): string[] | null {
+  const features = {
+    free: {
+      id: [
+        'Transaksi manual tanpa batas',
+        'Scan struk 3x per hari',
+        'Chat with AI 5x per hari',
+        '2 wallet',
+        'Budget target',
+        'Upcoming billing 3 item',
+        'AI insight basic',
+      ],
+      en: [
+        'Unlimited manual transactions',
+        'Receipt scan 3x/day',
+        'Chat with AI 5x/day',
+        '2 wallets',
+        'Budget targets',
+        '3 upcoming billings',
+        'Basic AI insight',
+      ],
+    },
+    pro: {
+      id: [
+        'Semua fitur Basic',
+        'Chat with AI 300 prompt/bulan',
+        'Scan struk 90x/bulan',
+        '10 wallet',
+        'Upcoming billing 20 item',
+        'Split bill',
+        'Insight dashboard lebih lengkap',
+      ],
+      en: [
+        'Everything in Basic',
+        'Chat with AI 300 prompts/month',
+        'Receipt scan 90x/month',
+        '10 wallets',
+        '20 upcoming billings',
+        'Split bill',
+        'Richer dashboard insights',
+      ],
+    },
+    premium: {
+      id: [
+        'Semua fitur Pro',
+        'Chat with AI 1.200 prompt/bulan',
+        'Scan struk 300x/bulan',
+        '50 wallet',
+        'Upcoming billing 100 item',
+        'Export dan laporan lanjutan',
+        'Prioritas support',
+      ],
+      en: [
+        'Everything in Pro',
+        'Chat with AI 1,200 prompts/month',
+        'Receipt scan 300x/month',
+        '50 wallets',
+        '100 upcoming billings',
+        'Advanced export and reports',
+        'Priority support',
+      ],
+    },
+  } as const
+  const normalized = code.includes('premium') ? 'premium' : code.startsWith('pro') ? 'pro' : code === 'free' ? 'free' : null
+  if (!normalized) return null
+  return [...features[normalized][locale === 'id' ? 'id' : 'en']]
+}
+
 export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const t = useT()
   const { locale } = useLocale()
   const navigate = useNavigate()
+  const [referralCode, setReferralCode] = useState('')
+  const [checkoutPlanCode, setCheckoutPlanCode] = useState<string | null>(null)
+  const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const plansQ = useQuery({
     queryKey: ['landing', 'subscription-plans'],
     queryFn: subscriptionApi.listPlans,
@@ -43,45 +117,40 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     staleTime: 60 * 1000,
   })
   const checkoutM = useMutation({
-    mutationFn: (planCode: string) => subscriptionApi.checkout(planCode),
+    mutationFn: ({ planCode, referralCode }: { planCode: string; referralCode?: string }) =>
+      subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? '')),
     onSuccess: (checkout) => {
       window.location.href = checkout.redirect_url
     },
   })
   const fallbackPlans = [
     {
-      name: t.landing.planFreeName,
+      name: locale === 'id' ? 'Basic' : 'Basic',
       price: t.landing.planFreePrice,
       period: '',
       badge: null,
       desc: locale === 'id' ? 'Fitur dasar untuk mulai mencatat arus kas harian.' : 'Core tools to start tracking daily cashflow.',
-      features: locale === 'id'
-        ? ['Input transaksi manual', 'Dompet utama', 'Ringkasan bulanan', 'Akses web responsif']
-        : ['Manual transaction entry', 'Primary wallet', 'Monthly summary', 'Responsive web access'],
+      features: planFeatures('free', locale) ?? [],
       cta: t.landing.ctaPrimary,
       tier: 'free',
     },
     {
       name: 'Pro',
-      price: t.landing.planProPrice,
-      period: t.landing.perMonth,
+      price: period === 'yearly' ? formatCurrency(278400, 'IDR') : t.landing.planProPrice,
+      period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
       desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
-      features: locale === 'id'
-        ? ['Semua fitur Starter', 'Catat transaksi via AI', 'Scan struk', 'Bantu kategori otomatis', 'Budget dan target', 'Split bill', 'Insight pengeluaran', 'Dompet lebih fleksibel']
-        : ['Everything in Starter', 'AI transaction entry', 'Receipt scanning', 'Assisted categorization', 'Budgets and goals', 'Split bills', 'Spending insights', 'More flexible wallets'],
+      features: planFeatures('pro', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
       tier: 'pro',
     },
     {
       name: 'Premium',
-      price: t.landing.planBizPrice,
-      period: t.landing.perMonth,
+      price: period === 'yearly' ? formatCurrency(950400, 'IDR') : t.landing.planBizPrice,
+      period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: null,
       desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
-      features: locale === 'id'
-        ? ['Semua fitur Pro', 'Kolaborasi keluarga atau tim', 'Analitik lanjutan', 'Laporan kustom', 'Ekspor data', 'Dukungan prioritas', 'Akses fitur awal']
-        : ['Everything in Pro', 'Family or team collaboration', 'Advanced analytics', 'Custom reports', 'Data export', 'Priority support', 'Early feature access'],
+      features: planFeatures('premium', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Premium' : 'Start Premium',
       tier: 'premium',
     },
@@ -105,21 +174,21 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   }
   const plans = plansQ.data && plansQ.data.length > 0
     ? plansQ.data
-        .filter((plan) => plan.period === 'monthly' && plan.is_active)
+        .filter((plan) => plan.period === period && plan.is_active)
         .map((plan) => ({
           name: plan.name,
           price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(plan.price, plan.currency),
-          period: plan.price <= 0 ? '' : t.landing.perMonth,
-          badge: planCopy[plan.code]?.badge ?? null,
-          desc: planCopy[plan.code]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
-          features: plan.features.map((feature) => translatePlanFeature(feature, locale)),
-          cta: planCopy[plan.code]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
+          period: plan.price <= 0 ? '' : plan.period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
+          badge: planCopy[plan.code.replace('_yearly', '')]?.badge ?? null,
+          desc: planCopy[plan.code.replace('_yearly', '')]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
+          features: planFeatures(plan.code, locale) ?? plan.features.map((feature) => translatePlanFeature(feature, locale)),
+          cta: planCopy[plan.code.replace('_yearly', '')]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
           tier: plan.code,
         }))
     : fallbackPlans
+  const hasYearly = Boolean(plansQ.data?.some((plan) => plan.period === 'yearly' && plan.is_active))
 
   const handlePlanClick = (plan: (typeof plans)[number]) => {
-    if (String(plan.tier).includes('premium')) return
     if (!isAuthed) {
       navigate('/register')
       return
@@ -132,7 +201,20 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       navigate('/app/profile')
       return
     }
-    checkoutM.mutate(String(plan.tier))
+    setCheckoutPlanCode(String(plan.tier))
+  }
+
+  const confirmCheckout = () => {
+    if (!checkoutPlanCode) return
+    checkoutM.mutate(
+      { planCode: checkoutPlanCode, referralCode },
+      {
+        onSuccess: () => {
+          setCheckoutPlanCode(null)
+          setReferralCode('')
+        },
+      },
+    )
   }
 
   return (
@@ -148,6 +230,29 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           title={t.landing.pricingTitle}
           description={t.landing.pricingSubtitle}
         />
+
+        {hasYearly ? (
+          <div className="mt-8 flex justify-center">
+            <div className="inline-flex rounded-2xl border border-slate-200 bg-white/75 p-1 shadow-sm">
+              {([
+                ['monthly', locale === 'id' ? 'Bulanan' : 'Monthly'],
+                ['yearly', locale === 'id' ? 'Tahunan' : 'Yearly'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPeriod(value)}
+                  className={cn(
+                    'rounded-xl px-4 py-2 text-sm font-bold transition',
+                    period === value ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
           {plans.map((plan) => {
@@ -181,10 +286,10 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                   <div className="absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-violet-300/20 blur-3xl" />
                 </div>
 
-                {plan.badge && (
+                {(plan.badge || (period === 'yearly' && plan.tier !== 'free')) && (
                   <span className="absolute right-6 top-6 z-10 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-blue-200">
                     <RiSparklingLine className="h-3.5 w-3.5" />
-                    {plan.badge}
+                    {period === 'yearly' && plan.tier !== 'free' ? (locale === 'id' ? 'Hemat 20%' : 'Save 20%') : plan.badge}
                   </span>
                 )}
 
@@ -230,11 +335,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
 
                 <button
                   type="button"
-                  disabled={isPremium || checkoutM.isPending}
+                  disabled={checkoutM.isPending}
                   onClick={() => handlePlanClick(plan)}
                   className={cn(
                     'relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
-                    isPremium && 'cursor-not-allowed opacity-60',
+                    isPremium && 'border-violet-200 bg-violet-50/80 text-violet-700 hover:border-violet-300 hover:bg-violet-50',
                     isPro
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-500 hover:shadow-blue-300'
                       : 'border border-slate-200 bg-white/80 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
@@ -243,7 +348,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                   {isPro && <RiFlashlightLine className="h-4 w-4" />}
                   {checkoutM.isPending && isPro
                     ? (locale === 'id' ? 'Memproses...' : 'Processing...')
-                    : isPremium ? (locale === 'id' ? 'Belum Tersedia' : 'Coming Soon') : plan.cta}
+                    : plan.cta}
                 </button>
               </div>
             )
@@ -259,6 +364,41 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           ))}
         </div>
       </div>
+
+      <Modal
+        open={Boolean(checkoutPlanCode)}
+        title={locale === 'id' ? 'Kode referal' : 'Referral code'}
+        onClose={() => {
+          if (checkoutM.isPending) return
+          setCheckoutPlanCode(null)
+          setReferralCode('')
+        }}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCheckoutPlanCode(null)
+                setReferralCode('')
+              }}
+              disabled={checkoutM.isPending}
+            >
+              {locale === 'id' ? 'Lewati' : 'Skip'}
+            </Button>
+            <Button onClick={confirmCheckout} loading={checkoutM.isPending}>
+              {locale === 'id' ? 'Lanjut pembayaran' : 'Continue payment'}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          label={locale === 'id' ? 'Kode referal' : 'Referral code'}
+          placeholder={locale === 'id' ? 'Opsional saat pembayaran' : 'Optional before payment'}
+          value={referralCode}
+          maxLength={32}
+          onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
+        />
+      </Modal>
     </section>
   )
 }

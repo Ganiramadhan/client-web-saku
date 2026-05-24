@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { EmptyState, Skeleton } from '@/components/ui'
+import { EmptyState, Input, Skeleton } from '@/components/ui'
 import { subscriptionApi, type Plan } from '../api'
 import { toast } from '@/lib/toast'
-import { loadSnap } from '../utils/snap'
+import { loadSnap } from '@/lib/snap'
+import { sanitizeReferralCode } from '../utils/referral'
 import type { BillingPeriod } from '../types'
 import {
   ActiveSubscriptionBanner,
@@ -30,6 +31,7 @@ export function PlansPage() {
 
   const [busyCode, setBusyCode] = useState<string | null>(null)
   const [period, setPeriod] = useState<BillingPeriod>('monthly')
+  const [referralCode, setReferralCode] = useState('')
   const snapLoadedRef = useRef(false)
 
 
@@ -46,20 +48,19 @@ export function PlansPage() {
     document.title = 'Langganan • SAKU'
   }, [])
 
-  async function handleSubscribe(plan: Plan) {
-    if (plan.code.includes('premium')) {
-      toast.info('Paket Premium belum tersedia untuk checkout.')
-      return
-    }
+  function handleSubscribe(plan: Plan) {
     if (plan.price <= 0) {
       toast.info('Paket gratis aktif otomatis')
       return
     }
+    void startCheckout(plan)
+  }
 
+  async function startCheckout(plan: Plan) {
     try {
       setBusyCode(plan.code)
 
-      const checkout = await subscriptionApi.checkout(plan.code)
+      const checkout = await subscriptionApi.checkout(plan.code, false, sanitizeReferralCode(referralCode))
 
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
@@ -104,6 +105,16 @@ export function PlansPage() {
       {active && <ActiveSubscriptionBanner active={active} />}
 
       {hasYearly && <BillingPeriodToggle period={period} onChange={setPeriod} />}
+
+      <div className="mx-auto max-w-md">
+        <Input
+          label="Kode referal"
+          placeholder="Opsional saat pembayaran"
+          value={referralCode}
+          maxLength={32}
+          onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
+        />
+      </div>
 
       {plansQ.isLoading ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">

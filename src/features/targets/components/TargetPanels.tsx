@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { HiOutlineCalendarDays, HiOutlinePlusCircle } from 'react-icons/hi2'
 import { Badge, Card } from '@/components/ui'
+import { useLocale } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
 import type { Wallet } from '@/types/api'
 import { TargetStat } from './TargetStat'
@@ -16,16 +17,30 @@ export function TargetSummaryCard({
   totalTarget: number
   overallPct: number
 }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        pocketCount: 'Jumlah Kantong',
+        saved: 'Total Tertabung',
+        target: 'Total Target',
+        progress: 'Progres keseluruhan',
+      }
+    : {
+        pocketCount: 'Pocket Count',
+        saved: 'Total Saved',
+        target: 'Total Target',
+        progress: 'Overall progress',
+      }
   return (
     <Card>
       <div className="grid gap-4 sm:grid-cols-3">
-        <TargetStat label="Jumlah Kantong" value={String(count)} />
-        <TargetStat label="Total Tertabung" value={formatCurrency(totalSaved)} />
-        <TargetStat label="Total Target" value={formatCurrency(totalTarget)} />
+        <TargetStat label={copy.pocketCount} value={String(count)} />
+        <TargetStat label={copy.saved} value={formatCurrency(totalSaved)} />
+        <TargetStat label={copy.target} value={formatCurrency(totalTarget)} />
       </div>
       <div className="mt-4">
         <div className="flex items-center justify-between text-xs text-slate-600">
-          <span>Progres keseluruhan</span>
+          <span>{copy.progress}</span>
           <span className="tabular-nums font-semibold text-brand-700">{overallPct}%</span>
         </div>
         <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/70 ring-1 ring-white/80">
@@ -37,6 +52,22 @@ export function TargetSummaryCard({
 }
 
 export function TargetCard({ wallet, now }: { wallet: Wallet; now: number }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        targetPocket: 'Kantong Tujuan',
+        completed: 'Tercapai',
+        overdue: 'Lewat tenggat',
+        remaining: 'Sisa',
+        addSaving: 'Tambah Tabungan',
+      }
+    : {
+        targetPocket: 'Target Pocket',
+        completed: 'Completed',
+        overdue: 'Overdue',
+        remaining: 'Remaining',
+        addSaving: 'Add Saving',
+      }
   const saved = Number(wallet.balance ?? 0)
   const target = Number(wallet.target_amount ?? 0)
   const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0
@@ -55,13 +86,13 @@ export function TargetCard({ wallet, now }: { wallet: Wallet; now: number }) {
               {wallet.name}
             </div>
             <h3 className="mt-0.5 truncate text-base font-bold text-slate-900">
-              🎯 {wallet.target_name || 'Kantong Tujuan'}
+              🎯 {wallet.target_name || copy.targetPocket}
             </h3>
           </div>
           {completed ? (
-            <Badge tone="green">Tercapai</Badge>
+            <Badge tone="green">{copy.completed}</Badge>
           ) : overdue ? (
-            <Badge tone="red">Lewat tenggat</Badge>
+            <Badge tone="red">{copy.overdue}</Badge>
           ) : (
             <Badge tone="blue">{pct}%</Badge>
           )}
@@ -84,7 +115,7 @@ export function TargetCard({ wallet, now }: { wallet: Wallet; now: number }) {
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
             <span>
-              Sisa{' '}
+              {copy.remaining}{' '}
               <span className="font-semibold tabular-nums text-slate-900">
                 {formatCurrency(remaining, wallet.currency)}
               </span>
@@ -101,7 +132,7 @@ export function TargetCard({ wallet, now }: { wallet: Wallet; now: number }) {
           to={`/app/transactions/add?wallet=${wallet.id}&type=income`}
           className="inline-flex items-center gap-1 rounded-xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-200/50 transition hover:bg-brand-700 active:scale-[0.98]"
         >
-          <HiOutlinePlusCircle className="h-4 w-4" /> Tambah Tabungan
+          <HiOutlinePlusCircle className="h-4 w-4" /> {copy.addSaving}
         </Link>
       </div>
     </div>
@@ -117,10 +148,11 @@ function TargetDeadline({
   daysLeft: number | null
   overdue: boolean
 }) {
+  const { locale } = useLocale()
   return (
     <span className="inline-flex items-center gap-1">
       <HiOutlineCalendarDays className="h-3.5 w-3.5 text-slate-400" />
-      {deadline.toLocaleDateString('id-ID', {
+      {deadline.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -132,7 +164,9 @@ function TargetDeadline({
             overdue ? 'text-rose-600' : daysLeft <= 7 ? 'text-amber-600' : 'text-slate-500',
           )}
         >
-          ({overdue ? `lewat ${Math.abs(daysLeft)}h` : `${daysLeft}h lagi`})
+          ({overdue
+            ? locale === 'id' ? `lewat ${Math.abs(daysLeft)}h` : `${Math.abs(daysLeft)}d overdue`
+            : locale === 'id' ? `${daysLeft}h lagi` : `${daysLeft}d left`})
         </span>
       ) : null}
     </span>

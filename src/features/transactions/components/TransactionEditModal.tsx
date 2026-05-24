@@ -8,13 +8,16 @@ import { useT } from '@/i18n'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import type { Transaction } from '@/types/api'
+import type { TransactionCopy } from '../constants/copy'
 
 export function EditModal({
   tx,
   onClose,
+  copy,
 }: {
   tx: Transaction | null
   onClose: () => void
+  copy: TransactionCopy
 }) {
   const t = useT()
   const qc = useQueryClient()
@@ -63,7 +66,7 @@ export function EditModal({
       return transactionApi.update(tx.id, payload)
     },
     onSuccess: () => {
-      toast.success('Transaksi diperbarui')
+      toast.success(copy.updated)
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
@@ -76,7 +79,7 @@ export function EditModal({
     <Modal
       open={Boolean(tx)}
       onClose={onClose}
-      title={tx ? 'Edit Transaksi' : ''}
+      title={tx ? copy.editTitle : ''}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -90,11 +93,11 @@ export function EditModal({
     >
       <div className="space-y-3">
         <RSelect
-          label="Jenis"
+          label={copy.type}
           value={form.type ?? 'expense'}
           options={[
-            { value: 'expense', label: 'Pengeluaran' },
-            { value: 'income', label: 'Pemasukan' },
+            { value: 'expense', label: copy.expense },
+            { value: 'income', label: copy.income },
           ]}
           onChange={(v) =>
             setForm({
@@ -105,20 +108,20 @@ export function EditModal({
           }
         />
         <RSelect
-          label="Dompet"
+          label={copy.wallet}
           value={form.wallet_id ?? ''}
           options={walletOpts}
           onChange={(v) => setForm({ ...form, wallet_id: v ?? '' })}
         />
         <RSelect
-          label="Kategori"
+          label={copy.category}
           value={form.category_id ?? ''}
           options={filteredCats}
           onChange={(v) => setForm({ ...form, category_id: v ?? '' })}
         />
         <div>
           <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-            Nominal
+            {copy.amount}
           </label>
           <CurrencyInput
             value={Number(form.amount ?? 0)}
@@ -126,7 +129,7 @@ export function EditModal({
           />
         </div>
         <DateInput
-          label="Tanggal"
+          label={copy.date}
           value={form.transaction_date || null}
           onChange={(d) =>
             setForm({
@@ -134,16 +137,16 @@ export function EditModal({
               transaction_date: d ? d.toISOString() : undefined,
             })
           }
-          placeholderText="Pilih tanggal"
+          placeholderText={copy.pickDate}
         />
         <Input
-          label="Merchant"
-          placeholder="cth: Indomaret"
+          label={copy.merchant}
+          placeholder={copy.merchantPlaceholder}
           value={form.merchant_name ?? ''}
           onChange={(e) => setForm({ ...form, merchant_name: e.target.value })}
         />
         <Textarea
-          label="Deskripsi"
+          label={copy.description}
           rows={2}
           value={form.description ?? ''}
           onChange={(e) => setForm({ ...form, description: e.target.value })}

@@ -26,8 +26,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore, isAdminUser } from '@/stores/authStore'
 import { getMe } from '@/features/auth/api'
 import { notificationApi, type NotificationItem } from '@/features/notifications/api'
+import { subscriptionApi } from '@/features/subscription/api'
 import { Logo } from '@/components/Logo'
-import { useT } from '@/i18n'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { useLocale, useT } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
 
 type IconCmp = ComponentType<{ className?: string }>
@@ -72,6 +74,12 @@ export function AppLayout() {
     enabled: Boolean(token),
     refetchInterval: 5 * 60 * 1000,
   })
+  const activeSubscriptionQ = useQuery({
+    queryKey: ['subscription', 'active'],
+    queryFn: subscriptionApi.active,
+    enabled: Boolean(token),
+    staleTime: 60 * 1000,
+  })
   const markAllRead = useMutation({
     mutationFn: notificationApi.markAllRead,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
@@ -104,15 +112,18 @@ export function AppLayout() {
 
   const isSuperAdmin = user?.role === 'super_admin'
   const isAdmin = isAdminUser(user)
+  const hasPro =
+    activeSubscriptionQ.data?.status === 'active' ||
+    activeSubscriptionQ.data?.status === 'trialing'
 
   const userItems: NavItem[] = [
     { to: '/app', label: t.nav.dashboard, end: true, icon: HiOutlineHome },
     { to: '/app/transactions', label: t.nav.transactions, icon: HiOutlineQueueList },
-    { to: '/app/scan-receipt', label: t.nav.scanReceipt, icon: HiOutlineCamera, tier: 'pro' },
-    { to: '/app/free-text', label: t.nav.freeText, icon: HiOutlinePencilSquare, tier: 'pro' },
+    { to: '/app/scan-receipt', label: t.nav.scanReceipt, icon: HiOutlineCamera },
+    { to: '/app/free-text', label: t.nav.freeText, icon: HiOutlinePencilSquare },
     { to: '/app/wallets', label: t.nav.wallets, icon: HiOutlineCreditCard },
-    { to: '/app/targets', label: t.nav.targets, icon: HiOutlineTrophy, tier: 'pro' },
-    { to: '/app/upcoming-billings', label: 'Upcoming Billing', icon: HiOutlineCalendarDays },
+    { to: '/app/targets', label: t.nav.targets, icon: HiOutlineTrophy },
+    { to: '/app/upcoming-billings', label: t.nav.upcomingBillings, icon: HiOutlineCalendarDays },
     { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup, tier: 'pro' },
   ]
 
@@ -134,6 +145,7 @@ export function AppLayout() {
   ]
 
   const onLogout = () => {
+    qc.clear()
     clear()
     navigate('/', { replace: true })
   }
@@ -197,7 +209,7 @@ export function AppLayout() {
             )}
           </button>
         </div>
-        <NavSections sections={sections} collapsed={collapsed} />
+        <NavSections sections={sections} collapsed={collapsed} hasPro={hasPro} />
       </aside>
 
       {/* Mobile drawer */}
@@ -223,7 +235,7 @@ export function AppLayout() {
                 <HiOutlineXMark className="h-5 w-5" />
               </button>
             </div>
-            <NavSections sections={sections} collapsed={false} onItemClick={() => setOpen(false)} />
+            <NavSections sections={sections} collapsed={false} hasPro={hasPro} onItemClick={() => setOpen(false)} />
           </aside>
         </div>
       ) : null}
@@ -258,6 +270,7 @@ export function AppLayout() {
           <GlobalNavSearch sections={sections} onNavigate={navigate} />
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher className="hidden sm:inline-flex" />
             <NotificationsBell
               items={notificationsQ.data ?? []}
               onMarkAllRead={() => markAllRead.mutate()}
@@ -265,7 +278,7 @@ export function AppLayout() {
             <UserDropdown user={user} onLogout={onLogout} t={t} />
           </div>
         </header>
-        <main className="min-h-[calc(100vh-64px)] flex-1 px-4 py-6 lg:px-8 lg:py-8">
+        <main className="min-h-[calc(100vh-64px)] flex-1 px-3 py-5 pb-28 sm:px-4 sm:pb-8 lg:px-8 lg:py-8">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />
           </div>
@@ -282,6 +295,18 @@ function NotificationsBell({
   items: NotificationItem[]
   onMarkAllRead: () => void
 }) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        notifications: 'Notifikasi',
+        markRead: 'Tandai dibaca',
+        empty: 'Belum ada notifikasi.',
+      }
+    : {
+        notifications: 'Notifications',
+        markRead: 'Mark as read',
+        empty: 'No notifications yet.',
+      }
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const unread = items.filter((item) => !item.read_at).length
@@ -301,7 +326,7 @@ function NotificationsBell({
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/65 text-slate-600 shadow-sm backdrop-blur-xl transition hover:bg-white"
-        aria-label="Notifikasi"
+        aria-label={copy.notifications}
       >
         <HiOutlineBell className="h-5 w-5" />
         {unread > 0 ? (
@@ -314,15 +339,15 @@ function NotificationsBell({
       {open ? (
         <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/70">
           <div className="flex items-center justify-between px-2 py-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Notifikasi</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{copy.notifications}</p>
             {unread > 0 ? (
               <button type="button" onClick={onMarkAllRead} className="text-xs font-semibold text-brand-700">
-                Tandai dibaca
+                {copy.markRead}
               </button>
             ) : null}
           </div>
           {items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-slate-400">Belum ada notifikasi.</p>
+            <p className="px-3 py-6 text-center text-sm text-slate-400">{copy.empty}</p>
           ) : (
             <div className="max-h-96 overflow-y-auto">
               {items.map((item) => (
@@ -354,10 +379,12 @@ function formatNotificationMessage(message: string): string {
 function NavSections({
   sections,
   collapsed,
+  hasPro,
   onItemClick,
 }: {
   sections: NavSection[]
   collapsed: boolean
+  hasPro: boolean
   onItemClick?: () => void
 }) {
   return (
@@ -371,7 +398,7 @@ function NavSections({
           ) : idx > 0 ? (
             <div className="mx-2 mb-2 h-px bg-slate-200" />
           ) : null}
-          <NavList items={section.items} collapsed={collapsed} onItemClick={onItemClick} />
+          <NavList items={section.items} collapsed={collapsed} hasPro={hasPro} onItemClick={onItemClick} />
         </div>
       ))}
     </nav>
@@ -494,10 +521,12 @@ function TierBadge({ tier }: { tier: Tier }) {
 function NavList({
   items,
   collapsed,
+  hasPro,
   onItemClick,
 }: {
   items: NavItem[]
   collapsed?: boolean
+  hasPro: boolean
   onItemClick?: () => void
 }) {
   return (
@@ -530,7 +559,7 @@ function NavList({
               {!collapsed && (
                 <>
                   <span className="flex-1 truncate">{label}</span>
-                  {tier ? <TierBadge tier={tier} /> : null}
+                  {tier && !hasPro ? <TierBadge tier={tier} /> : null}
                 </>
               )}
             </>

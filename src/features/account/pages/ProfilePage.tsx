@@ -9,7 +9,6 @@ import {
   HiOutlineUser,
   HiOutlineShieldCheck,
   HiOutlineIdentification,
-  HiPlus,
 } from 'react-icons/hi2'
 import {
   Card,
@@ -19,6 +18,7 @@ import {
   Spinner,
   Badge,
 } from '@/components/ui'
+import { useLocale } from '@/i18n'
 import {
   getMe,
   updateProfile,
@@ -26,40 +26,74 @@ import {
   deletePhoto,
 } from '@/features/auth/api'
 import { subscriptionApi } from '@/features/subscription/api'
-import {
-  upcomingBillingApi,
-  type UpcomingBilling,
-} from '@/features/billing/api'
 import { useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
-import { loadSnap } from '../utils/snap'
+import { loadSnap } from '@/lib/snap'
 import { sanitizeReferralCode } from '../utils/billing'
 import {
-  BillingModal,
   ReferralCard,
   SubscriptionCard,
-  UpcomingBillingManager,
 } from '../components/ProfilePanels'
 
-declare global {
-  interface Window {
-    snap?: {
-      pay: (
-        token: string,
-        callbacks: {
-          onSuccess?: (result: unknown) => void
-          onPending?: (result: unknown) => void
-          onError?: (result: unknown) => void
-          onClose?: () => void
-        },
-      ) => void
-    }
-  }
-}
-
-export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: 'profile' | 'billing' }) {
+export function ProfilePage() {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        title: 'Pengaturan Akun',
+        subtitle: 'Kelola profil, kode referal, dan langganan SAKU.',
+        photoUploaded: 'Foto berhasil diunggah, klik Simpan untuk menerapkan.',
+        photoDeleted: 'Foto profil dihapus.',
+        profileUpdated: 'Profil berhasil diperbarui.',
+        invalidFormat: 'Format harus JPG, PNG, atau WEBP.',
+        maxSize: 'Ukuran maksimum 5 MB.',
+        paymentPending: 'Pembayaran belum selesai',
+        paymentFailed: 'Pembayaran gagal',
+        subCanceled: 'Langganan berhasil dibatalkan.',
+        accountInfo: 'Informasi Akun',
+        accountInfoDesc: 'Foto, nama tampilan, dan email yang dipakai untuk login.',
+        active: 'Aktif',
+        account: 'Akun',
+        uploadTitle: 'Upload foto profil',
+        change: 'Ganti',
+        delete: 'Hapus',
+        dragPhoto: 'Drag & drop foto, atau klik untuk pilih file',
+        fullName: 'Nama Lengkap',
+        fullNamePlaceholder: 'Nama lengkap',
+        reset: 'Reset',
+        save: 'Simpan Perubahan',
+        cancelTitle: 'Batalkan langganan?',
+        cancelDesc: 'Langganan aktif akan dibatalkan dan fitur berbayar akan mengikuti status paket setelah proses selesai.',
+        cancelConfirm: 'Batalkan Langganan',
+      }
+    : {
+        title: 'Account Settings',
+        subtitle: 'Manage your profile, referral code, and SAKU subscription.',
+        photoUploaded: 'Photo uploaded. Click Save to apply it.',
+        photoDeleted: 'Profile photo deleted.',
+        profileUpdated: 'Profile updated.',
+        invalidFormat: 'Format must be JPG, PNG, or WEBP.',
+        maxSize: 'Maximum size is 5 MB.',
+        paymentPending: 'Payment is still pending',
+        paymentFailed: 'Payment failed',
+        subCanceled: 'Subscription canceled.',
+        accountInfo: 'Account Information',
+        accountInfoDesc: 'Photo, display name, and email used for login.',
+        active: 'Active',
+        account: 'Account',
+        uploadTitle: 'Upload profile photo',
+        change: 'Change',
+        delete: 'Delete',
+        dragPhoto: 'Drag and drop photo, or click to choose a file',
+        fullName: 'Full Name',
+        fullNamePlaceholder: 'Full name',
+        reset: 'Reset',
+        save: 'Save Changes',
+        cancelTitle: 'Cancel subscription?',
+        cancelDesc: 'The active subscription will be canceled and paid features will follow the plan status after the process is complete.',
+        cancelConfirm: 'Cancel Subscription',
+      }
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
@@ -67,15 +101,12 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
   const sub = useQuery({ queryKey: ['subscription', 'active'], queryFn: subscriptionApi.active })
   const subscriptions = useQuery({ queryKey: ['subscriptions', 'me'], queryFn: subscriptionApi.mySubscriptions })
   const plans = useQuery({ queryKey: ['subscriptions', 'plans'], queryFn: subscriptionApi.listPlans })
-  const billings = useQuery({ queryKey: ['upcoming-billings'], queryFn: upcomingBillingApi.list })
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [pendingPhotoKey, setPendingPhotoKey] = useState<string | null>(null)
   const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [billingOpen, setBillingOpen] = useState(false)
-  const [editingBilling, setEditingBilling] = useState<UpcomingBilling | null>(null)
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const snapLoadedRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -95,7 +126,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
     onSuccess: (res) => {
       setPendingPhotoKey(res.image)
       setPendingPhotoPreview(res.preview_url)
-      toast.success('Foto berhasil diunggah, klik Simpan untuk menerapkan.')
+      toast.success(copy.photoUploaded)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -107,7 +138,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
       qc.invalidateQueries({ queryKey: ['me'] })
       setPendingPhotoKey(null)
       setPendingPhotoPreview(null)
-      toast.success('Foto profil dihapus.')
+      toast.success(copy.photoDeleted)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -124,18 +155,18 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
       qc.invalidateQueries({ queryKey: ['me'] })
       setPendingPhotoKey(null)
       setPendingPhotoPreview(null)
-      toast.success('Profil berhasil diperbarui.')
+      toast.success(copy.profileUpdated)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
   const handleFile = (f: File) => {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) {
-      toast.error('Format harus JPG, PNG, atau WEBP.')
+      toast.error(copy.invalidFormat)
       return
     }
     if (f.size > 5 * 1024 * 1024) {
-      toast.error('Ukuran maksimum 5 MB.')
+      toast.error(copy.maxSize)
       return
     }
     upload.mutate(f)
@@ -204,11 +235,11 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
           navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
         },
         onPending: () => {
-          toast.info('Pembayaran belum selesai')
+          toast.info(copy.paymentPending)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
-        onError: () => toast.error('Pembayaran gagal'),
+        onError: () => toast.error(copy.paymentFailed),
         onClose: () => {
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
@@ -224,7 +255,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
   const cancelSubscription = useMutation({
     mutationFn: (id: string) => subscriptionApi.cancel(id),
     onSuccess: () => {
-      toast.success('Langganan berhasil dibatalkan.')
+      toast.success(copy.subCanceled)
       qc.invalidateQueries({ queryKey: ['subscriptions'] })
       qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
       qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
@@ -232,48 +263,11 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
-  if (defaultSection === 'billing') {
-    const openCreateBilling = () => {
-      setEditingBilling(null)
-      setBillingOpen(true)
-    }
-
-    return (
-      <div className="mx-auto max-w-5xl">
-        <PageHeader
-          title="Upcoming Billing"
-          subtitle="Pantau tagihan rutin seperti VPS, domain, software, dan layanan berulang sebelum jatuh tempo."
-          action={
-            <Button onClick={openCreateBilling}>
-              <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Billing
-            </Button>
-          }
-        />
-        <UpcomingBillingManager
-          items={billings.data ?? []}
-          loading={billings.isLoading}
-          onCreate={openCreateBilling}
-          onEdit={(item) => {
-            setEditingBilling(item)
-            setBillingOpen(true)
-          }}
-        />
-        <BillingModal
-          key={editingBilling?.id ?? 'new'}
-          open={billingOpen}
-          editing={editingBilling}
-          onClose={() => setBillingOpen(false)}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="Pengaturan Akun"
-        subtitle="Kelola profil, kode referal, dan langganan SAKU."
+        title={copy.title}
+        subtitle={copy.subtitle}
       />
 
       {me.isLoading ? (
@@ -281,9 +275,9 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
           <Spinner />
         </div>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
           <div className="space-y-6">
-          <Card>
+          <Card className="bg-white/72">
             <div className="flex items-start justify-between gap-4 border-b border-white/60 pb-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100">
@@ -291,15 +285,15 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
-                    Informasi Akun
+                    {copy.accountInfo}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Foto, nama tampilan, dan email yang dipakai untuk login.
+                    {copy.accountInfoDesc}
                   </p>
                 </div>
               </div>
               <Badge tone={me.data?.status === 'active' ? 'green' : 'amber'}>
-                {me.data?.status === 'active' ? 'Aktif' : me.data?.status ?? 'Akun'}
+                {me.data?.status === 'active' ? copy.active : me.data?.status ?? copy.account}
               </Badge>
             </div>
 
@@ -321,7 +315,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                 {pendingPhotoKey ? (
                   <span
                     className="absolute -right-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white"
-                    title="Foto baru menunggu disimpan"
+                    title={copy.photoUploaded}
                   >
                     <HiOutlineCheckCircle className="h-4 w-4" />
                   </span>
@@ -345,7 +339,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                   {me.data?.status ? (
                     <Badge tone={me.data.status === 'active' ? 'green' : 'amber'}>
                       <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
-                      {me.data.status === 'active' ? 'Aktif' : me.data.status}
+                      {me.data.status === 'active' ? copy.active : me.data.status}
                     </Badge>
                   ) : null}
                 </div>
@@ -355,8 +349,8 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                 <input
                   ref={fileRef}
                   type="file"
-                  aria-label="Upload foto profil"
-                  title="Upload foto profil"
+                  aria-label={copy.uploadTitle}
+                  title={copy.uploadTitle}
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={onPickFile}
@@ -369,18 +363,18 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                   loading={upload.isPending}
                   className="transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  Ganti
+                  {copy.change}
                 </Button>
                 {me.data?.photo_url ? (
                   <Button
-                    variant="outline"
+                    variant="danger"
                     size="sm"
                     leftIcon={<HiOutlineTrash className="h-4 w-4" />}
                     onClick={() => removePhoto.mutate()}
                     loading={removePhoto.isPending}
-                    className="border-rose-100 text-rose-700 transition hover:-translate-y-0.5 hover:!bg-rose-50 hover:shadow-md"
+                    className="shadow-rose-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
                   >
-                  Hapus
+                  {copy.delete}
                 </Button>
               ) : null}
               </div>
@@ -404,7 +398,7 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
               >
                 <HiOutlineCamera className="h-4 w-4" />
                 <span>
-                  Drag &amp; drop foto, atau klik untuk pilih file ·{' '}
+                  {copy.dragPhoto} ·{' '}
                   <span className="text-slate-400">JPG/PNG/WEBP · maks 5 MB</span>
                 </span>
               </button>
@@ -413,12 +407,12 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                  <HiOutlineUser className="h-3.5 w-3.5" /> Nama Lengkap
+                  <HiOutlineUser className="h-3.5 w-3.5" /> {copy.fullName}
                 </label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Nama lengkap"
+                  placeholder={copy.fullNamePlaceholder}
                 />
               </div>
               <div>
@@ -434,11 +428,11 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-2 border-t border-white/60 pt-5 sm:flex-row sm:justify-end">
+            <div className="mt-6 grid gap-2 border-t border-white/60 pt-5 sm:flex sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="border-slate-200 !bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-slate-50 hover:text-slate-950"
+                className="shadow-slate-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
                 onClick={() => {
                   setName(me.data?.name ?? '')
                   setEmail(me.data?.email ?? '')
@@ -447,14 +441,17 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
                 }}
                 disabled={save.isPending || !dirty}
               >
-                Reset
+                {copy.reset}
               </Button>
               <Button
+                className="transition hover:-translate-y-0.5 hover:shadow-md"
+                type="button"
+                variant="primary"
                 onClick={() => save.mutate()}
                 loading={save.isPending}
                 disabled={!dirty}
               >
-                Simpan Perubahan
+                {copy.save}
               </Button>
             </div>
           </Card>
@@ -476,10 +473,10 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
             onSubscribe={handleSubscribe}
             onCancel={async (id) => {
               const ok = await confirm({
-                title: 'Batalkan langganan?',
-                description: 'Langganan aktif akan dibatalkan dan fitur berbayar akan mengikuti status paket setelah proses selesai.',
+                title: copy.cancelTitle,
+                description: copy.cancelDesc,
                 tone: 'danger',
-                confirmLabel: 'Batalkan Langganan',
+                confirmLabel: copy.cancelConfirm,
               })
               if (ok) cancelSubscription.mutate(id)
             }}
@@ -495,12 +492,6 @@ export function ProfilePage({ defaultSection = 'profile' }: { defaultSection?: '
         </div>
       )}
 
-      <BillingModal
-        key={editingBilling?.id ?? 'new'}
-        open={billingOpen}
-        editing={editingBilling}
-        onClose={() => setBillingOpen(false)}
-      />
     </div>
   )
 }

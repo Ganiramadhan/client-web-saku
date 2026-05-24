@@ -8,7 +8,6 @@ import {
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
   HiOutlineLightBulb,
-  HiOutlinePlus,
   HiOutlineSparkles,
   HiOutlineWallet,
 } from 'react-icons/hi2'
@@ -30,7 +29,7 @@ import { upcomingBillingApi, type UpcomingBilling } from '@/features/billing/api
 import { budgetApi } from '@/features/budgets/api'
 import { savingsGoalApi } from '@/features/targets/api'
 import { Card, PageHeader, Shimmer, EmptyState, Button } from '@/components/ui'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/lib/toast'
@@ -81,8 +80,149 @@ const TONE = {
   },
 }
 
+const DASHBOARD_COPY = {
+  id: {
+    subtitle: 'Ringkasan keuanganmu dalam sekejap. Lihat saldo, pengeluaran, dan insight penting lainnya di dashboard ini.',
+    savingRate: 'Saving rate',
+    trendDescription: 'Perbandingan pemasukan dan pengeluaran berdasarkan periode.',
+    income: 'Pemasukan',
+    expense: 'Pengeluaran',
+    recentDescription: 'Aktivitas transaksi terbaru dari semua wallet.',
+    actionTitle: 'Insight yang bisa langsung ditindaklanjuti',
+    actionDesc: 'SAKU mengubah pola transaksi menjadi rekomendasi operasional, bukan sekadar laporan.',
+    categoryTitle: 'Kategori Pengeluaran',
+    categoryDesc: 'Ringkasan kategori terbesar bulan ini dari transaksi yang sudah tercatat.',
+    emptyInsight: 'Belum ada pengeluaran bulan ini. Insight kategori akan muncul setelah ada transaksi.',
+    reviewTransactions: 'Review transaksi',
+    budgetActive: 'Budget sudah aktif',
+    activeLimit: 'Aktifkan limit',
+    trendToday: 'Tren Hari Ini',
+    trend7d: 'Tren 7 Hari',
+    trend30d: 'Tren 30 Hari',
+    trend6mo: 'Tren 6 Bulan',
+    tabToday: 'Hari ini',
+    tab7d: '7 Hari',
+    tab30d: '30 Hari',
+    tab6mo: '6 Bulan',
+    monthlyInsight: 'Insight Bulan Ini',
+    positiveInsight: 'Bagus, pemasukan kamu masih lebih besar dari pengeluaran bulan ini.',
+    negativeInsight: 'Pengeluaran bulan ini lebih besar dari pemasukan. Coba cek kategori terbesar.',
+    aiInsight: 'AI Insight',
+    categoryAbsorbs: 'menyerap',
+    categorySpendSuffix: 'dari pengeluaran bulan ini.',
+    categoryAdvice: 'Cek transaksi di kategori ini sebelum menambah pengeluaran baru. Kamu juga bisa mengubah insight ini jadi batas harian.',
+    perDay: 'hari',
+    transactionsCount: 'transaksi',
+    upcomingEyebrow: 'Upcoming Billing',
+    upcomingTitle: 'Tagihan Berikutnya',
+    closestReminder: 'Reminder terdekat',
+    dueOn: 'jatuh tempo',
+    billsNeedReview: 'tagihan perlu dicek',
+    billsSafe: 'Semua tagihan aman',
+    todayLower: 'hari ini',
+    daysLeft: 'hari lagi',
+    emptyBilling: 'Belum ada reminder tagihan. Tambahkan VPS, domain, SaaS, atau langganan lain dari menu Upcoming Billing.',
+    walletDesc: 'Saldo dari wallet yang kamu miliki.',
+    actionBadge: 'Aksi',
+    recurringTitle: 'Recurring yang bisa dibuat',
+    recurringWithCategory: 'Kategori',
+    recurringDesc: 'muncul cukup sering. Pertimbangkan jadwal recurring agar arus kas lebih mudah diprediksi.',
+    recurringEmpty: 'Kalau kamu membayar layanan yang sama beberapa bulan berturut-turut, jadikan recurring agar tidak terlewat.',
+    setupBilling: 'Atur tagihan',
+    nextMonthBills: 'Tagihan bulan depan',
+    monthlyBillsEstimate: 'Estimasi tagihan rutin:',
+    setAsideEarly: 'Sisihkan lebih awal dari dompet utama.',
+    monthlyBillsEmpty: 'Tambahkan tagihan rutin untuk melihat estimasi pengeluaran bulan depan.',
+    monitorBilling: 'Pantau billing',
+    goalRecommendation: 'Target → Rekomendasi Harian',
+    reduceDaily: 'Kalau kurangi jajan',
+    youCanAdd: 'hari, kamu bisa menambah tabungan sekitar',
+    monthlyAndAdvance: 'bulan dan target berpotensi maju sekitar',
+    days: 'hari',
+    monthUnit: 'bulan',
+    remainingTarget: 'Sisa target',
+    viewTarget: 'Lihat target',
+    noActiveGoal: 'Belum ada target aktif',
+    noActiveGoalDesc: 'Buat target seperti DP rumah, dana darurat, atau liburan. SAKU akan ubah target menjadi rekomendasi harian.',
+    createTarget: 'Buat target',
+    dailyBudgetCreated: 'Budget harian berhasil dibuat.',
+  },
+  en: {
+    subtitle: 'Your financial summary at a glance. Review balance, spending, and important insights in one dashboard.',
+    savingRate: 'Saving rate',
+    trendDescription: 'Income and spending comparison by selected period.',
+    income: 'Income',
+    expense: 'Spending',
+    recentDescription: 'Latest transaction activity across all wallets.',
+    actionTitle: 'Insights you can act on immediately',
+    actionDesc: 'SAKU turns transaction patterns into practical recommendations, not just reports.',
+    categoryTitle: 'Spending Categories',
+    categoryDesc: 'Largest spending categories this month based on recorded transactions.',
+    emptyInsight: 'No spending this month yet. Category insights will appear after transactions are recorded.',
+    reviewTransactions: 'Review transactions',
+    budgetActive: 'Budget already active',
+    activeLimit: 'Activate limit',
+    trendToday: 'Today Trend',
+    trend7d: '7-Day Trend',
+    trend30d: '30-Day Trend',
+    trend6mo: '6-Month Trend',
+    tabToday: 'Today',
+    tab7d: '7 Days',
+    tab30d: '30 Days',
+    tab6mo: '6 Months',
+    monthlyInsight: 'This Month Insight',
+    positiveInsight: 'Nice, your income is still higher than spending this month.',
+    negativeInsight: 'Spending is higher than income this month. Review the largest category.',
+    aiInsight: 'AI Insight',
+    categoryAbsorbs: 'takes',
+    categorySpendSuffix: 'of this month spending.',
+    categoryAdvice: 'Review transactions in this category before adding new spending. You can also turn this insight into a daily limit.',
+    perDay: 'day',
+    transactionsCount: 'transactions',
+    upcomingEyebrow: 'Upcoming Billing',
+    upcomingTitle: 'Next Bills',
+    closestReminder: 'Closest reminder',
+    dueOn: 'due on',
+    billsNeedReview: 'bills need review',
+    billsSafe: 'All bills are on track',
+    todayLower: 'today',
+    daysLeft: 'days left',
+    emptyBilling: 'No bill reminders yet. Add VPS, domain, SaaS, or other subscriptions from Upcoming Billing.',
+    walletDesc: 'Balance from wallets you own.',
+    actionBadge: 'Action',
+    recurringTitle: 'Recurring item to create',
+    recurringWithCategory: 'Category',
+    recurringDesc: 'appears often enough. Consider a recurring schedule so cashflow is easier to predict.',
+    recurringEmpty: 'If you pay the same service for multiple months, make it recurring so it is not missed.',
+    setupBilling: 'Set billing',
+    nextMonthBills: 'Next month bills',
+    monthlyBillsEstimate: 'Estimated recurring bills:',
+    setAsideEarly: 'Set aside funds earlier from your main wallet.',
+    monthlyBillsEmpty: 'Add recurring bills to see next month spending estimates.',
+    monitorBilling: 'Monitor billing',
+    goalRecommendation: 'Goal → Daily Recommendation',
+    reduceDaily: 'If you reduce discretionary spending by',
+    youCanAdd: 'per day, you can add around',
+    monthlyAndAdvance: 'per month and potentially move the goal forward by',
+    days: 'days',
+    monthUnit: 'month',
+    remainingTarget: 'Remaining target',
+    viewTarget: 'View target',
+    noActiveGoal: 'No active goal yet',
+    noActiveGoalDesc: 'Create goals such as a home down payment, emergency fund, or vacation. SAKU will turn them into daily recommendations.',
+    createTarget: 'Create target',
+    dailyBudgetCreated: 'Daily budget created.',
+  },
+} as const
+
+type DashboardCopy = {
+  [K in keyof typeof DASHBOARD_COPY.id]: string
+}
+
 export function DashboardPage() {
   const t = useT()
+  const { locale } = useLocale()
+  const copy = DASHBOARD_COPY[locale]
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
@@ -123,7 +263,7 @@ export function DashboardPage() {
       transactionApi.list({
         from: sixMonthStart.toISOString(),
         to: now.toISOString(),
-        limit: 5000,
+        limit: 1200,
       }),
   })
 
@@ -155,7 +295,7 @@ export function DashboardPage() {
   const createBudget = useMutation({
     mutationFn: budgetApi.create,
     onSuccess: () => {
-      toast.success('Budget harian berhasil dibuat.')
+      toast.success(copy.dailyBudgetCreated)
       qc.invalidateQueries({ queryKey: ['budgets'] })
     },
     onError: (error) => toast.error(toErrorMessage(error)),
@@ -198,21 +338,11 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${t.common.welcome}${user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋`}
-        subtitle="Ringkasan kondisi keuangan, transaksi terbaru, dan performa bulanan kamu."
-        action={
-          <Link to="/app/transactions">
-            {/* <Button
-              className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
-              leftIcon={<HiOutlinePlus className="h-4 w-4" />}
-            >
-              {t.transactions.newTransaction}
-            </Button> */}
-          </Link>
-        }
+        title={`${t.common.welcome}${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
+        subtitle={copy.subtitle}
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           loading={wallets.isLoading}
           label={t.dashboard.totalBalance}
@@ -222,11 +352,11 @@ export function DashboardPage() {
         />
 
         <StatCard
-          loading={wallets.isLoading}
-          label={t.dashboard.walletsCount}
-          value={String(wallets.data?.length ?? 0)}
-          Icon={HiOutlineWallet}
-          tone="slate"
+          loading={monthTxns.isLoading}
+          label={copy.savingRate}
+          value={`${monthSummary.savingRate.toFixed(0)}%`}
+          Icon={HiOutlineLightBulb}
+          tone={monthSummary.savingRate >= 20 ? 'emerald' : 'slate'}
         />
 
         <StatCard
@@ -262,12 +392,14 @@ export function DashboardPage() {
             })
           }
           creatingBudget={createBudget.isPending}
+          copy={copy}
         />
 
         <UpcomingBillingCard
           loading={activeSubscription.isLoading || upcomingBillings.isLoading}
           subscription={activeSubscription.data ?? null}
           billings={upcomingBillings.data ?? []}
+          copy={copy}
         />
       </section>
 
@@ -277,6 +409,7 @@ export function DashboardPage() {
         expense={monthSummary.expense}
         billings={upcomingBillings.data ?? []}
         goals={goals.data ?? []}
+        copy={copy}
       />
 
       <section className="grid gap-6 xl:grid-cols-3">
@@ -284,14 +417,14 @@ export function DashboardPage() {
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-slate-950">
-                {getTrendTitle(trendRange)}
+                {getTrendTitle(trendRange, copy)}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Perbandingan pemasukan dan pengeluaran berdasarkan periode.
+                {copy.trendDescription}
               </p>
             </div>
 
-            <RangeTabs value={trendRange} onChange={setTrendRange} />
+            <RangeTabs value={trendRange} onChange={setTrendRange} copy={copy} />
           </div>
 
           {longRangeTxns.isLoading ? (
@@ -325,7 +458,7 @@ export function DashboardPage() {
                   strokeWidth={2}
                   fill="#10b981"
                   fillOpacity={0.12}
-                  name="Pemasukan"
+                  name={copy.income}
                 />
                 <Area
                   type="monotone"
@@ -334,7 +467,7 @@ export function DashboardPage() {
                   strokeWidth={2}
                   fill="#f43f5e"
                   fillOpacity={0.1}
-                  name="Pengeluaran"
+                  name={copy.expense}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -347,6 +480,7 @@ export function DashboardPage() {
           saved={monthSummary.saved}
           savingRate={monthSummary.savingRate}
           loading={monthTxns.isLoading}
+          copy={copy}
         />
       </section>
 
@@ -358,7 +492,7 @@ export function DashboardPage() {
                 {t.dashboard.recentTransactions}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Aktivitas transaksi terbaru dari semua wallet.
+                {copy.recentDescription}
               </p>
             </div>
 
@@ -447,6 +581,7 @@ export function DashboardPage() {
           title={t.nav.wallets}
           seeAllLabel={t.dashboard.seeAll}
           emptyLabel={t.common.empty}
+          description={copy.walletDesc}
         />
       </section>
     </div>
@@ -470,7 +605,7 @@ function StatCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-md"
+      className="group relative overflow-hidden rounded-2xl p-4 transition-all duration-500 hover:-translate-y-1 hover:shadow-md sm:p-6"
       style={{
         background: color.bg,
         backdropFilter: 'blur(24px) saturate(160%)',
@@ -483,11 +618,11 @@ function StatCard({
         <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
       </div>
 
-      <div className="relative flex items-center justify-between gap-4">
-        <p className="text-sm font-semibold text-slate-600">{label}</p>
+      <div className="relative flex items-center justify-between gap-3 sm:gap-4">
+        <p className="min-w-0 text-xs font-semibold text-slate-600 sm:text-sm">{label}</p>
 
         <div
-          className={cn('flex h-11 w-11 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105', color.icon)}
+          className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 sm:h-11 sm:w-11 sm:rounded-2xl', color.icon)}
           style={{
             background: color.iconBg,
             border: color.iconBorder,
@@ -500,7 +635,7 @@ function StatCard({
       {loading ? (
         <Shimmer className="mt-4 h-8 w-32 rounded-xl" />
       ) : (
-        <p className={cn('relative mt-4 text-3xl font-extrabold tracking-tight', color.value)}>
+        <p className={cn('relative mt-4 break-words text-xl font-extrabold tracking-tight sm:text-3xl', color.value)}>
           {value}
         </p>
       )}
@@ -514,12 +649,14 @@ function MonthlyInsight({
   saved,
   savingRate,
   loading,
+  copy,
 }: {
   income: number
   expense: number
   saved: number
   savingRate: number
   loading?: boolean
+  copy: DashboardCopy
 }) {
   const isPositive = saved >= 0
 
@@ -535,7 +672,7 @@ function MonthlyInsight({
       }}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Insight Bulan Ini
+        {copy.monthlyInsight}
       </p>
 
       {loading ? (
@@ -552,14 +689,14 @@ function MonthlyInsight({
 
           <p className="mt-3 text-sm leading-6 text-slate-300">
             {isPositive
-              ? 'Bagus, pemasukan kamu masih lebih besar dari pengeluaran bulan ini.'
-              : 'Pengeluaran bulan ini lebih besar dari pemasukan. Coba cek kategori terbesar.'}
+              ? copy.positiveInsight
+              : copy.negativeInsight}
           </p>
 
           <div className="mt-6 space-y-3">
-            <InsightRow label="Pemasukan" value={formatCurrency(income)} />
-            <InsightRow label="Pengeluaran" value={formatCurrency(expense)} />
-            <InsightRow label="Saving rate" value={`${savingRate.toFixed(0)}%`} />
+            <InsightRow label={copy.income} value={formatCurrency(income)} />
+            <InsightRow label={copy.expense} value={formatCurrency(expense)} />
+            <InsightRow label={copy.savingRate} value={`${savingRate.toFixed(0)}%`} />
           </div>
 
           <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
@@ -589,12 +726,14 @@ function FinancialActionEngine({
   expense,
   billings,
   goals,
+  copy,
 }: {
   loading?: boolean
   insights: CategoryInsight[]
   expense: number
   billings: UpcomingBilling[]
   goals: SavingsGoal[]
+  copy: DashboardCopy
 }) {
   const top = insights[0]
   const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
@@ -617,10 +756,10 @@ function FinancialActionEngine({
               Financial Action Engine
             </p>
             <h2 className="mt-1 text-base font-bold text-slate-950">
-              Insight yang bisa langsung ditindaklanjuti
+              {copy.actionTitle}
             </h2>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              SAKU mengubah pola transaksi menjadi rekomendasi operasional, bukan sekadar laporan.
+              {copy.actionDesc}
             </p>
           </div>
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
@@ -638,36 +777,39 @@ function FinancialActionEngine({
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <ActionCard
               tone="blue"
-              title={top ? `${top.name} dominan bulan ini` : 'Budget harian'}
+              title={top ? `${top.name} ${copy.categoryAbsorbs} ${topPct}%` : copy.activeLimit}
               description={
                 top
-                  ? `${top.name} menyerap ${topPct}% pengeluaran. Ubah jadi batas harian agar lebih terkendali.`
-                  : 'Mulai dari transaksi rutin, lalu aktifkan budget harian untuk kategori yang paling sering dipakai.'
+                  ? `${copy.categoryAdvice}`
+                  : copy.emptyInsight
               }
-              actionLabel={top ? 'Buka transaksi' : 'Tambah transaksi'}
+              actionLabel={top ? copy.reviewTransactions : copy.activeLimit}
               to="/app/transactions"
+              copy={copy}
             />
             <ActionCard
               tone="violet"
-              title="Recurring detector"
+              title={copy.recurringTitle}
               description={
                 billings.length > 0
-                  ? `${billings.length} tagihan rutin sudah dipantau. Cek tagihan yang perlu dibayar bulan ini.`
-                  : 'Kalau kamu membayar layanan yang sama beberapa bulan berturut-turut, jadikan recurring agar tidak terlewat.'
+                  ? `${billings.length} ${copy.upcomingTitle.toLowerCase()} ${copy.billsNeedReview.toLowerCase()}.`
+                  : copy.recurringEmpty
               }
-              actionLabel="Atur tagihan"
+              actionLabel={copy.setupBilling}
               to="/app/upcoming-billings"
+              copy={copy}
             />
             <ActionCard
               tone="emerald"
-              title="Tagihan bulan depan"
+              title={copy.nextMonthBills}
               description={
                 monthlyBills > 0
-                  ? `Estimasi tagihan rutin: ${formatCurrency(monthlyBills)}. Sisihkan lebih awal dari dompet utama.`
-                  : 'Tambahkan tagihan rutin untuk melihat estimasi pengeluaran bulan depan.'
+                  ? `${copy.monthlyBillsEstimate} ${formatCurrency(monthlyBills)}. ${copy.setAsideEarly}`
+                  : copy.monthlyBillsEmpty
               }
-              actionLabel="Pantau billing"
+              actionLabel={copy.monitorBilling}
               to="/app/upcoming-billings"
+              copy={copy}
             />
           </div>
         )}
@@ -675,7 +817,7 @@ function FinancialActionEngine({
 
       <Card>
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-          Goal → Daily Recommendation
+          {copy.goalRecommendation}
         </p>
         {loading ? (
           <div className="mt-5 space-y-3">
@@ -686,10 +828,10 @@ function FinancialActionEngine({
           <>
             <h2 className="mt-2 text-base font-bold text-slate-950">{activeGoal.name}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Kalau kurangi jajan {formatCurrency(dailyCut)}/hari, kamu bisa menambah tabungan sekitar {formatCurrency(monthlyExtra)}/bulan dan target berpotensi maju sekitar {daysAdvanced} hari.
+              {copy.reduceDaily} {formatCurrency(dailyCut)}/{copy.perDay}, {copy.youCanAdd} {formatCurrency(monthlyExtra)}/{copy.monthUnit} {copy.monthlyAndAdvance} {daysAdvanced} {copy.days}.
             </p>
             <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
-              <p className="text-xs font-semibold text-emerald-800">Sisa target</p>
+              <p className="text-xs font-semibold text-emerald-800">{copy.remainingTarget}</p>
               <p className="mt-1 text-xl font-extrabold text-emerald-950">
                 {formatCurrency(Number(activeGoal.remaining ?? 0))}
               </p>
@@ -698,20 +840,20 @@ function FinancialActionEngine({
               to="/app/targets"
               className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
             >
-              Lihat target
+              {copy.viewTarget}
             </Link>
           </>
         ) : (
           <>
-            <h2 className="mt-2 text-base font-bold text-slate-950">Belum ada target aktif</h2>
+            <h2 className="mt-2 text-base font-bold text-slate-950">{copy.noActiveGoal}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Buat target seperti DP rumah, dana darurat, atau liburan. SAKU akan ubah target menjadi rekomendasi harian.
+              {copy.noActiveGoalDesc}
             </p>
             <Link
               to="/app/targets"
               className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
             >
-              Buat target
+              {copy.createTarget}
             </Link>
           </>
         )}
@@ -726,12 +868,14 @@ function ActionCard({
   actionLabel,
   to,
   tone,
+  copy,
 }: {
   title: string
   description: string
   actionLabel: string
   to: string
   tone: 'blue' | 'violet' | 'emerald'
+  copy: DashboardCopy
 }) {
   const toneClass =
     tone === 'emerald'
@@ -743,7 +887,7 @@ function ActionCard({
   return (
     <div className="rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm">
       <div className={cn('mb-3 inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider', toneClass)}>
-        Action
+        {copy.actionBadge}
       </div>
       <h3 className="text-sm font-extrabold text-slate-950">{title}</h3>
       <p className="mt-2 min-h-16 text-xs leading-5 text-slate-600">{description}</p>
@@ -766,6 +910,7 @@ function AiCategoryInsight({
   walletId,
   onCreateDailyBudget,
   creatingBudget,
+  copy,
 }: {
   loading?: boolean
   insights: CategoryInsight[]
@@ -774,6 +919,7 @@ function AiCategoryInsight({
   walletId: string
   onCreateDailyBudget: (categoryId: string, limitAmount: number) => void
   creatingBudget?: boolean
+  copy: DashboardCopy
 }) {
   const top = insights[0]
   const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
@@ -785,13 +931,13 @@ function AiCategoryInsight({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-            AI Insight
+            {copy.aiInsight}
           </p>
           <h2 className="mt-1 text-base font-bold text-slate-950">
-            Kategori Pengeluaran
+            {copy.categoryTitle}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            Ringkasan kategori terbesar bulan ini dari transaksi yang sudah tercatat.
+            {copy.categoryDesc}
           </p>
         </div>
 
@@ -808,16 +954,16 @@ function AiCategoryInsight({
         </div>
       ) : !top ? (
         <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
-          Belum ada pengeluaran bulan ini. Insight kategori akan muncul setelah ada transaksi.
+          {copy.emptyInsight}
         </div>
       ) : (
         <>
           <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
             <p className="text-sm font-semibold text-blue-950">
-              {top.name} menyerap {topPct}% dari pengeluaran bulan ini.
+              {top.name} {copy.categoryAbsorbs} {topPct}% {copy.categorySpendSuffix}
             </p>
             <p className="mt-1 text-sm leading-6 text-blue-800">
-              Cek transaksi di kategori ini sebelum menambah pengeluaran baru. Kamu juga bisa mengubah insight ini jadi batas harian.
+              {copy.categoryAdvice}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button
@@ -826,13 +972,13 @@ function AiCategoryInsight({
                 loading={creatingBudget}
                 onClick={() => top && onCreateDailyBudget(top.id, suggestedDailyLimit)}
               >
-                {hasDailyBudget ? 'Budget sudah aktif' : `Aktifkan limit ${formatCurrency(suggestedDailyLimit)}/hari`}
+                {hasDailyBudget ? copy.budgetActive : `${copy.activeLimit} ${formatCurrency(suggestedDailyLimit)}/${copy.perDay}`}
               </Button>
               <Link
                 to="/app/transactions"
                 className="inline-flex rounded-xl border border-blue-100 bg-white/70 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-white"
               >
-                Review transaksi
+                {copy.reviewTransactions}
               </Link>
             </div>
           </div>
@@ -847,7 +993,7 @@ function AiCategoryInsight({
                 <p className="mt-2 text-lg font-extrabold text-slate-950">
                   {formatCurrency(item.amount)}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">{item.count} transaksi</p>
+                <p className="mt-1 text-xs text-slate-500">{item.count} {copy.transactionsCount}</p>
               </div>
             ))}
           </div>
@@ -861,10 +1007,12 @@ function UpcomingBillingCard({
   loading,
   subscription,
   billings,
+  copy,
 }: {
   loading?: boolean
   subscription: Subscription | null
   billings: UpcomingBilling[]
+  copy: DashboardCopy
 }) {
   const rows = useMemo(
     () => buildUpcomingBillingRows(subscription, billings),
@@ -877,10 +1025,10 @@ function UpcomingBillingCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-            Upcoming Billing
+            {copy.upcomingEyebrow}
           </p>
           <h2 className="mt-1 text-base font-bold text-slate-950">
-            Tagihan Berikutnya
+            {copy.upcomingTitle}
           </h2>
         </div>
 
@@ -898,13 +1046,13 @@ function UpcomingBillingCard({
         <div className="mt-5">
           <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
-              Reminder terdekat
+              {copy.closestReminder}
             </p>
             <p className="mt-1 text-xl font-extrabold text-slate-950">
               {rows[0].name}
             </p>
             <p className="mt-1 text-sm leading-6 text-violet-900">
-              {formatCurrency(rows[0].amount, rows[0].currency)} jatuh tempo {formatDate(rows[0].dueDate)}
+              {formatCurrency(rows[0].amount, rows[0].currency)} {copy.dueOn} {formatDate(rows[0].dueDate)}
             </p>
           </div>
           <span
@@ -915,7 +1063,7 @@ function UpcomingBillingCard({
                 : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100',
             )}
           >
-            {urgentCount > 0 ? `${urgentCount} tagihan perlu dicek` : 'Semua tagihan aman'}
+            {urgentCount > 0 ? `${urgentCount} ${copy.billsNeedReview}` : copy.billsSafe}
           </span>
           <div className="mt-4 space-y-2">
             {rows.slice(0, 4).map((row) => (
@@ -926,7 +1074,7 @@ function UpcomingBillingCard({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-slate-950">{row.name}</p>
                   <p className="mt-0.5 truncate text-xs text-slate-500">
-                    {row.provider} · {row.daysLeft <= 0 ? 'hari ini' : `${row.daysLeft} hari lagi`}
+                    {row.provider} · {row.daysLeft <= 0 ? copy.todayLower : `${row.daysLeft} ${copy.daysLeft}`}
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-extrabold text-slate-950">
@@ -938,7 +1086,7 @@ function UpcomingBillingCard({
         </div>
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
-          Belum ada reminder tagihan. Tambahkan VPS, domain, SaaS, atau langganan lain dari menu Upcoming Billing.
+          {copy.emptyBilling}
         </div>
       )}
     </Card>
@@ -1011,19 +1159,21 @@ function WalletList({
   title,
   seeAllLabel,
   emptyLabel,
+  description,
 }: {
   loading?: boolean
   wallets: { id: string; name: string; balance?: number | string | null; currency?: string }[]
   title: string
   seeAllLabel: string
   emptyLabel: string
+  description: string
 }) {
   return (
     <Card>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-950">{title}</h2>
-          <p className="mt-1 text-xs text-slate-500">Saldo dari wallet yang kamu miliki.</p>
+          <p className="mt-1 text-xs text-slate-500">{description}</p>
         </div>
 
         <Link to="/app/wallets" className="text-xs font-semibold text-brand-700 hover:underline">
@@ -1070,15 +1220,17 @@ function WalletList({
 function RangeTabs({
   value,
   onChange,
+  copy,
 }: {
   value: TrendRange
   onChange: (value: TrendRange) => void
+  copy: DashboardCopy
 }) {
   const options: { value: TrendRange; label: string }[] = [
-    { value: 'today', label: 'Hari ini' },
-    { value: '7d', label: '7 Hari' },
-    { value: '30d', label: '30 Hari' },
-    { value: '6mo', label: '6 Bulan' },
+    { value: 'today', label: copy.tabToday },
+    { value: '7d', label: copy.tab7d },
+    { value: '30d', label: copy.tab30d },
+    { value: '6mo', label: copy.tab6mo },
   ]
 
   return (
@@ -1102,11 +1254,11 @@ function RangeTabs({
   )
 }
 
-function getTrendTitle(range: TrendRange): string {
-  if (range === 'today') return 'Tren Hari Ini'
-  if (range === '7d') return 'Tren 7 Hari'
-  if (range === '30d') return 'Tren 30 Hari'
-  return 'Tren 6 Bulan'
+function getTrendTitle(range: TrendRange, copy: DashboardCopy): string {
+  if (range === 'today') return copy.trendToday
+  if (range === '7d') return copy.trend7d
+  if (range === '30d') return copy.trend30d
+  return copy.trend6mo
 }
 
 function buildTrendData(

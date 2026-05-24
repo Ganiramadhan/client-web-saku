@@ -23,7 +23,8 @@ import {
   RSelect,
   type SelectOption,
 } from '@/components/ui'
-import { useT } from '@/i18n'
+import { MobileFab } from '@/components/MobileFab'
+import { useLocale, useT } from '@/i18n'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -37,10 +38,13 @@ import {
   MobileTransactionList,
   SummaryCard,
 } from '../components/TransactionsListPanels'
+import { getTransactionCopy } from '../constants/copy'
 
 type TypeFilter = 'all' | 'income' | 'expense'
 export function TransactionsListPage() {
   const t = useT()
+  const { locale } = useLocale()
+  const txCopy = getTransactionCopy(locale)
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -64,7 +68,7 @@ export function TransactionsListPage() {
   })
   const q = useQuery({
     queryKey: ['transactions', 'all'],
-    queryFn: () => transactionApi.list({ page: 1, limit: 500 }),
+    queryFn: () => transactionApi.list({ page: 1, limit: 200 }),
   })
 
   const walletMap = useMemo(() => {
@@ -85,10 +89,10 @@ export function TransactionsListPage() {
       (c) => typeFilter === 'all' || c.type === typeFilter,
     )
     return [
-      { value: '', label: 'Semua Kategori' },
+      { value: '', label: txCopy.allCategories },
       ...cats.map((c) => ({ value: c.id, label: c.name })),
     ]
-  }, [categories.data, typeFilter])
+  }, [categories.data, typeFilter, txCopy.allCategories])
 
   const filteredTx = useMemo(() => {
     const all = q.data?.data ?? []
@@ -170,7 +174,7 @@ export function TransactionsListPage() {
   const remove = useMutation({
     mutationFn: transactionApi.remove,
     onSuccess: () => {
-      toast.success('Transaksi dihapus')
+      toast.success(txCopy.deleted)
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
@@ -183,7 +187,7 @@ export function TransactionsListPage() {
       await Promise.all(ids.map((id) => transactionApi.remove(id)))
     },
     onSuccess: (_, ids) => {
-      toast.success(`${ids.length} transaksi dihapus`)
+      toast.success(txCopy.deletedMany(ids.length))
       setSelectedIds(new Set())
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
@@ -194,8 +198,8 @@ export function TransactionsListPage() {
 
   const onDelete = async (tx: Transaction) => {
     const ok = await confirm({
-      title: 'Hapus transaksi?',
-      description: 'Saldo dompet akan di-recalc setelah penghapusan.',
+      title: txCopy.deleteTitle,
+      description: txCopy.deleteDescription,
       tone: 'danger',
       confirmLabel: t.common.delete,
     })
@@ -226,10 +230,10 @@ export function TransactionsListPage() {
     const ids = [...selectedIds]
     if (ids.length === 0) return
     const ok = await confirm({
-      title: `Hapus ${ids.length} transaksi?`,
-      description: 'Semua transaksi terpilih akan dihapus dan saldo dompet akan dihitung ulang.',
+      title: txCopy.deleteManyTitle(ids.length),
+      description: txCopy.deleteManyDescription,
       tone: 'danger',
-      confirmLabel: 'Hapus Semua',
+      confirmLabel: txCopy.deleteAll,
     })
     if (ok) bulkRemove.mutate(ids)
   }
@@ -258,7 +262,7 @@ export function TransactionsListPage() {
                 checked={allSelected}
                 onChange={toggleAllVisible}
                 onClick={(event) => event.stopPropagation()}
-                aria-label="Pilih semua transaksi"
+                aria-label={txCopy.deleteAll}
                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
               />
             </div>
@@ -272,7 +276,7 @@ export function TransactionsListPage() {
               checked={selectedIds.has(row.original.id)}
               onChange={() => toggleSelected(row.original.id)}
               onClick={(event) => event.stopPropagation()}
-              aria-label="Pilih transaksi"
+              aria-label={txCopy.detail}
               className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
             />
           </div>
@@ -294,7 +298,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'date',
-        header: 'Tanggal',
+        header: txCopy.date,
         accessorFn: (tx) => tx.transaction_date,
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-slate-700">
@@ -304,7 +308,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'category',
-        header: 'Kategori',
+        header: txCopy.category,
         accessorFn: (tx) => categoryMap.get(tx.category_id) ?? '—',
         cell: ({ row }) => (
           <CategoryCell name={categoryMap.get(row.original.category_id) ?? '—'} />
@@ -312,7 +316,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'description',
-        header: 'Deskripsi',
+        header: txCopy.description,
         enableSorting: false,
         accessorFn: (tx) => tx.description ?? tx.merchant_name ?? '',
         cell: ({ row }) => {
@@ -329,7 +333,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'amount',
-        header: () => <span className="block text-right">Nominal</span>,
+        header: () => <span className="block text-right">{txCopy.amount}</span>,
         accessorFn: (tx) => Number(tx.amount),
         cell: ({ row }) => {
           const isIncome = row.original.type === 'income'
@@ -348,15 +352,15 @@ export function TransactionsListPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="block text-right">Aksi</span>,
+        header: () => <span className="block text-right">{txCopy.action}</span>,
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <button
               onClick={() => setViewing(row.original)}
               className="rounded-lg p-1.5 text-slate-500 transition hover:bg-brand-50 hover:text-brand-700"
-              title="Detail"
-              aria-label="Detail transaksi"
+              title={txCopy.detail}
+              aria-label={txCopy.detail}
             >
               <HiOutlineEye className="h-4 w-4" />
             </button>
@@ -391,12 +395,14 @@ export function TransactionsListPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setExportOpen(true)}>
               <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
-              Export Excel
+              {txCopy.exportExcel}
             </Button>
-            <Button onClick={() => navigate('/app/transactions/add')}>
-              <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Transaksi
-            </Button>
+            <div className="hidden sm:block">
+              <Button onClick={() => navigate('/app/transactions/add')}>
+                <HiPlus className="mr-1 h-4 w-4" />
+                {txCopy.add}
+              </Button>
+            </div>
           </div>
         }
       />
@@ -404,13 +410,13 @@ export function TransactionsListPage() {
       {/* Summary cards */}
       <div className="mb-4 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SummaryCard label="Pemasukan" helper="Sesuai filter aktif" value={summary.income} tone="emerald" />
-          <SummaryCard label="Pengeluaran" helper="Sesuai filter aktif" value={summary.expense} tone="rose" />
-          <SummaryCard label="Net Cashflow" helper={`${summary.count} transaksi`} value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
+          <SummaryCard label={txCopy.income} helper={txCopy.matchesFilter} value={summary.income} tone="emerald" />
+          <SummaryCard label={txCopy.expense} helper={txCopy.matchesFilter} value={summary.expense} tone="rose" />
+          <SummaryCard label={txCopy.netCashflow} helper={`${summary.count} ${txCopy.transactionCount}`} value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <SummaryCard label="Pemasukan Hari Ini" helper="Total hari ini" value={todaySummary.income} tone="emerald" compact />
-          <SummaryCard label="Pengeluaran Hari Ini" helper="Total hari ini" value={todaySummary.expense} tone="rose" compact />
+          <SummaryCard label={txCopy.todayIncome} helper={txCopy.todayTotal} value={todaySummary.income} tone="emerald" compact />
+          <SummaryCard label={txCopy.todayExpense} helper={txCopy.todayTotal} value={todaySummary.expense} tone="rose" compact />
         </div>
       </div>
 
@@ -424,7 +430,7 @@ export function TransactionsListPage() {
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 lg:hidden"
               >
                 <HiOutlineFunnel className="h-4 w-4" />
-                Filter
+                {txCopy.filter}
                 {hasActiveFilter ? (
                   <span className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                     !
@@ -433,7 +439,7 @@ export function TransactionsListPage() {
               </button>
               <h3 className="hidden items-center gap-2 text-sm font-semibold text-slate-700 lg:inline-flex">
                 <HiOutlineFunnel className="h-4 w-4" />
-                Filter
+                {txCopy.filter}
               </h3>
             </div>
             {hasActiveFilter ? (
@@ -441,20 +447,20 @@ export function TransactionsListPage() {
                 onClick={resetFilters}
                 className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-rose-600"
               >
-                <HiOutlineXMark className="h-3.5 w-3.5" /> Reset
+                <HiOutlineXMark className="h-3.5 w-3.5" /> {txCopy.reset}
               </button>
             ) : null}
           </div>
 
           <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-5'}>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">Jenis</label>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.type}</label>
               <RSelect
                 value={typeFilter}
                 options={[
-                  { value: 'all', label: 'Semua' },
-                  { value: 'income', label: 'Pemasukan' },
-                  { value: 'expense', label: 'Pengeluaran' },
+                  { value: 'all', label: txCopy.all },
+                  { value: 'income', label: txCopy.income },
+                  { value: 'expense', label: txCopy.expense },
                 ]}
                 onChange={(v) => {
                   setTypeFilter((v as TypeFilter) ?? 'all')
@@ -463,7 +469,7 @@ export function TransactionsListPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">Kategori</label>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.category}</label>
               <RSelect
                 value={categoryFilter}
                 options={categoryFilterOptions}
@@ -472,31 +478,31 @@ export function TransactionsListPage() {
             </div>
             <div>
               <DateInput
-                label="Bulan"
+                label={txCopy.month}
                 value={monthFilter}
                 onChange={(d) => setMonthFilter(d)}
                 picker="month"
-                placeholderText="Semua bulan"
+                placeholderText={txCopy.allMonths}
               />
             </div>
             <div>
               <DateInput
-                label="Dari Tanggal"
+                label={txCopy.fromDate}
                 value={dateFrom}
                 onChange={(d) => {
                   setDateFrom(d)
                   if (d && dateTo && dateTo < d) setDateTo(null)
                 }}
-                placeholderText="Pilih tanggal"
+                placeholderText={txCopy.pickDate}
                 maxDate={dateTo ?? undefined}
               />
             </div>
             <div>
               <DateInput
-                label="Sampai Tanggal"
+                label={txCopy.toDate}
                 value={dateTo}
                 onChange={(d) => setDateTo(d)}
-                placeholderText={dateFrom ? 'Pilih tanggal' : 'Pilih tanggal mulai dulu'}
+                placeholderText={dateFrom ? txCopy.pickDate : txCopy.pickStartFirst}
                 minDate={dateFrom ?? undefined}
                 disabled={!dateFrom}
               />
@@ -513,10 +519,10 @@ export function TransactionsListPage() {
             </div>
             <div>
               <p className="text-sm font-extrabold text-rose-950">
-                {selectedIds.size} transaksi dipilih
+                {selectedIds.size} {txCopy.selected}
               </p>
               <p className="mt-0.5 text-xs leading-5 text-rose-700">
-                Hapus massal akan menghitung ulang saldo dompet setelah transaksi dihapus.
+                {txCopy.bulkHelp}
               </p>
             </div>
           </div>
@@ -524,10 +530,10 @@ export function TransactionsListPage() {
             <Button
               type="button"
               variant="outline"
-              className="border-rose-100 !bg-white text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-rose-50"
+              className="transition hover:-translate-y-0.5 hover:shadow-md"
               onClick={() => setSelectedIds(new Set())}
             >
-              Batal Pilih
+              {txCopy.cancelSelect}
             </Button>
             <Button
               variant="danger"
@@ -535,7 +541,7 @@ export function TransactionsListPage() {
               loading={bulkRemove.isPending}
               leftIcon={<HiOutlineTrash className="h-4 w-4" />}
             >
-              Hapus Terpilih
+              {txCopy.deleteSelected}
             </Button>
           </div>
         </div>
@@ -547,17 +553,18 @@ export function TransactionsListPage() {
           data={filteredTx}
           columns={columns}
           loading={q.isLoading}
-          searchPlaceholder="Cari kategori, dompet, deskripsi…"
-          emptyTitle="Belum ada transaksi"
+          searchPlaceholder={txCopy.searchPlaceholder}
+          emptyTitle={txCopy.emptyTitle}
           emptyAction={
             <Button onClick={() => navigate('/app/transactions/add')}>
               <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Transaksi
+              {txCopy.add}
             </Button>
           }
           getRowId={(r) => r.id}
           initialPageSize={10}
           onRowClick={(r) => setViewing(r)}
+          labels={txCopy.tableLabels}
         />
       </div>
 
@@ -572,6 +579,7 @@ export function TransactionsListPage() {
         onDelete={onDelete}
         selectedIds={selectedIds}
         onToggleSelected={toggleSelected}
+        copy={txCopy}
       />
 
       <DetailModal
@@ -581,18 +589,26 @@ export function TransactionsListPage() {
         onClose={() => setViewing(null)}
         onEdit={(tx) => { setViewing(null); setEditing(tx) }}
         onDelete={(tx) => { setViewing(null); onDelete(tx) }}
+        copy={txCopy}
       />
 
       <EditModal
         key={editing?.id ?? 'noedit'}
         tx={editing}
         onClose={() => setEditing(null)}
+        copy={txCopy}
       />
 
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         categoryOptions={categoryFilterOptions}
+        copy={txCopy}
+      />
+      <MobileFab
+        label={txCopy.add}
+        icon={<HiPlus className="h-6 w-6" />}
+        onClick={() => navigate('/app/transactions/add')}
       />
     </div>
   )

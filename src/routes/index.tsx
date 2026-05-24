@@ -1,35 +1,41 @@
+import { Suspense, lazy, type ComponentType } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProRoute } from '@/components/ProRoute'
 import { AppLayout } from '@/layouts/AppLayout'
 
-import { HomePage } from '@/features/home/pages/HomePage'
-import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
-import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { RegisterPage } from '@/features/auth/pages/RegisterPage'
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
-import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
-import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
-import { TransactionsListPage } from '@/features/transactions/pages/TransactionsListPage'
-import { AddTransactionPage } from '@/features/transactions/pages/AddTransactionPage'
-import { TransactionDetailPage } from '@/features/transactions/pages/TransactionDetailPage'
-import { TargetsPage } from '@/features/targets/pages/TargetsPage'
-import { AILogsPage } from '@/features/ai/pages/AILogsPage'
-import { ScanReceiptPage } from '@/features/ai/pages/ScanReceiptPage'
-import { FreeTextPage } from '@/features/ai/pages/FreeTextPage'
-import { AdminUsersPage } from '@/features/adminUsers/pages/AdminUsersPage'
-import { ProfilePage } from '@/features/account/pages/ProfilePage'
-import { SettingsPage } from '@/features/account/pages/SettingsPage'
-import { ThanksPage } from '@/features/subscription/pages/ThanksPage'
-import { SubscribersPage } from '@/features/subscription/pages/SubscribersPage'
-import { SplitBillsListPage } from '@/features/split/pages/SplitBillsListPage'
-import { SplitBillFormPage } from '@/features/split/pages/SplitBillFormPage'
-import { SplitBillDetailPage } from '@/features/split/pages/SplitBillDetailPage'
-import { NotFoundPage } from '@/features/misc/pages/NotFoundPage'
+const lazyRoute = (loader: () => Promise<Record<string, unknown>>, exportName: string): ComponentType<any> =>
+  lazy(async () => ({ default: (await loader())[exportName] as ComponentType<any> }))
+
+const HomePage = lazyRoute(() => import('@/features/home/pages/HomePage'), 'HomePage')
+const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage')
+const LoginPage = lazyRoute(() => import('@/features/auth/pages/LoginPage'), 'LoginPage')
+const RegisterPage = lazyRoute(() => import('@/features/auth/pages/RegisterPage'), 'RegisterPage')
+const DashboardPage = lazyRoute(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage')
+const WalletsPage = lazyRoute(() => import('@/features/wallets/pages/WalletsPage'), 'WalletsPage')
+const CategoriesPage = lazyRoute(() => import('@/features/categories/pages/CategoriesPage'), 'CategoriesPage')
+const TransactionsListPage = lazyRoute(() => import('@/features/transactions/pages/TransactionsListPage'), 'TransactionsListPage')
+const AddTransactionPage = lazyRoute(() => import('@/features/transactions/pages/AddTransactionPage'), 'AddTransactionPage')
+const TransactionDetailPage = lazyRoute(() => import('@/features/transactions/pages/TransactionDetailPage'), 'TransactionDetailPage')
+const TargetsPage = lazyRoute(() => import('@/features/targets/pages/TargetsPage'), 'TargetsPage')
+const AILogsPage = lazyRoute(() => import('@/features/ai/pages/AILogsPage'), 'AILogsPage')
+const ScanReceiptPage = lazyRoute(() => import('@/features/ai/pages/ScanReceiptPage'), 'ScanReceiptPage')
+const FreeTextPage = lazyRoute(() => import('@/features/ai/pages/FreeTextPage'), 'FreeTextPage')
+const AdminUsersPage = lazyRoute(() => import('@/features/adminUsers/pages/AdminUsersPage'), 'AdminUsersPage')
+const ProfilePage = lazyRoute(() => import('@/features/account/pages/ProfilePage'), 'ProfilePage')
+const SettingsPage = lazyRoute(() => import('@/features/account/pages/SettingsPage'), 'SettingsPage')
+const UpcomingBillingPage = lazyRoute(() => import('@/features/billing/pages/UpcomingBillingPage'), 'UpcomingBillingPage')
+const ThanksPage = lazyRoute(() => import('@/features/subscription/pages/ThanksPage'), 'ThanksPage')
+const SubscribersPage = lazyRoute(() => import('@/features/subscription/pages/SubscribersPage'), 'SubscribersPage')
+const SplitBillsListPage = lazyRoute(() => import('@/features/split/pages/SplitBillsListPage'), 'SplitBillsListPage')
+const SplitBillFormPage = lazyRoute(() => import('@/features/split/pages/SplitBillFormPage'), 'SplitBillFormPage')
+const SplitBillDetailPage = lazyRoute(() => import('@/features/split/pages/SplitBillDetailPage'), 'SplitBillDetailPage')
+const NotFoundPage = lazyRoute(() => import('@/features/misc/pages/NotFoundPage'), 'NotFoundPage')
 
 export function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Public */}
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -50,10 +56,10 @@ export function AppRoutes() {
         <Route path="transactions" element={<TransactionsListPage />} />
         <Route path="transactions/add" element={<AddTransactionPage />} />
         <Route path="transactions/:id" element={<TransactionDetailPage />} />
-        <Route path="scan-receipt" element={<ProRoute feature="scan"><ScanReceiptPage /></ProRoute>} />
-        <Route path="free-text" element={<ProRoute feature="chat"><FreeTextPage /></ProRoute>} />
-        <Route path="targets" element={<ProRoute feature="targets"><TargetsPage /></ProRoute>} />
-        <Route path="upcoming-billings" element={<ProfilePage defaultSection="billing" />} />
+        <Route path="scan-receipt" element={<ScanReceiptPage />} />
+        <Route path="free-text" element={<FreeTextPage />} />
+        <Route path="targets" element={<TargetsPage />} />
+        <Route path="upcoming-billings" element={<UpcomingBillingPage />} />
         <Route path="split-bills" element={<ProRoute feature="splitbill"><SplitBillsListPage /></ProRoute>} />
         <Route path="split-bills/new" element={<ProRoute feature="splitbill"><SplitBillFormPage /></ProRoute>} />
         <Route path="split-bills/:id" element={<ProRoute feature="splitbill"><SplitBillDetailPage /></ProRoute>} />
@@ -95,6 +101,15 @@ export function AppRoutes() {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </Suspense>
+  )
+}
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-slate-50 px-4">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+    </div>
   )
 }
