@@ -99,6 +99,10 @@ function planFeatures(code: string, locale: string): string[] | null {
   return [...features[normalized][locale === 'id' ? 'id' : 'en']]
 }
 
+function basePlanCode(code: string) {
+  return code.replace('_yearly', '')
+}
+
 export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const t = useT()
   const { locale } = useLocale()
@@ -127,6 +131,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     {
       name: locale === 'id' ? 'Basic' : 'Basic',
       price: t.landing.planFreePrice,
+      originalPrice: null,
       period: '',
       badge: null,
       desc: locale === 'id' ? 'Fitur dasar untuk mulai mencatat arus kas harian.' : 'Core tools to start tracking daily cashflow.',
@@ -137,6 +142,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     {
       name: 'Pro',
       price: period === 'yearly' ? formatCurrency(278400, 'IDR') : t.landing.planProPrice,
+      originalPrice: period === 'yearly' ? formatCurrency(348000, 'IDR') : null,
       period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
       desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
@@ -147,6 +153,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     {
       name: 'Premium',
       price: period === 'yearly' ? formatCurrency(950400, 'IDR') : t.landing.planBizPrice,
+      originalPrice: period === 'yearly' ? formatCurrency(1188000, 'IDR') : null,
       period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: null,
       desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
@@ -172,19 +179,33 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       badge: null,
     },
   }
+  const monthlyPlansByCode = new Map(
+    plansQ.data
+      ?.filter((plan) => plan.period === 'monthly')
+      .map((plan) => [plan.code, plan]) ?? [],
+  )
   const plans = plansQ.data && plansQ.data.length > 0
     ? plansQ.data
         .filter((plan) => plan.period === period && plan.is_active)
-        .map((plan) => ({
-          name: plan.name,
-          price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(plan.price, plan.currency),
-          period: plan.price <= 0 ? '' : plan.period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
-          badge: planCopy[plan.code.replace('_yearly', '')]?.badge ?? null,
-          desc: planCopy[plan.code.replace('_yearly', '')]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
-          features: planFeatures(plan.code, locale) ?? plan.features.map((feature) => translatePlanFeature(feature, locale)),
-          cta: planCopy[plan.code.replace('_yearly', '')]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
-          tier: plan.code,
-        }))
+        .map((plan) => {
+          const baseCode = basePlanCode(plan.code)
+          const monthlyPlan = monthlyPlansByCode.get(baseCode)
+          const yearlyOriginalPrice = plan.period === 'yearly' && plan.price > 0 && monthlyPlan?.price
+            ? formatCurrency(monthlyPlan.price * 12, plan.currency)
+            : null
+
+          return {
+            name: plan.name,
+            price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(plan.price, plan.currency),
+            originalPrice: yearlyOriginalPrice,
+            period: plan.price <= 0 ? '' : plan.period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
+            badge: planCopy[baseCode]?.badge ?? null,
+            desc: planCopy[baseCode]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
+            features: planFeatures(plan.code, locale) ?? plan.features.map((feature) => translatePlanFeature(feature, locale)),
+            cta: planCopy[baseCode]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
+            tier: plan.code,
+          }
+        })
     : fallbackPlans
   const hasYearly = Boolean(plansQ.data?.some((plan) => plan.period === 'yearly' && plan.is_active))
 
@@ -256,8 +277,9 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
 
         <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
           {plans.map((plan) => {
-            const isPro = plan.tier === 'pro'
-            const isPremium = String(plan.tier).includes('premium')
+            const baseTier = basePlanCode(String(plan.tier))
+            const isPro = baseTier === 'pro'
+            const isPremium = baseTier.includes('premium')
 
             return (
               <div
@@ -297,7 +319,18 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                   <h3 className="text-lg font-bold text-slate-950">{plan.name}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">{plan.desc}</p>
 
-                  <div className="mt-6 flex items-end gap-1">
+                  {plan.originalPrice ? (
+                    <div className="mt-6 flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-400 line-through">
+                        {plan.originalPrice}
+                      </span>
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700">
+                        {locale === 'id' ? 'Diskon tahunan' : 'Yearly discount'}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className={cn('flex items-end gap-1', plan.originalPrice ? 'mt-2' : 'mt-6')}>
                     <span
                       className={cn(
                         'text-4xl font-extrabold tracking-tight',

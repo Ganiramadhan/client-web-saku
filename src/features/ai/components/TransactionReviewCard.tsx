@@ -7,19 +7,27 @@ import { cn } from '@/lib/utils'
 import type { TransactionType } from '@/types/api'
 import { cleanMerchant, type Message, type TxForm } from '../utils/freeText'
 
-function getCategoryEmoji(name?: string): string {
-  if (!name) return '💰'
+function translateCategoryName(name: string | undefined, locale: string): string {
+  if (!name) return ''
   const n = name.toLowerCase()
-  if (n.includes('makan') || n.includes('minum') || n.includes('kuliner') || n.includes('food') || n.includes('drink') || n.includes('kopi') || n.includes('coffee') || n.includes('warung') || n.includes('restoran')) return '🍔'
-  if (n.includes('trans') || n.includes('ojek') || n.includes('gojek') || n.includes('grab') || n.includes('bensin') || n.includes('mobil') || n.includes('motor') || n.includes('travel') || n.includes('bus') || n.includes('kereta')) return '🚗'
-  if (n.includes('belanja') || n.includes('shop') || n.includes('supermarket') || n.includes('mall') || n.includes('baju') || n.includes('pakaian')) return '🛍️'
-  if (n.includes('hiburan') || n.includes('nonton') || n.includes('bioskop') || n.includes('game') || n.includes('rekreasi') || n.includes('play')) return '🎮'
-  if (n.includes('kesehatan') || n.includes('obat') || n.includes('dokter') || n.includes('rs') || n.includes('sakit') || n.includes('health') || n.includes('medical')) return '🏥'
-  if (n.includes('tagihan') || n.includes('listrik') || n.includes('air') || n.includes('wifi') || n.includes('internet') || n.includes('pulsa') || n.includes('bill')) return '⚡'
-  if (n.includes('gaji') || n.includes('salary') || n.includes('bonus') || n.includes('pendapatan') || n.includes('income')) return '💵'
-  if (n.includes('investasi') || n.includes('saham') || n.includes('reksadana')) return '📈'
-  if (n.includes('edukasi') || n.includes('sekolah') || n.includes('kuliah') || n.includes('buku')) return '🎓'
-  return '💸'
+  const isId = locale === 'id'
+  const rules: Array<{ match: string[]; id: string; en: string }> = [
+    { match: ['makan', 'minum', 'kuliner', 'food', 'drink', 'kopi', 'coffee', 'warung', 'restoran'], id: 'Makanan & Minuman', en: 'Food & Drink' },
+    { match: ['trans', 'ojek', 'gojek', 'grab', 'bensin', 'mobil', 'motor', 'travel', 'bus', 'kereta'], id: 'Transportasi', en: 'Transportation' },
+    { match: ['belanja', 'shop', 'supermarket', 'mall', 'baju', 'pakaian'], id: 'Belanja', en: 'Shopping' },
+    { match: ['hiburan', 'nonton', 'bioskop', 'game', 'rekreasi', 'play'], id: 'Hiburan', en: 'Entertainment' },
+    { match: ['kesehatan', 'obat', 'dokter', 'rs', 'sakit', 'health', 'medical'], id: 'Kesehatan', en: 'Health' },
+    { match: ['tagihan', 'listrik', 'air', 'wifi', 'internet', 'pulsa', 'bill'], id: 'Tagihan', en: 'Bills' },
+    { match: ['gaji', 'salary', 'bonus', 'pendapatan', 'income'], id: 'Pendapatan', en: 'Income' },
+    { match: ['investasi', 'saham', 'reksadana', 'investment'], id: 'Investasi', en: 'Investment' },
+    { match: ['edukasi', 'sekolah', 'kuliah', 'buku', 'education'], id: 'Edukasi', en: 'Education' },
+  ]
+  const found = rules.find((rule) => rule.match.some((token) => n.includes(token)))
+  return found ? (isId ? found.id : found.en) : name
+}
+
+function getLetterMark(seed?: string): string {
+  return (seed?.trim()?.[0] ?? 'S').toUpperCase()
 }
 
 export function TransactionReviewCard({
@@ -95,7 +103,10 @@ export function TransactionReviewCard({
         saveTransaction: 'Save Transaction',
       }
   const form = message.form as TxForm
-  const filteredCats = categoryOptions(form.type)
+  const filteredCats = categoryOptions(form.type).map((option) => ({
+    ...option,
+    label: translateCategoryName(option.label, locale),
+  }))
   const isBatch = !!message.batchId
   const saved = !!message.saved
   const selected = message.selected !== false
@@ -106,7 +117,8 @@ export function TransactionReviewCard({
 
   const walletName = walletOptions.find((w) => w.value === form.wallet_id)?.label
   const categoryName = filteredCats.find((c) => c.value === form.category_id)?.label
-  const categoryEmoji = getCategoryEmoji(categoryName || message.extractedData?.category)
+  const extractedCategoryName = translateCategoryName(message.extractedData?.category, locale)
+  const letterMark = getLetterMark(form.merchant_name || form.description || categoryName || extractedCategoryName)
 
   if (!isEditing || saved) {
     return (
@@ -131,8 +143,8 @@ export function TransactionReviewCard({
           </div>
 
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 text-2xl">
-              {categoryEmoji}
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-base font-extrabold text-blue-700 shadow-sm shadow-blue-100/60">
+              {letterMark}
             </div>
 
             <div className="min-w-0 flex-1">
@@ -140,7 +152,7 @@ export function TransactionReviewCard({
                 {form.description || copy.noDescription}
               </p>
               <p className="truncate text-xs text-slate-400">
-                {categoryName || copy.noCategory}
+                {categoryName || extractedCategoryName || copy.noCategory}
               </p>
             </div>
 
@@ -253,7 +265,7 @@ export function TransactionReviewCard({
               value:
                 message.extractedData?.type === 'income' ? t.transactions.income : t.transactions.expense,
             },
-            { label: copy.category, value: message.extractedData?.category ?? '-' },
+            { label: copy.category, value: extractedCategoryName || '-' },
             { label: copy.merchant, value: cleanMerchant(message.extractedData?.merchant_name) },
           ].map((item) => (
             <div key={item.label}>

@@ -12,10 +12,11 @@ export function HowItWorksSection() {
   const [activeTab, setActiveTab] = useState<'nlp' | 'chat' | 'receipt'>('nlp')
 
   const tabs = [
-    { id: 'nlp' as const, label: 'Record via Chat', Icon: RiChatSmile3Line },
-    { id: 'chat' as const, label: 'Ask AI Insights', Icon: RiBrainLine },
-    { id: 'receipt' as const, label: 'Scan Receipt', Icon: RiReceiptLine },
+    { id: 'nlp' as const, label: locale === 'id' ? 'Catat via Chat' : 'Record via Chat', Icon: RiChatSmile3Line },
+    { id: 'chat' as const, label: locale === 'id' ? 'Tanya Insight AI' : 'Ask AI Insights', Icon: RiBrainLine },
+    { id: 'receipt' as const, label: locale === 'id' ? 'Scan Struk' : 'Scan Receipt', Icon: RiReceiptLine },
   ]
+
 
   return (
     <section id="how-it-works" className="relative overflow-hidden py-20 sm:py-28">

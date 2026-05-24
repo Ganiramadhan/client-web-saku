@@ -167,7 +167,7 @@ export function AuthShell({
 
       <Link
         to="/"
-        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/80 bg-white/75 px-3 py-2 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white hover:text-blue-700 sm:left-6 sm:top-6"
+        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm shadow-slate-200/50 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/80 hover:text-blue-700 hover:shadow-blue-100 sm:left-6 sm:top-6"
       >
         <HiOutlineHome className="h-4 w-4" />
         Home

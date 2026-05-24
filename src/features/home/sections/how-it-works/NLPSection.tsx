@@ -1,14 +1,21 @@
 import { HiOutlineCheckCircle, HiOutlineEye } from 'react-icons/hi2'
 import { RiBrainLine, RiChatSmile3Line, RiSendPlaneLine, RiSparklingLine, RiWalletLine } from 'react-icons/ri'
+import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 export function NLPSection() {
+  const { locale } = useLocale()
+  const isId = locale === 'id'
+  const categoryCopy = {
+    food: isId ? 'Makanan & Minuman' : 'Food & Drink',
+    transportation: isId ? 'Transportasi' : 'Transportation',
+  }
   const steps = [
     {
       num: '01',
       Icon: RiSendPlaneLine,
-      title: 'Type naturally',
-      desc: 'Write expenses like a normal chat message.',
+      title: isId ? 'Tulis natural' : 'Type naturally',
+      desc: isId ? 'Masukkan transaksi seperti chat biasa.' : 'Write expenses like a normal chat message.',
       example: '"lunch di warteg 35 ribu"',
       color: 'text-blue-600',
       bg: 'rgba(239,246,255,0.90)',
@@ -17,8 +24,8 @@ export function NLPSection() {
     {
       num: '02',
       Icon: RiBrainLine,
-      title: 'AI understands',
-      desc: 'SAKU detects amount, merchant, category, and wallet.',
+      title: isId ? 'AI memahami konteks' : 'AI understands',
+      desc: isId ? 'SAKU membaca nominal, merchant, kategori, dan wallet.' : 'SAKU detects amount, merchant, category, and wallet.',
       example: 'Warteg · Rp 35.000 · Food',
       color: 'text-violet-600',
       bg: 'rgba(245,243,255,0.90)',
@@ -27,9 +34,9 @@ export function NLPSection() {
     {
       num: '03',
       Icon: HiOutlineEye,
-      title: 'Preview first',
-      desc: 'Review and edit the result before saving.',
-      example: 'Confirm or edit transaction',
+      title: isId ? 'Preview dulu' : 'Preview first',
+      desc: isId ? 'Cek dan edit hasil AI sebelum disimpan.' : 'Review and edit the result before saving.',
+      example: isId ? 'Konfirmasi atau edit transaksi' : 'Confirm or edit transaction',
       color: 'text-amber-600',
       bg: 'rgba(255,251,235,0.90)',
       border: 'rgba(253,230,138,0.70)',
@@ -37,9 +44,9 @@ export function NLPSection() {
     {
       num: '04',
       Icon: HiOutlineCheckCircle,
-      title: 'Save instantly',
-      desc: 'Confirmed transactions are saved to your wallet.',
-      example: 'Saved to Main Wallet',
+      title: isId ? 'Simpan instan' : 'Save instantly',
+      desc: isId ? 'Transaksi tersimpan ke wallet setelah dikonfirmasi.' : 'Confirmed transactions are saved to your wallet.',
+      example: isId ? 'Tersimpan ke Main Wallet' : 'Saved to Main Wallet',
       color: 'text-emerald-600',
       bg: 'rgba(236,253,245,0.90)',
       border: 'rgba(167,243,208,0.70)',
@@ -56,9 +63,8 @@ export function NLPSection() {
       preview: {
         merchant: 'Starbucks',
         amount: 'Rp 25.000',
-        cat: 'Food & Drink',
+        catKey: 'food' as const,
         wallet: 'Main Wallet',
-        emoji: '☕',
       },
     },
     {
@@ -70,9 +76,8 @@ export function NLPSection() {
       preview: {
         merchant: 'Gojek',
         amount: 'Rp 18.000',
-        cat: 'Transportation',
+        catKey: 'transportation' as const,
         wallet: 'Main Wallet',
-        emoji: '🛵',
       },
     },
   ]
@@ -81,7 +86,7 @@ export function NLPSection() {
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
       <div className="space-y-4">
         <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
-          How NLP Recording Works
+          {isId ? 'Alur Chat Transaksi' : 'How NLP Recording Works'}
         </p>
 
         {steps.map((s) => (
@@ -134,7 +139,7 @@ export function NLPSection() {
       </div>
 
       <div
-        className="sticky top-28 overflow-hidden rounded-3xl"
+        className="overflow-hidden rounded-3xl lg:sticky lg:top-28"
         style={{
           background: 'rgba(255,255,255,0.74)',
           backdropFilter: 'blur(40px) saturate(180%)',
@@ -151,12 +156,12 @@ export function NLPSection() {
 
           <div>
             <p className="text-sm font-bold text-slate-900">SAKU AI</p>
-            <p className="text-xs text-slate-400">Natural language recording</p>
+            <p className="text-xs text-slate-400">{isId ? 'Catat transaksi natural' : 'Natural language recording'}</p>
           </div>
 
           <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Online
+            {isId ? 'Aktif' : 'Online'}
           </span>
         </div>
 
@@ -176,18 +181,20 @@ export function NLPSection() {
                       <div className="mb-3 flex items-center gap-2">
                         <RiSparklingLine className="h-4 w-4 text-blue-500" />
                         <p className="text-xs font-bold text-blue-600">
-                          Transaction Preview
+                          {isId ? 'Preview Transaksi' : 'Transaction Preview'}
                         </p>
                       </div>
 
                       <div className="mb-3 flex items-center gap-3">
-                        <span className="text-2xl">{msg.preview.emoji}</span>
+                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-sm font-extrabold text-blue-600 shadow-sm shadow-blue-100/60">
+                          {msg.preview.merchant.slice(0, 1)}
+                        </span>
 
                         <div>
                           <p className="text-sm font-bold text-slate-900">
                             {msg.preview.merchant}
                           </p>
-                          <p className="text-xs text-slate-400">{msg.preview.cat}</p>
+                          <p className="text-xs text-slate-400">{categoryCopy[msg.preview.catKey]}</p>
                         </div>
 
                         <span className="ml-auto text-base font-extrabold text-rose-500">
@@ -203,16 +210,16 @@ export function NLPSection() {
                           </span>
                         </div>
 
-                        <span className="text-xs text-slate-400">Just now</span>
+                        <span className="text-xs text-slate-400">{isId ? 'Baru saja' : 'Just now'}</span>
                       </div>
                     </div>
 
                     <div className="flex border-t border-slate-200/70">
                       <button className="flex-1 py-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50">
-                        Edit
+                        {isId ? 'Edit' : 'Edit'}
                       </button>
                       <button className="flex-1 py-3 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-50">
-                        Confirm
+                        {isId ? 'Konfirmasi' : 'Confirm'}
                       </button>
                     </div>
                   </div>
@@ -226,7 +233,7 @@ export function NLPSection() {
           <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-2.5">
             <input
               readOnly
-              placeholder='Type like "dinner 80k" or "gojek 18 ribu"…'
+              placeholder={isId ? 'Tulis seperti "makan malam 80k"...' : 'Type like "dinner 80k"...'}
               className="flex-1 bg-transparent text-sm text-slate-400 placeholder-slate-300 outline-none"
             />
             <RiSendPlaneLine className="h-4 w-4 text-blue-500" />

@@ -124,6 +124,7 @@ export function SubscriptionCard({
         pendingTitle: 'Pembayaran Belum Selesai',
         pendingDesc: 'Selesaikan pembayaran untuk mengaktifkan paket',
         continuePay: 'Lanjutkan Pembayaran',
+        cancelPayment: 'Batalkan Pembayaran',
         freeDesc: 'Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.',
         referral: 'Kode Referal',
         referralPlaceholder: 'Opsional saat pembayaran',
@@ -133,6 +134,9 @@ export function SubscriptionCard({
         year: 'tahun',
         soon: 'Segera',
         choose: 'Pilih',
+        yearlyDiscount: 'Hemat 20%',
+        yearly: 'Tahunan',
+        monthly: 'Bulanan',
         active: 'Aktif',
         trialEnds: 'Trial berakhir',
         periodUntil: 'Periode hingga',
@@ -155,6 +159,7 @@ export function SubscriptionCard({
         pendingTitle: 'Payment Not Completed',
         pendingDesc: 'Complete payment to activate plan',
         continuePay: 'Continue Payment',
+        cancelPayment: 'Cancel Payment',
         freeDesc: 'Your account is still on the Free plan. Choose a plan to unlock AI features, advanced reports, and richer financial workflows.',
         referral: 'Referral Code',
         referralPlaceholder: 'Optional during payment',
@@ -164,6 +169,9 @@ export function SubscriptionCard({
         year: 'year',
         soon: 'Soon',
         choose: 'Choose',
+        yearlyDiscount: 'Save 20%',
+        yearly: 'Yearly',
+        monthly: 'Monthly',
         active: 'Active',
         trialEnds: 'Trial ends',
         periodUntil: 'Period until',
@@ -182,6 +190,7 @@ export function SubscriptionCard({
       }
   const [referralCode, setReferralCode] = useState('')
   const cleanReferralCode = sanitizeReferralCode(referralCode)
+  const monthlyPlans = new Map(plans.filter((plan) => plan.period === 'monthly').map((plan) => [basePlanCode(plan.code), plan]))
 
   if (loading) {
     return (
@@ -211,14 +220,25 @@ export function SubscriptionCard({
               </div>
               <Badge tone="amber">Pending</Badge>
             </div>
-            <Button
-              size="sm"
-              className="mt-3 w-full"
-              loading={busyPlan === pendingSub.plan_code}
-              onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode)}
-            >
-              {copy.continuePay}
-            </Button>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Button
+                size="sm"
+                className="w-full"
+                loading={busyPlan === pendingSub.plan_code}
+                onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode)}
+              >
+                {copy.continuePay}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-amber-200 bg-white/80 text-amber-800 hover:border-amber-300 hover:bg-amber-50"
+                loading={cancelLoading}
+                onClick={() => onCancel(pendingSub.id)}
+              >
+                {copy.cancelPayment}
+              </Button>
+            </div>
           </div>
         ) : null}
         <div className="flex items-start justify-between gap-3">
@@ -242,7 +262,7 @@ export function SubscriptionCard({
             maxLength={32}
           />
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 grid gap-3">
           {plansLoading ? (
             <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
               {copy.loadingPlans}
@@ -253,26 +273,50 @@ export function SubscriptionCard({
             </p>
           ) : (
             plans.map((plan) => {
-              const disabled = plan.code.includes('premium')
+              const baseCode = basePlanCode(plan.code)
+              const monthlyPlan = monthlyPlans.get(baseCode)
+              const yearlyOriginal = plan.period === 'yearly' && monthlyPlan?.price
+                ? Number(monthlyPlan.price) * 12
+                : null
+              const isYearly = plan.period === 'yearly'
+              const isPro = baseCode === 'pro'
               return (
               <div
                 key={plan.id}
-                className="rounded-2xl border border-white/80 bg-white/65 p-3 shadow-sm"
+                className="group rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm shadow-slate-200/50 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:bg-white hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-extrabold text-slate-950">{plan.name}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {formatCurrency(Number(plan.price), plan.currency)}/{plan.period === 'monthly' ? copy.month : copy.year}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-extrabold text-slate-950">{plan.name}</p>
+                      <Badge tone={isYearly ? 'green' : isPro ? 'blue' : 'gray'}>
+                        {isYearly ? copy.yearly : copy.monthly}
+                      </Badge>
+                      {isYearly ? (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                          {copy.yearlyDiscount}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 flex flex-wrap items-end gap-2 text-xs text-slate-500">
+                      {yearlyOriginal ? (
+                        <span className="font-semibold text-slate-400 line-through">
+                          {formatCurrency(yearlyOriginal, plan.currency)}
+                        </span>
+                      ) : null}
+                      <span className="text-base font-extrabold text-slate-950">
+                        {formatCurrency(Number(plan.price), plan.currency)}
+                      </span>
+                      <span>/{plan.period === 'monthly' ? copy.month : copy.year}</span>
                     </p>
                   </div>
                   <Button
                     size="sm"
-                    disabled={disabled}
                     loading={busyPlan === plan.code}
                     onClick={() => onSubscribe(plan.code, cleanReferralCode)}
+                    className="shrink-0"
                   >
-                    {disabled ? copy.soon : copy.choose}
+                    {copy.choose}
                   </Button>
                 </div>
               </div>
@@ -366,6 +410,10 @@ export function SubscriptionCard({
       </div>
     </Card>
   )
+}
+
+function basePlanCode(code: string) {
+  return code.replace('_yearly', '')
 }
 
 function translatePlanFeature(

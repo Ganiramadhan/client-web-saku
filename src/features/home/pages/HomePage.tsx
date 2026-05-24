@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { RiArrowUpLine, RiWhatsappLine } from 'react-icons/ri'
 import { useAuthStore } from '@/stores/authStore'
 import { useLocale, useT } from '@/i18n'
 import { smoothScrollTo } from '../components/landingUtils'
@@ -44,6 +45,11 @@ export function HomePage() {
     { href: 'pricing', label: t.nav.pricing },
     { href: 'faq', label: t.nav.faq },
   ]
+  const whatsappText = encodeURIComponent(
+    locale === 'id'
+      ? 'Halo SAKU, saya ingin bertanya tentang SAKU.'
+      : 'Hi SAKU, I want to ask about SAKU.',
+  )
 
   return (
     <div className="app-surface min-h-screen overflow-x-hidden font-sans antialiased">
@@ -81,6 +87,36 @@ export function HomePage() {
       <Suspense fallback={null}>
         <FooterSection onNavClick={smoothScrollTo} />
       </Suspense>
+
+      <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+        {scrolled ? (
+          <button
+            type="button"
+            onClick={() => smoothScrollTo('home')}
+            aria-label={locale === 'id' ? 'Kembali ke atas' : 'Back to top'}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 bg-white/75 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:bg-white hover:text-blue-700 hover:shadow-blue-100 active:translate-y-0"
+          >
+            <RiArrowUpLine className="h-5 w-5" />
+          </button>
+        ) : null}
+
+        <a
+          href={`https://wa.me/628211248685?text=${whatsappText}`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={locale === 'id' ? 'Chat SAKU di WhatsApp' : 'Chat SAKU on WhatsApp'}
+          className="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/70 bg-emerald-500 text-white shadow-xl shadow-emerald-200/80 transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-400 hover:shadow-emerald-300/80 active:translate-y-0"
+        >
+          <span className="absolute -right-1 -top-1 flex h-4 w-4">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" />
+            <span className="relative inline-flex h-4 w-4 rounded-full border-2 border-white bg-emerald-300" />
+          </span>
+          <span className="pointer-events-none absolute right-14 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-2xl border border-white/80 bg-white/90 px-3 py-2 text-xs font-bold text-slate-700 shadow-lg shadow-slate-200/60 backdrop-blur-xl opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 sm:block">
+            {locale === 'id' ? 'Chat WhatsApp' : 'WhatsApp chat'}
+          </span>
+          <RiWhatsappLine className="h-6 w-6" />
+        </a>
+      </div>
     </div>
   )
 }

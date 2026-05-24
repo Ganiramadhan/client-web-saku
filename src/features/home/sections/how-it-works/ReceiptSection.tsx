@@ -1,14 +1,17 @@
 import { HiOutlineArrowUpTray, HiOutlineCheckCircle, HiOutlineDocumentCheck } from 'react-icons/hi2'
 import { RiBankLine, RiCalendarEventLine, RiMoneyDollarCircleLine, RiPieChart2Line, RiReceiptLine, RiScanLine } from 'react-icons/ri'
+import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 export function ReceiptSection() {
+  const { locale } = useLocale()
+  const isId = locale === 'id'
   const steps = [
     {
       num: '01',
       Icon: HiOutlineArrowUpTray,
-      title: 'Upload receipt',
-      desc: 'Take a photo or upload your receipt.',
+      title: isId ? 'Ambil foto struk' : 'Capture receipt',
+      desc: isId ? 'Foto langsung atau upload gambar struk.' : 'Take a photo or upload your receipt.',
       color: 'text-cyan-600',
       bg: 'rgba(236,254,255,0.90)',
       border: 'rgba(165,243,252,0.70)',
@@ -16,8 +19,8 @@ export function ReceiptSection() {
     {
       num: '02',
       Icon: RiScanLine,
-      title: 'AI extracts data',
-      desc: 'SAKU reads merchant, date, items, and total.',
+      title: isId ? 'AI membaca data' : 'AI extracts data',
+      desc: isId ? 'SAKU membaca merchant, tanggal, item, dan total.' : 'SAKU reads merchant, date, items, and total.',
       color: 'text-blue-600',
       bg: 'rgba(239,246,255,0.90)',
       border: 'rgba(191,219,254,0.70)',
@@ -25,8 +28,8 @@ export function ReceiptSection() {
     {
       num: '03',
       Icon: HiOutlineDocumentCheck,
-      title: 'Review details',
-      desc: 'Check and edit extracted data before saving.',
+      title: isId ? 'Review detail' : 'Review details',
+      desc: isId ? 'Cek dan edit data sebelum disimpan.' : 'Check and edit extracted data before saving.',
       color: 'text-violet-600',
       bg: 'rgba(245,243,255,0.90)',
       border: 'rgba(221,214,254,0.70)',
@@ -34,8 +37,8 @@ export function ReceiptSection() {
     {
       num: '04',
       Icon: HiOutlineCheckCircle,
-      title: 'Confirm & save',
-      desc: 'Save it instantly as a transaction.',
+      title: isId ? 'Konfirmasi & simpan' : 'Confirm & save',
+      desc: isId ? 'Simpan langsung sebagai transaksi.' : 'Save it instantly as a transaction.',
       color: 'text-emerald-600',
       bg: 'rgba(236,253,245,0.90)',
       border: 'rgba(167,243,208,0.70)',
@@ -46,7 +49,7 @@ export function ReceiptSection() {
     <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
       <div className="space-y-4">
         <p className="text-xs font-bold uppercase tracking-widest text-cyan-600">
-          How Receipt Scanning Works
+          {isId ? 'Alur Scan Struk' : 'How Receipt Scanning Works'}
         </p>
 
         {steps.map((step) => (
@@ -106,42 +109,79 @@ export function ReceiptSection() {
           </div>
 
           <div>
-            <p className="text-sm font-bold text-slate-900">Receipt Preview</p>
-            <p className="text-xs text-slate-400">Review before saving</p>
+            <p className="text-sm font-bold text-slate-900">{isId ? 'Preview Struk' : 'Receipt Preview'}</p>
+            <p className="text-xs text-slate-400">{isId ? 'Review sebelum simpan' : 'Review before saving'}</p>
           </div>
 
           <span className="ml-auto rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">
-            AI Extracted
+            {isId ? 'Hasil AI' : 'AI Extracted'}
           </span>
         </div>
 
         <div className="space-y-4 bg-cyan-50/40 p-5">
-          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-3xl border border-dashed border-cyan-200 bg-cyan-50">
-            <div className="text-center">
-              <RiReceiptLine className="mx-auto mb-1 h-8 w-8 text-cyan-300" />
-              <p className="text-xs font-medium text-cyan-500">
-                Receipt image uploaded
-              </p>
+          <div className="grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
+            <div className="relative flex min-h-40 items-center justify-center overflow-hidden rounded-3xl border border-dashed border-cyan-200 bg-cyan-50">
+              <div className="absolute inset-x-6 top-5 h-1 rounded-full bg-white/80" />
+              <div className="absolute inset-x-8 bottom-5 h-1 rounded-full bg-white/80" />
+              <div className="absolute left-5 top-1/2 h-16 w-1 -translate-y-1/2 rounded-full bg-white/80" />
+              <div className="absolute right-5 top-1/2 h-16 w-1 -translate-y-1/2 rounded-full bg-white/80" />
+              <div className="text-center">
+                <RiReceiptLine className="mx-auto mb-1 h-8 w-8 text-cyan-300" />
+                <p className="text-xs font-medium text-cyan-500">
+                  {isId ? 'Foto struk siap dibaca' : 'Receipt image uploaded'}
+                </p>
+              </div>
+
+              <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-cyan-600 px-3 py-1 text-xs font-bold text-white">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-200" />
+                {isId ? 'Memindai' : 'Scanning'}
+              </div>
             </div>
 
-            <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-cyan-600 px-3 py-1 text-xs font-bold text-white">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-200" />
-              Scanning
+            <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+                {isId ? 'Ringkasan AI' : 'AI Summary'}
+              </p>
+              <div className="space-y-2">
+                {[
+                  { label: isId ? 'Subtotal' : 'Subtotal', value: 'Rp 65.000' },
+                  { label: isId ? 'Diskon' : 'Discount', value: '-Rp 8.000' },
+                  { label: isId ? 'Pajak' : 'Tax', value: 'Rp 5.700' },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">{row.label}</span>
+                    <span className="font-bold text-slate-800">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-2xl bg-emerald-50 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-700">{isId ? 'Total Simpan' : 'Saved Total'}</span>
+                  <span className="text-sm font-extrabold text-emerald-700">Rp 62.700</span>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
-              Extracted Data
-            </p>
-
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  {isId ? 'Data Terdeteksi' : 'Extracted Data'}
+                </p>
+                <p className="mt-1 text-sm font-extrabold text-slate-900">Starbucks Coffee</p>
+              </div>
+              <span className="rounded-full border border-cyan-100 bg-cyan-50 px-2.5 py-1 text-[11px] font-extrabold text-cyan-700">
+                {isId ? 'Siap Simpan' : 'Ready'}
+              </span>
+            </div>
             {[
-              { label: 'Merchant', value: 'Starbucks Coffee', Icon: RiBankLine },
-              { label: 'Date', value: 'May 20, 2026', Icon: RiCalendarEventLine },
-              { label: 'Category', value: 'Food & Drink', Icon: RiPieChart2Line },
+              { label: isId ? 'Tanggal' : 'Date', value: isId ? '20 Mei 2026' : 'May 20, 2026', Icon: RiCalendarEventLine },
+              { label: isId ? 'Kategori' : 'Category', value: isId ? 'Makanan & Minuman' : 'Food & Drink', Icon: RiPieChart2Line },
+              { label: isId ? 'Wallet' : 'Wallet', value: 'Main Wallet', Icon: RiBankLine },
               {
-                label: 'Total Amount',
-                value: 'Rp 65.000',
+                label: isId ? 'Total' : 'Total Amount',
+                value: 'Rp 62.700',
                 highlight: true,
                 Icon: RiMoneyDollarCircleLine,
               },
@@ -176,7 +216,7 @@ export function ReceiptSection() {
 
           <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-4">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">
-              Items Detected
+              {isId ? 'Item Terdeteksi' : 'Items Detected'}
             </p>
 
             {[
@@ -192,11 +232,11 @@ export function ReceiptSection() {
 
           <div className="flex gap-2.5">
             <button className="flex-1 rounded-2xl border border-slate-200 bg-white/80 py-3 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50">
-              Edit Details
+              {isId ? 'Edit Detail' : 'Edit Details'}
             </button>
 
             <button className="flex-1 rounded-2xl bg-cyan-600 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-200/70 transition-all hover:bg-cyan-500">
-              Confirm & Save
+              {isId ? 'Konfirmasi & Simpan' : 'Confirm & Save'}
             </button>
           </div>
         </div>
@@ -204,5 +244,3 @@ export function ReceiptSection() {
     </div>
   )
 }
-
-/* ─── Pricing ───────────────────────────────────────────────── */

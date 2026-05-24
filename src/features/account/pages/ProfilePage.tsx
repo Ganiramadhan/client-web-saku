@@ -63,9 +63,9 @@ export function ProfilePage() {
         fullNamePlaceholder: 'Nama lengkap',
         reset: 'Reset',
         save: 'Simpan Perubahan',
-        cancelTitle: 'Batalkan langganan?',
-        cancelDesc: 'Langganan aktif akan dibatalkan dan fitur berbayar akan mengikuti status paket setelah proses selesai.',
-        cancelConfirm: 'Batalkan Langganan',
+        cancelTitle: 'Batalkan langganan atau pembayaran?',
+        cancelDesc: 'Langganan atau pembayaran pending akan dibatalkan. Kamu bisa memilih paket lain setelah proses selesai.',
+        cancelConfirm: 'Batalkan',
       }
     : {
         title: 'Account Settings',
@@ -90,9 +90,9 @@ export function ProfilePage() {
         fullNamePlaceholder: 'Full name',
         reset: 'Reset',
         save: 'Save Changes',
-        cancelTitle: 'Cancel subscription?',
-        cancelDesc: 'The active subscription will be canceled and paid features will follow the plan status after the process is complete.',
-        cancelConfirm: 'Cancel Subscription',
+        cancelTitle: 'Cancel subscription or payment?',
+        cancelDesc: 'The subscription or pending payment will be canceled. You can choose another plan after the process is complete.',
+        cancelConfirm: 'Cancel',
       }
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
