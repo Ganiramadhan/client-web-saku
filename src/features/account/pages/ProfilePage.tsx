@@ -50,6 +50,7 @@ export function ProfilePage() {
         maxSize: 'Ukuran maksimum 5 MB.',
         paymentPending: 'Pembayaran belum selesai',
         paymentFailed: 'Pembayaran gagal',
+        pendingPlanExists: 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.',
         subCanceled: 'Langganan berhasil dibatalkan.',
         accountInfo: 'Informasi Akun',
         accountInfoDesc: 'Foto, nama tampilan, dan email yang dipakai untuk login.',
@@ -77,6 +78,7 @@ export function ProfilePage() {
         maxSize: 'Maximum size is 5 MB.',
         paymentPending: 'Payment is still pending',
         paymentFailed: 'Payment failed',
+        pendingPlanExists: 'You still have a pending payment. Cancel it first before choosing another plan.',
         subCanceled: 'Subscription canceled.',
         accountInfo: 'Account Information',
         accountInfoDesc: 'Photo, display name, and email used for login.',
@@ -212,6 +214,10 @@ export function ProfilePage() {
 
   const handleSubscribe = async (planCode: string, referralCode?: string) => {
     try {
+      if (pendingSubscription && pendingSubscription.plan_code !== planCode) {
+        toast.info(copy.pendingPlanExists)
+        return
+      }
       setBusyPlan(planCode)
       const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
       if (!snapLoadedRef.current) {

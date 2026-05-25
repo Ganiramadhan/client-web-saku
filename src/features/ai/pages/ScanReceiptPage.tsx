@@ -35,6 +35,8 @@ import {
   type ScanHistoryEntry,
 } from '../utils/receipt'
 
+const SCAN_DRAFT_KEY = 'saku-scan-receipt-draft'
+
 export function ScanReceiptPage() {
   const t = useT()
   const qc = useQueryClient()
@@ -58,6 +60,36 @@ export function ScanReceiptPage() {
     description: '',
     transaction_date: new Date().toISOString().split('T')[0],
   })
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SCAN_DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw) as {
+        imagePreview?: string
+        isEditing?: boolean
+        extractedData?: ExtractedReceipt | null
+        form?: typeof form
+      }
+      if (draft.imagePreview) setImagePreview(draft.imagePreview)
+      if (draft.extractedData) setExtractedData(draft.extractedData)
+      if (draft.form) setForm(draft.form)
+      if (typeof draft.isEditing === 'boolean') setIsEditing(draft.isEditing)
+    } catch {
+      window.localStorage.removeItem(SCAN_DRAFT_KEY)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!imagePreview && !extractedData) {
+      window.localStorage.removeItem(SCAN_DRAFT_KEY)
+      return
+    }
+    window.localStorage.setItem(
+      SCAN_DRAFT_KEY,
+      JSON.stringify({ imagePreview, isEditing, extractedData, form }),
+    )
+  }, [extractedData, form, imagePreview, isEditing])
 
   const wallets = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
   const categories = useQuery({
@@ -103,7 +135,7 @@ export function ScanReceiptPage() {
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
       const base64 = await imageFileToOptimizedBase64(file)
-      return aiApi.scanReceipt({ image_base64: base64 })
+      return aiApi.scanReceipt({ image_base64: base64, media_type: 'image/webp' })
     },
     onSuccess: (data) => {
       const d = { ...(data as ExtractedReceipt), merchant_name: cleanMerchant((data as ExtractedReceipt).merchant_name) }
@@ -138,13 +170,18 @@ export function ScanReceiptPage() {
         confidence_score: extractedData?.confidence,
       })
     },
-    onSuccess: (savedTx) => {
+    onSuccess: async (savedTx) => {
       void savedTx
+      if (extractedData?.image_key) {
+        await aiApi.promoteScanImage(extractedData.image_key).catch(() => undefined)
+      }
       toast.success('Transaksi berhasil disimpan!')
-      qc.invalidateQueries({ queryKey: ['transactions'] })
-      qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] })
-      qc.invalidateQueries({ queryKey: ['savings-goals'] })
-      qc.invalidateQueries({ queryKey: ['wallets'] })
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['transactions'] }),
+        qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] }),
+        qc.invalidateQueries({ queryKey: ['savings-goals'] }),
+        qc.invalidateQueries({ queryKey: ['wallets'] }),
+      ])
       resetForm()
     },
     onError: (e) => toast.error(toErrorMessage(e)),
@@ -175,6 +212,7 @@ export function ScanReceiptPage() {
   }
 
   const resetForm = () => {
+    window.localStorage.removeItem(SCAN_DRAFT_KEY)
     setImagePreview('')
     setIsEditing(false)
     setExtractedData(null)

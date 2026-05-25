@@ -13,6 +13,7 @@ import {
   sanitizeEmail,
 } from '@/features/auth/components/AuthFormParts'
 import { GoogleButton } from '@/features/auth/components/GoogleButton'
+import { TurnstileWidget, isTurnstileEnabled } from '@/features/auth/components/TurnstileWidget'
 import { useLocale, useT } from '@/i18n'
 import { getErrorStatus, getRetryAfterSeconds, toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -31,6 +32,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [remember, setRemember] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
   const [retryUntil, setRetryUntil] = useState<number | null>(() => {
     const saved = Number(window.localStorage.getItem(LOGIN_RETRY_KEY) || 0)
     return saved > Date.now() ? saved : null
@@ -89,7 +91,11 @@ export function LoginPage() {
     if (retryRemaining > 0) return
     const cleanEmail = sanitizeEmail(email)
     setEmail(cleanEmail)
-    m.mutate({ email: cleanEmail, password })
+    if (isTurnstileEnabled() && !turnstileToken) {
+      toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
+      return
+    }
+    m.mutate({ email: cleanEmail, password, turnstile_token: turnstileToken })
   }
 
   return (
@@ -122,11 +128,13 @@ export function LoginPage() {
           </Link>
         </div>
 
+        <TurnstileWidget onVerify={setTurnstileToken} />
+
         <Button
           type="submit"
           className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
           loading={m.isPending}
-          disabled={retryRemaining > 0}
+          disabled={retryRemaining > 0 || (isTurnstileEnabled() && !turnstileToken)}
           rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
         >
           {retryRemaining > 0 ? `Coba lagi dalam ${formatCountdown(retryRemaining)}` : t.auth.submitLogin}

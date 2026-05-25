@@ -17,8 +17,10 @@ interface AuthState {
   token: string | null
   user: AuthUser | null
   remember: boolean
+  lastActivityAt: number | null
   setSession: (token: string, user: AuthUser, remember?: boolean) => void
   setUser: (user: AuthUser) => void
+  touch: () => void
   clear: () => void
 }
 
@@ -27,16 +29,8 @@ const AUTH_STORAGE_KEY = 'saku-admin-auth'
 const authStorage: StateStorage = {
   getItem: (name) => localStorage.getItem(name) ?? sessionStorage.getItem(name),
   setItem: (name, value) => {
-    let remember = true
-    try {
-      remember = Boolean(JSON.parse(value)?.state?.remember)
-    } catch {
-      remember = true
-    }
-    const target = remember ? localStorage : sessionStorage
-    const other = remember ? sessionStorage : localStorage
-    target.setItem(name, value)
-    other.removeItem(name)
+    localStorage.setItem(name, value)
+    sessionStorage.removeItem(name)
   },
   removeItem: (name) => {
     localStorage.removeItem(name)
@@ -50,9 +44,11 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       remember: true,
-      setSession: (token, user, remember = true) => set({ token, user, remember }),
+      lastActivityAt: null,
+      setSession: (token, user, remember = true) => set({ token, user, remember, lastActivityAt: Date.now() }),
       setUser: (user) => set({ user }),
-      clear: () => set({ token: null, user: null, remember: true }),
+      touch: () => set((state) => (state.token ? { lastActivityAt: Date.now() } : state)),
+      clear: () => set({ token: null, user: null, remember: true, lastActivityAt: null }),
     }),
     {
       name: AUTH_STORAGE_KEY,

@@ -144,6 +144,7 @@ export interface AIScanReceiptResponse extends AICategorizeResponse {
   description?: string
   ocr_text?: string
   line_items?: string[]
+  image_key?: string
 }
 
 export interface AIInsightsResponse {

@@ -1,6 +1,8 @@
 import { useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AppRoutes } from '@/routes'
 import { useSEO } from '@/lib/seo'
+import { initSessionActivity } from '@/lib/sessionActivity'
 
 const PAGE_SEO: Array<{ pattern: RegExp; title: string; description: string; noIndex?: boolean }> = [
   { pattern: /^\/$/, title: 'SAKU — Personal Finance with AI', description: 'Kelola transaksi, dompet, tagihan, budget, dan target finansial dengan bantuan AI.' },
@@ -15,6 +17,7 @@ const PAGE_SEO: Array<{ pattern: RegExp; title: string; description: string; noI
 
 export default function App() {
   const location = useLocation()
+  useEffect(() => initSessionActivity(), [])
   const match = PAGE_SEO.find((item) => item.pattern.test(location.pathname)) ?? PAGE_SEO[0]
   useSEO({
     title: match.title,

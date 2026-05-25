@@ -1,6 +1,7 @@
 import { aiLogApi } from '@/features/ai/api'
 import type { TransactionType } from '@/types/api'
 import { formatRelativeDayLabel } from '@/lib/dateLabel'
+import { imageFileToWebPBase64 } from '@/lib/files'
 
 export interface ExtractedReceipt {
   amount?: number
@@ -12,6 +13,7 @@ export interface ExtractedReceipt {
   date?: string
   confidence?: number
   line_items?: string[]
+  image_key?: string
 }
 
 export interface ScanHistoryEntry {
@@ -168,33 +170,7 @@ export function groupHistoryByDay(entries: ScanHistoryEntry[]) {
 }
 
 export function imageFileToOptimizedBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      const maxSide = 1600
-      const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
-      const width = Math.max(1, Math.round(img.width * scale))
-      const height = Math.max(1, Math.round(img.height * scale))
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        URL.revokeObjectURL(url)
-        reject(new Error('Canvas tidak tersedia'))
-        return
-      }
-      ctx.drawImage(img, 0, 0, width, height)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.82).split(',')[1])
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('Gagal membaca gambar'))
-    }
-    img.src = url
-  })
+  return imageFileToWebPBase64(file, { maxSide: 1800, quality: 0.88, filename: 'receipt-scan' })
 }
 
 function rawString(raw: Record<string, unknown> | undefined, key: string): string {

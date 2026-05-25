@@ -1,10 +1,12 @@
 import { RiArrowRightLine, RiBrainLine, RiCalendarEventLine, RiChatSmile3Line, RiLockLine, RiScanLine, RiScales3Line } from 'react-icons/ri'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { SectionHeading } from '../components/SectionHeading'
 
 export function FeaturesSection() {
   const t = useT()
+  const { locale } = useLocale()
+  const isId = locale === 'id'
   const features = [
     {
       Icon: RiChatSmile3Line,
@@ -166,6 +168,28 @@ export function FeaturesSection() {
                 Explore feature
                 <RiArrowRightLine className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 grid gap-3 rounded-3xl border border-white/80 bg-white/65 p-4 shadow-sm shadow-slate-200/50 backdrop-blur-xl sm:grid-cols-3">
+          {[
+            {
+              title: isId ? 'Siap pembayaran real' : 'Payment ready',
+              desc: isId ? 'Checkout Midtrans, status pending, dan aktivasi otomatis.' : 'Midtrans checkout, pending states, and automatic activation.',
+            },
+            {
+              title: isId ? 'Gambar lebih ringan' : 'Optimized images',
+              desc: isId ? 'Upload profile dan struk dikompresi ke WebP.' : 'Profile and receipt uploads are compressed to WebP.',
+            },
+            {
+              title: isId ? 'Dukungan langsung' : 'Direct support',
+              desc: isId ? 'Tombol WhatsApp tersedia dari landing.' : 'WhatsApp support is available from the landing page.',
+            },
+          ].map((item) => (
+            <div key={item.title} className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+              <p className="text-sm font-extrabold text-slate-950">{item.title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{item.desc}</p>
             </div>
           ))}
         </div>

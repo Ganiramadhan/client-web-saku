@@ -18,6 +18,7 @@ import {
 import { useLocale, useT } from '@/i18n'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
+import { TurnstileWidget, isTurnstileEnabled } from '@/features/auth/components/TurnstileWidget'
 
 export function ForgotPasswordPage() {
   const t = useT()
@@ -34,6 +35,7 @@ export function ForgotPasswordPage() {
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null)
   const [resendAt, setResendAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [turnstileToken, setTurnstileToken] = useState('')
 
   useEffect(() => {
     if (!otpSent || otpVerified) return
@@ -42,7 +44,7 @@ export function ForgotPasswordPage() {
   }, [otpSent, otpVerified])
 
   const m = useMutation({
-    mutationFn: () => forgotPassword(email.trim()),
+    mutationFn: () => forgotPassword(email.trim(), turnstileToken),
     onSuccess: () => {
       setOtpSent(true)
       setOtp('')
@@ -99,6 +101,10 @@ export function ForgotPasswordPage() {
         toast.error(t.auth.emailRequiredMessage, t.auth.emailRequiredTitle)
         return
       }
+      if (isTurnstileEnabled() && !turnstileToken) {
+        toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
+        return
+      }
       m.mutate()
       return
     }
@@ -129,6 +135,8 @@ export function ForgotPasswordPage() {
           </div>
         )}
 
+        {!otpSent ? <TurnstileWidget onVerify={setTurnstileToken} /> : null}
+
         {otpSent && !otpVerified ? (
           <>
             <Field
@@ -154,6 +162,10 @@ export function ForgotPasswordPage() {
                   onClick={() => {
                     if (!email.trim()) {
                       toast.error(t.auth.emailRequiredMessage, t.auth.emailRequiredTitle)
+                      return
+                    }
+                    if (isTurnstileEnabled() && !turnstileToken) {
+                      toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
                       return
                     }
                     m.mutate()
@@ -194,7 +206,7 @@ export function ForgotPasswordPage() {
           type="submit"
           className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
           loading={isSubmitting}
-          disabled={submitDisabled}
+          disabled={submitDisabled || (!otpSent && isTurnstileEnabled() && !turnstileToken)}
           rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
         >
           {!otpSent ? t.auth.sendOtp : otpVerified ? t.auth.resetPassword : t.auth.verifyOtp}

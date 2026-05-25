@@ -1,4 +1,4 @@
-import type { ComponentType, InputHTMLAttributes, ReactNode } from 'react'
+import { useEffect, type ComponentType, type InputHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   HiOutlineEnvelope,
@@ -17,6 +17,7 @@ import {
 } from 'react-icons/ri'
 import { useT } from '@/i18n'
 import type { Dict } from '@/i18n/dictionaries'
+import { preloadTurnstileScript } from '@/features/auth/components/TurnstileWidget'
 import { cn } from '@/lib/utils'
 
 export function getPasswordValidationError(t: Dict, password: string, confirmPassword: string): string | null {
@@ -123,6 +124,9 @@ export function AuthShell({
   children: ReactNode
 }) {
   const t = useT()
+  useEffect(() => {
+    preloadTurnstileScript().catch(() => undefined)
+  }, [])
   const copy =
     mode === 'login'
       ? {

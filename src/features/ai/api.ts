@@ -60,6 +60,10 @@ export interface ScanReceiptRequest {
   user_categories?: string[]
 }
 
+export interface PromoteScanImageResponse {
+  image_key: string
+}
+
 export interface InsightsRequest {
   from?: string
   to?: string
@@ -89,6 +93,8 @@ export const aiApi = {
     unwrap<AICategorizeResponse>(await api.post('/ai/categorize', req)),
   scanReceipt: async (req: ScanReceiptRequest): Promise<AIScanReceiptResponse> =>
     unwrap<AIScanReceiptResponse>(await api.post('/ai/scan-receipt', req)),
+  promoteScanImage: async (image_key: string): Promise<PromoteScanImageResponse> =>
+    unwrap<PromoteScanImageResponse>(await api.post('/ai/scan-receipt/promote-image', { image_key })),
   insights: async (req: InsightsRequest): Promise<AIInsightsResponse> =>
     unwrap<AIInsightsResponse>(await api.post('/ai/insights', req)),
   suggestBudget: async (req: SuggestBudgetRequest): Promise<AISuggestBudgetResponse> =>

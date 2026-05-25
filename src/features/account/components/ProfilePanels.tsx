@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   HiOutlineCheckCircle,
   HiOutlineClipboardDocument,
@@ -189,8 +189,17 @@ export function SubscriptionCard({
         cancel: 'Cancel Subscription',
       }
   const [referralCode, setReferralCode] = useState('')
+  const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const cleanReferralCode = sanitizeReferralCode(referralCode)
   const monthlyPlans = new Map(plans.filter((plan) => plan.period === 'monthly').map((plan) => [basePlanCode(plan.code), plan]))
+  const hasMonthly = plans.some((plan) => plan.period === 'monthly')
+  const hasYearly = plans.some((plan) => plan.period === 'yearly')
+  const visiblePlans = plans.filter((plan) => plan.period === period)
+
+  useEffect(() => {
+    if (!hasMonthly && hasYearly) setPeriod('yearly')
+    else if (hasMonthly && !hasYearly) setPeriod('monthly')
+  }, [hasMonthly, hasYearly])
 
   if (loading) {
     return (
@@ -262,17 +271,43 @@ export function SubscriptionCard({
             maxLength={32}
           />
         </div>
+        {hasMonthly && hasYearly ? (
+          <div className="mt-4 grid grid-cols-2 rounded-2xl border border-white/80 bg-white/60 p-1 shadow-sm">
+            {([
+              ['monthly', copy.monthly],
+              ['yearly', copy.yearly],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setPeriod(value)}
+                className={`rounded-xl px-3 py-2 text-xs font-extrabold transition ${
+                  period === value
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-100'
+                    : 'text-slate-500 hover:bg-white hover:text-brand-700'
+                }`}
+              >
+                {label}
+                {value === 'yearly' ? (
+                  <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] ${period === value ? 'bg-white/15 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {copy.yearlyDiscount}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-3">
           {plansLoading ? (
             <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
               {copy.loadingPlans}
             </p>
-          ) : plans.length === 0 ? (
+          ) : visiblePlans.length === 0 ? (
             <p className="rounded-2xl border border-slate-100 bg-white/60 px-4 py-3 text-xs text-slate-500">
               {copy.noPlans}
             </p>
           ) : (
-            plans.map((plan) => {
+            visiblePlans.map((plan) => {
               const baseCode = basePlanCode(plan.code)
               const monthlyPlan = monthlyPlans.get(baseCode)
               const yearlyOriginal = plan.period === 'yearly' && monthlyPlan?.price

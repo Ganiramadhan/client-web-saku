@@ -5,6 +5,7 @@ import { EmptyState, Input, Skeleton } from '@/components/ui'
 import { subscriptionApi, type Plan } from '../api'
 import { toast } from '@/lib/toast'
 import { loadSnap } from '@/lib/snap'
+import { useLocale } from '@/i18n'
 import { sanitizeReferralCode } from '../utils/referral'
 import type { BillingPeriod } from '../types'
 import {
@@ -18,6 +19,22 @@ import {
 export function PlansPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        freeActive: 'Paket gratis aktif otomatis',
+        pendingPayment: 'Pembayaran belum selesai',
+        paymentFailed: 'Pembayaran gagal',
+        checkoutFailed: 'Gagal memulai checkout',
+        pendingPlanExists: 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.',
+      }
+    : {
+        freeActive: 'Free plan is active automatically',
+        pendingPayment: 'Payment is still pending',
+        paymentFailed: 'Payment failed',
+        checkoutFailed: 'Failed to start checkout',
+        pendingPlanExists: 'You still have a pending payment. Cancel it first before choosing another plan.',
+      }
 
   const plansQ = useQuery({
     queryKey: ['subscriptions', 'plans'],
@@ -27,6 +44,10 @@ export function PlansPage() {
   const activeQ = useQuery({
     queryKey: ['subscriptions', 'active'],
     queryFn: subscriptionApi.active,
+  })
+  const subscriptionsQ = useQuery({
+    queryKey: ['subscriptions', 'me'],
+    queryFn: subscriptionApi.mySubscriptions,
   })
 
   const [busyCode, setBusyCode] = useState<string | null>(null)
@@ -42,6 +63,7 @@ export function PlansPage() {
   )
   const plans = useMemo(() => allPlans.filter((p) => p.period === period), [allPlans, period])
   const active = activeQ.data ?? null
+  const pending = (subscriptionsQ.data ?? []).find((item) => item.status === 'pending') ?? null
   const hasYearly = useMemo(() => allPlans.some((p) => p.period === 'yearly'), [allPlans])
 
   useEffect(() => {
@@ -50,7 +72,11 @@ export function PlansPage() {
 
   function handleSubscribe(plan: Plan) {
     if (plan.price <= 0) {
-      toast.info('Paket gratis aktif otomatis')
+      toast.info(copy.freeActive)
+      return
+    }
+    if (pending && pending.plan_code !== plan.code) {
+      toast.info(copy.pendingPlanExists)
       return
     }
     void startCheckout(plan)
@@ -84,14 +110,14 @@ export function PlansPage() {
           navigate(`/app/subscription/thanks${qs}`)
         },
         onPending: () => {
-          toast.info('Pembayaran belum selesai')
+          toast.info(copy.pendingPayment)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
         },
-        onError: () => toast.error('Pembayaran gagal'),
+        onError: () => toast.error(copy.paymentFailed),
         onClose: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
       })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Gagal memulai checkout'
+      const msg = err instanceof Error ? err.message : copy.checkoutFailed
       toast.error(msg)
     } finally {
       setBusyCode(null)
