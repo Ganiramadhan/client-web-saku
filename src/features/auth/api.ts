@@ -6,13 +6,22 @@ export interface LoginPayload { email: string; password: string; turnstile_token
 export interface RegisterPayload { name: string; email: string; password: string; turnstile_token?: string }
 
 interface AuthResponse { token: string; user: AuthUser }
+interface RegisterResponse { email: string; expires_in: number }
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
   return unwrap<AuthResponse>(await api.post('/auth/login', payload))
 }
 
-export async function register(payload: RegisterPayload): Promise<AuthResponse> {
-  return unwrap<AuthResponse>(await api.post('/auth/register', payload))
+export async function register(payload: RegisterPayload): Promise<RegisterResponse> {
+  return unwrap<RegisterResponse>(await api.post('/auth/register', payload))
+}
+
+export async function verifyRegistration(payload: { email: string; otp: string }): Promise<AuthResponse> {
+  return unwrap<AuthResponse>(await api.post('/auth/register/verify', payload))
+}
+
+export async function resendRegistrationOTP(email: string): Promise<void> {
+  await api.post('/auth/register/resend-otp', { email })
 }
 
 export async function loginWithGoogle(idToken: string, mode: 'login' | 'register' = 'login'): Promise<AuthResponse> {
@@ -71,4 +80,12 @@ export async function uploadPhoto(file: File): Promise<UploadPhotoResponse> {
 
 export async function deletePhoto(): Promise<AuthUser> {
   return unwrap<AuthUser>(await api.delete('/users/me/photo'))
+}
+
+export async function deleteAccount(): Promise<void> {
+  await api.delete('/users/me')
+}
+
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
 }

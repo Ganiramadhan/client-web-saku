@@ -39,6 +39,7 @@ export interface AdminSubscription extends Subscription {
   user_name: string
   user_email: string
   user_photo_url?: string
+  user_last_login_at?: string | null
 }
 
 export interface CheckoutResponse {

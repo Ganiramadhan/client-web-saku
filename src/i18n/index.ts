@@ -15,7 +15,7 @@ export const useI18nStore = create<I18nState>()(
     }),
     {
       name: 'saku-locale',
-      version: 2,
+      version: 3,
       migrate: (persisted) => ({
         ...(persisted as I18nState),
         locale: 'en',

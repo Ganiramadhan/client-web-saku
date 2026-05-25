@@ -43,9 +43,10 @@ export function preloadTurnstileScript() {
   return scriptPromise
 }
 
-export function TurnstileWidget({ onVerify }: { onVerify: (token: string) => void }) {
+export function TurnstileWidget({ onVerify, resetSignal }: { onVerify: (token: string) => void; resetSignal?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
+  const lastResetSignalRef = useRef(resetSignal)
   const [loaded, setLoaded] = useState(false)
   const { locale } = useLocale()
 
@@ -79,6 +80,14 @@ export function TurnstileWidget({ onVerify }: { onVerify: (token: string) => voi
       widgetIdRef.current = null
     }
   }, [loaded, locale, onVerify])
+
+  useEffect(() => {
+    if (!SITE_KEY || !window.turnstile || !widgetIdRef.current) return
+    if (lastResetSignalRef.current === resetSignal) return
+    lastResetSignalRef.current = resetSignal
+    window.turnstile.reset(widgetIdRef.current)
+    onVerify('')
+  }, [onVerify, resetSignal])
 
   if (!SITE_KEY) return null
   return <div ref={ref} className="min-h-[65px] overflow-hidden rounded-xl" />

@@ -181,9 +181,11 @@ export interface AdminUser {
   name: string
   email: string
   role: string
+  auth_provider?: string
   status?: string
   phone?: string
   photo_url?: string
+  last_login_at?: string | null
   created_at: string
   updated_at: string
 }

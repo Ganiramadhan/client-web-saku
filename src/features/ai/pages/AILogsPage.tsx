@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
+import { HiOutlineArrowPath } from 'react-icons/hi2'
 import { aiLogApi } from '@/features/ai/api'
-import { Badge, DataTable, PageHeader, Pagination } from '@/components/ui'
+import { AdminDataTable, Badge, Button, PageHeader, Pagination } from '@/components/ui'
 import { useT } from '@/i18n'
 import { formatDateTime } from '@/lib/utils'
 import type { AIProcessingLog as AILog } from '@/types/api'
@@ -22,12 +23,18 @@ export function AILogsPage() {
   const columns = useMemo<ColumnDef<AILog>[]>(
     () => [
       {
+        id: 'no',
+        header: '#',
+        cell: ({ row }) => <span className="text-xs tabular-nums text-slate-400">{row.index + 1}</span>,
+        enableSorting: false,
+      },
+      {
         id: 'user',
         header: 'User',
         accessorFn: (l) => l.user_name ?? '',
         cell: ({ row }) => (
-          <div className="min-w-[160px]">
-            <div className="font-medium text-slate-900">{row.original.user_name || '—'}</div>
+          <div className="min-w-[190px]">
+            <div className="font-semibold text-slate-900">{row.original.user_name || '—'}</div>
             {row.original.user_email ? (
               <div className="text-xs text-slate-500">{row.original.user_email}</div>
             ) : null}
@@ -123,9 +130,22 @@ export function AILogsPage() {
 
   return (
     <div>
-      <PageHeader title={t.ai.title} subtitle={t.ai.subtitle} />
+      <PageHeader
+        title={t.ai.title}
+        subtitle={t.ai.subtitle}
+        action={
+          <Button
+            variant="outline"
+            onClick={() => q.refetch()}
+            loading={q.isFetching}
+            leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
-      <DataTable
+      <AdminDataTable
         data={rows}
         columns={columns}
         loading={q.isLoading}

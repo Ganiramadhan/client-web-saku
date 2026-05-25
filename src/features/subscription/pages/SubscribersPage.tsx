@@ -5,10 +5,13 @@ import {
   HiOutlineBanknotes,
   HiOutlineCheckCircle,
   HiOutlineClock,
+  HiOutlineCreditCard,
+  HiOutlineArrowPath,
+  HiOutlineEye,
   HiOutlineUsers,
 } from 'react-icons/hi2'
 
-import { Badge, Button, DataTable, PageHeader } from '@/components/ui'
+import { AdminDataTable, Badge, Button, Modal, PageHeader } from '@/components/ui'
 import { RSelect } from '@/components/ui/RSelect'
 import { subscriptionApi, type AdminSubscription } from '@/features/subscription/api'
 import { useT } from '@/i18n'
@@ -56,10 +59,19 @@ const fmtDate = (s?: string | null) => {
   }
 }
 
+const shortOrder = (value?: string) => value ? `${value.slice(0, 14)}...` : '-'
+const paymentLabel = (row: AdminSubscription) => {
+  if (row.payment_type) return row.payment_type
+  if (row.status === 'active' || row.status === 'trialing') return 'Confirmed'
+  if (row.status === 'pending') return 'Waiting payment'
+  return 'No payment'
+}
+
 export function SubscribersPage() {
   const t = useT()
   const [status, setStatus] = useState<StatusFilter>('all')
   const [plan, setPlan] = useState<PlanFilter>('all')
+  const [viewing, setViewing] = useState<AdminSubscription | null>(null)
 
   const q = useQuery({
     queryKey: ['admin-subscriptions'],
@@ -109,7 +121,7 @@ export function SubscribersPage() {
           const r = row.original
           const initial = (r.user_name || r.user_email || '?').charAt(0).toUpperCase()
           return (
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-[220px] items-center gap-3">
               {r.user_photo_url ? (
                 <img
                   src={r.user_photo_url}
@@ -137,9 +149,9 @@ export function SubscribersPage() {
         cell: ({ row }) => {
           const r = row.original
           return (
-            <div className="flex flex-col">
+            <div className="flex min-w-[140px] flex-col items-start gap-1">
               <Badge tone="violet">{r.plan_name || r.plan_code}</Badge>
-              <span className="mt-1 text-xs text-slate-500">{r.plan_code}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-500">{r.plan_code}</span>
             </div>
           )
         },
@@ -149,7 +161,10 @@ export function SubscribersPage() {
         header: 'Nominal',
         accessorFn: (r) => r.amount,
         cell: ({ row }) => (
-          <span className="text-sm font-bold tabular-nums text-slate-900">{fmtIDR(row.original.amount, row.original.currency)}</span>
+          <div className="min-w-[120px]">
+            <div className="text-sm font-extrabold tabular-nums text-slate-900">{fmtIDR(row.original.amount, row.original.currency)}</div>
+            <div className="text-[11px] text-slate-400">{row.original.currency}</div>
+          </div>
         ),
       },
       {
@@ -167,34 +182,34 @@ export function SubscribersPage() {
         },
       },
       {
-        id: 'period',
-        header: 'Periode',
-        cell: ({ row }) => {
-          const r = row.original
-          return (
-            <div className="text-xs leading-5 text-slate-600">
-              <div>Mulai: {fmtDate(r.starts_at)}</div>
-              <div>Selesai: {fmtDate(r.ends_at)}</div>
-              {r.trial_ends_at ? <div>Trial s/d: {fmtDate(r.trial_ends_at)}</div> : null}
-            </div>
-          )
-        },
-      },
-      {
         id: 'order',
         header: 'Order',
         cell: ({ row }) => (
-          <div className="flex flex-col text-xs text-slate-600">
-            <span className="font-mono text-[11px] text-slate-700">{row.original.order_id}</span>
-            <span className="text-slate-500">{row.original.payment_type || '—'}</span>
+          <div className="flex min-w-[150px] flex-col text-xs text-slate-600">
+            <span className="font-mono text-[11px] text-slate-700" title={row.original.order_id}>{shortOrder(row.original.order_id)}</span>
+            <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
+              <HiOutlineCreditCard className="h-3 w-3" />
+              {paymentLabel(row.original)}
+            </span>
           </div>
         ),
       },
       {
-        id: 'createdAt',
-        header: 'Dibuat',
-        accessorFn: (r) => r.created_at,
-        cell: ({ row }) => <span className="text-xs text-slate-600">{fmtDate(row.original.created_at)}</span>,
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setViewing(row.original)}
+              className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"
+              title="Detail"
+            >
+              <HiOutlineEye className="h-4 w-4" />
+            </button>
+          </div>
+        ),
       },
     ],
     []
@@ -205,6 +220,16 @@ export function SubscribersPage() {
       <PageHeader
         title={t.nav.subscribers}
         subtitle="Daftar semua pengguna yang telah berlangganan SAKU."
+        action={
+          <Button
+            variant="outline"
+            onClick={() => q.refetch()}
+            loading={q.isFetching}
+            leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -214,7 +239,7 @@ export function SubscribersPage() {
         <SubStatCard label="Revenue Aktif" value={fmtIDR(stats.revenue)} Icon={HiOutlineBanknotes} tone="violet" />
       </section>
 
-      <DataTable
+      <AdminDataTable
         data={filtered}
         columns={columns}
         loading={q.isLoading}
@@ -260,6 +285,65 @@ export function SubscribersPage() {
           </>
         }
       />
+      <SubscriptionDetailModal subscription={viewing} onClose={() => setViewing(null)} />
+    </div>
+  )
+}
+
+function SubscriptionDetailModal({
+  subscription,
+  onClose,
+}: {
+  subscription: AdminSubscription | null
+  onClose: () => void
+}) {
+  if (!subscription) return null
+  return (
+    <Modal
+      open={Boolean(subscription)}
+      onClose={onClose}
+      size="lg"
+      title="Subscription Detail"
+      description={`${subscription.user_name || '-'} - ${subscription.plan_name || subscription.plan_code}`}
+      footer={<Button variant="outline" onClick={onClose}>Close</Button>}
+    >
+      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Subscription</p>
+            <h3 className="mt-1 truncate text-lg font-extrabold text-slate-950">
+              {subscription.plan_name || subscription.plan_code}
+            </h3>
+            <p className="truncate text-sm text-slate-500">{subscription.user_email}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={statusTone(subscription.status)}>{statusLabel[subscription.status] || subscription.status}</Badge>
+            <Badge tone="blue">{paymentLabel(subscription)}</Badge>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <DetailItem label="Customer" value={subscription.user_name || '-'} helper={subscription.user_email} />
+        <DetailItem label="Plan" value={subscription.plan_name || subscription.plan_code} helper={subscription.plan_code} />
+        <DetailItem label="Amount" value={fmtIDR(subscription.amount, subscription.currency)} helper={subscription.currency} />
+        <DetailItem label="Status" value={statusLabel[subscription.status] || subscription.status} helper={paymentLabel(subscription)} />
+        <DetailItem label="Order ID" value={subscription.order_id} helper={subscription.payment_type || 'Payment type not recorded'} wide />
+        <DetailItem label="Started" value={fmtDate(subscription.starts_at)} />
+        <DetailItem label="Ends" value={fmtDate(subscription.ends_at)} />
+        <DetailItem label="Trial ends" value={fmtDate(subscription.trial_ends_at)} />
+        <DetailItem label="Created" value={fmtDate(subscription.created_at)} />
+        <DetailItem label="Updated" value={fmtDate(subscription.updated_at)} />
+      </div>
+    </Modal>
+  )
+}
+
+function DetailItem({ label, value, helper, wide }: { label: string; value: string; helper?: string; wide?: boolean }) {
+  return (
+    <div className={wide ? 'sm:col-span-2 rounded-xl border border-slate-200 bg-white/70 p-3' : 'rounded-xl border border-slate-200 bg-white/70 p-3'}>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{value || '-'}</p>
+      {helper ? <p className="mt-1 break-words text-xs text-slate-500">{helper}</p> : null}
     </div>
   )
 }

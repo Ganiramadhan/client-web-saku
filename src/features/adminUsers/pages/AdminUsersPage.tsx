@@ -9,15 +9,18 @@ import {
   HiOutlineUsers,
   HiOutlineCheckCircle,
   HiOutlineNoSymbol,
+  HiOutlineClock,
+  HiOutlineArrowPath,
+  HiOutlineKey,
 } from 'react-icons/hi2'
 import { adminUserApi, type AdminUserPayload } from '@/features/adminUsers/api'
 import {
-  Badge, Button, DataTable, Input, Modal, PageHeader,
+  AdminDataTable, Badge, Button, Input, Modal, PageHeader,
   RSelect,
   type SelectOption,
 } from '@/components/ui'
 import { useT } from '@/i18n'
-import { cn, formatDate } from '@/lib/utils'
+import { cn, formatDate, formatDateTime } from '@/lib/utils'
 import type { AdminUser } from '@/types/api'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -25,7 +28,9 @@ import { confirm } from '@/lib/confirm'
 import { useAuthStore } from '@/stores/authStore'
 
 type RoleFilter = 'all' | 'user' | 'admin' | 'super_admin'
-type StatusFilter = 'all' | 'active' | 'suspended'
+type StatusFilter = 'all' | 'active' | 'pending_verification' | 'suspended'
+
+const lastLoginLabel = (value?: string | null) => value ? formatDateTime(value) : 'Belum pernah login'
 
 export function AdminUsersPage() {
   const t = useT()
@@ -62,7 +67,7 @@ export function AdminUsersPage() {
   const onDelete = async (u: AdminUser) => {
     const ok = await confirm({
       title: 'Hapus user?',
-      description: `User "${u.name}" (${u.email}) akan dihapus permanen.`,
+      description: `User "${u.name}" (${u.email}) akan dinonaktifkan dari daftar aktif. Data historis tetap disimpan.`,
       tone: 'danger',
       confirmLabel: t.common.delete,
     })
@@ -102,6 +107,7 @@ export function AdminUsersPage() {
       total: all.length,
       active: all.filter((u) => (u.status ?? 'active') === 'active').length,
       suspended: all.filter((u) => u.status === 'suspended').length,
+      pending: all.filter((u) => u.status === 'pending_verification').length,
       admin: all.filter((u) => u.role === 'admin' || u.role === 'super_admin').length,
     }
   }, [q.data?.data, currentUser?.id])
@@ -120,17 +126,17 @@ export function AdminUsersPage() {
       },
       {
         id: 'name',
-        header: t.common.name,
+        header: 'User',
         accessorFn: (u) => u.name,
         cell: ({ row }) => (
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+          <div className="flex min-w-[220px] items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm ring-2 ring-white">
               {row.original.photo_url ? (
                 <img
                   src={row.original.photo_url}
                   alt={row.original.name}
                   referrerPolicy="no-referrer"
-                  className="h-full w-full rounded-full object-cover ring-2 ring-white"
+                  className="h-full w-full rounded-full object-cover"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
@@ -138,43 +144,35 @@ export function AdminUsersPage() {
                 </span>
               )}
             </div>
-            <div>
-              <div className="font-medium text-slate-900">{row.original.name}</div>
-              {row.original.phone ? (
-                <div className="text-xs text-slate-500">{row.original.phone}</div>
-              ) : null}
+            <div className="min-w-0">
+              <div className="truncate font-semibold text-slate-900">{row.original.name}</div>
+              <div className="truncate text-xs text-slate-500">{row.original.email}</div>
             </div>
           </div>
         ),
-      },
-      { id: 'email', header: 'Email', accessorFn: (u) => u.email },
-      {
-        id: 'role',
-        header: t.adminUsers.role,
-        accessorFn: (u) => u.role,
-        cell: ({ row }) => {
-          const role = row.original.role
-          const tone =
-            role === 'admin' ? 'violet' : role === 'super_admin' ? 'blue' : 'gray'
-          return <Badge tone={tone}>{role}</Badge>
-        },
       },
       {
         id: 'status',
         header: t.adminUsers.status,
         accessorFn: (u) => u.status ?? 'active',
         cell: ({ row }) => (
-          <Badge tone={row.original.status === 'suspended' ? 'red' : 'green'}>
-            {row.original.status ?? 'active'}
+          <Badge tone={row.original.status === 'suspended' ? 'red' : row.original.status === 'pending_verification' ? 'amber' : 'green'}>
+            {row.original.status === 'pending_verification' ? 'pending verify' : row.original.status ?? 'active'}
           </Badge>
         ),
       },
       {
-        id: 'created',
-        header: 'Joined',
-        accessorFn: (u) => u.created_at,
+        id: 'activity',
+        header: 'Activity',
+        accessorFn: (u) => `${u.last_login_at ?? ''} ${u.created_at}`,
         cell: ({ row }) => (
-          <span className="text-slate-500">{formatDate(row.original.created_at)}</span>
+          <div className="min-w-[170px] text-xs leading-5">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <HiOutlineClock className="h-3.5 w-3.5 text-blue-500" />
+              {lastLoginLabel(row.original.last_login_at)}
+            </div>
+            <div className="text-slate-400">Joined {formatDate(row.original.created_at)}</div>
+          </div>
         ),
       },
       {
@@ -227,24 +225,34 @@ export function AdminUsersPage() {
         title={t.adminUsers.title}
         subtitle={t.adminUsers.subtitle}
         action={
-          <Button
-            className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
-            onClick={() => { setEditing(null); setOpen(true) }}
-            leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}
-          >
-            {t.common.create}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => q.refetch()}
+              loading={q.isFetching}
+              leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+            >
+              Refresh
+            </Button>
+            <Button
+              className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
+              onClick={() => { setEditing(null); setOpen(true) }}
+              leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}
+            >
+              {t.common.create}
+            </Button>
+          </div>
         }
       />
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <UserStatCard label="Total User" value={stats.total} Icon={HiOutlineUsers} tone="blue" />
         <UserStatCard label="Aktif" value={stats.active} Icon={HiOutlineCheckCircle} tone="emerald" />
-        <UserStatCard label="Suspended" value={stats.suspended} Icon={HiOutlineNoSymbol} tone="rose" />
+        <UserStatCard label="Pending Verify" value={stats.pending} Icon={HiOutlineNoSymbol} tone="amber" />
         <UserStatCard label="Admin" value={stats.admin} Icon={HiOutlineShieldCheck} tone="violet" />
       </section>
 
-      <DataTable
+      <AdminDataTable
         data={filteredUsers}
         columns={columns}
         loading={q.isLoading}
@@ -276,6 +284,7 @@ export function AdminUsersPage() {
                 options={[
                   { value: 'all', label: 'Semua status' },
                   { value: 'active', label: 'Aktif' },
+                  { value: 'pending_verification', label: 'Pending Verify' },
                   { value: 'suspended', label: 'Suspended' },
                 ]}
                 onChange={(v) => setStatusFilter((v as StatusFilter) ?? 'all')}
@@ -311,13 +320,14 @@ function UserStatCard({
   label: string
   value: number
   Icon: ComponentType<{ className?: string }>
-  tone: 'blue' | 'emerald' | 'rose' | 'violet'
+  tone: 'blue' | 'emerald' | 'rose' | 'violet' | 'amber'
 }) {
   const styles = {
     blue: 'border-blue-100 bg-blue-50/55 text-blue-700',
     emerald: 'border-emerald-100 bg-emerald-50/55 text-emerald-700',
     rose: 'border-rose-100 bg-rose-50/55 text-rose-700',
     violet: 'border-violet-100 bg-violet-50/55 text-violet-700',
+    amber: 'border-amber-100 bg-amber-50/55 text-amber-700',
   }
   return (
     <div className="group rounded-2xl border border-white/80 bg-white/68 p-4 shadow-lg shadow-slate-200/30 backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
@@ -374,7 +384,7 @@ function UserModal({
       description={
         editing
           ? 'Perbarui informasi akun. Kosongkan password jika tidak diubah.'
-          : 'Buat akun baru. Pengguna otomatis aktif dan dapat login setelahnya.'
+          : 'Buat akun internal untuk akses admin atau pengguna operasional.'
       }
       footer={
         <>
@@ -383,72 +393,96 @@ function UserModal({
         </>
       }
     >
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white">
+      <div className="space-y-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white shadow-sm">
             {(form.name?.trim()?.[0] ?? '?').toUpperCase()}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-slate-900">
               {form.name || 'Nama pengguna'}
             </div>
             <div className="truncate text-xs text-slate-500">
               {form.email || 'email@perusahaan.com'}
             </div>
+            {editing ? (
+              <div className="mt-1 text-[11px] text-blue-700">
+                Last login: {lastLoginLabel(editing.last_login_at)}
+              </div>
+            ) : null}
+          </div>
+          {editing ? <Badge tone={editing.status === 'suspended' ? 'red' : 'green'}>{editing.status ?? 'active'}</Badge> : null}
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+          <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Identity</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Nama Lengkap"
+              placeholder="Contoh: Budi Santoso"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="nama@perusahaan.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            label="Nama Lengkap"
-            placeholder="Contoh: Budi Santoso"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <Input
-            label="Email"
-            type="email"
-            placeholder="nama@perusahaan.com"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
+        <div className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+          <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Security</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label={editing ? 'Password (opsional)' : 'Password'}
+              type="password"
+              placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'}
+              value={form.password ?? ''}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <Input
+              label="Nomor Telepon"
+              placeholder="0812xxxxxxxx (opsional)"
+              value={form.phone ?? ''}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+          </div>
+          <button
+            type="button"
+            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-100"
+            onClick={() => setForm({ ...form, password: '12345678' })}
+          >
+            <HiOutlineKey className="h-4 w-4" />
+            Set default password 12345678
+          </button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            label={editing ? 'Password (opsional)' : 'Password'}
-            type="password"
-            placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'}
-            value={form.password ?? ''}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <Input
-            label="Nomor Telepon"
-            placeholder="0812xxxxxxxx (opsional)"
-            value={form.phone ?? ''}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <RSelect
-            label="Peran"
-            value={form.role ?? 'user'}
-            options={[
-              { value: 'user', label: 'User' },
-              { value: 'admin', label: 'Admin' },
-            ] as SelectOption[]}
-            onChange={(v) => setForm({ ...form, role: v ?? 'user' })}
-          />
-          <RSelect
-            label="Status"
-            value={form.status ?? 'active'}
-            options={[
-              { value: 'active', label: 'Aktif' },
-              { value: 'suspended', label: 'Suspended' },
-            ] as SelectOption[]}
-            onChange={(v) => setForm({ ...form, status: v ?? 'active' })}
-          />
+        <div className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+          <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Access Control</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <RSelect
+              label="Peran"
+              value={form.role ?? 'user'}
+              options={[
+                { value: 'user', label: 'User' },
+                { value: 'admin', label: 'Admin' },
+              ] as SelectOption[]}
+              onChange={(v) => setForm({ ...form, role: v ?? 'user' })}
+            />
+            <RSelect
+              label="Status"
+              value={form.status ?? 'active'}
+              options={[
+                { value: 'active', label: 'Aktif' },
+                { value: 'pending_verification', label: 'Pending Verification' },
+                { value: 'suspended', label: 'Suspended' },
+              ] as SelectOption[]}
+              onChange={(v) => setForm({ ...form, status: v ?? 'active' })}
+            />
+          </div>
         </div>
 
         <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-700">

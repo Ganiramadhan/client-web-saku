@@ -46,6 +46,7 @@ export interface DataTableProps<T> {
   initialPageSize?: number
   onRowClick?: (row: T) => void
   labels?: DataTableLabels
+  variant?: 'default' | 'admin'
 }
 
 export function DataTable<T>({
@@ -61,6 +62,7 @@ export function DataTable<T>({
   initialPageSize = 10,
   onRowClick,
   labels,
+  variant = 'default',
 }: DataTableProps<T>) {
   const [globalFilter, setGlobalFilter] = useState('')
   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState('')
@@ -94,16 +96,27 @@ export function DataTable<T>({
   const start = totalRows === 0 ? 0 : pageIndex * pageSize + 1
   const end = Math.min(totalRows, (pageIndex + 1) * pageSize)
 
+  const admin = variant === 'admin'
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/80 bg-white/58 shadow-lg shadow-slate-200/40 backdrop-blur-2xl">
-      <div className="flex flex-col gap-3 border-b border-white/70 bg-white/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className={cn(
+      'overflow-hidden rounded-2xl shadow-lg shadow-slate-200/40 backdrop-blur-2xl',
+      admin ? 'border border-slate-200/80 bg-white/72' : 'border border-white/80 bg-white/58',
+    )}>
+      <div className={cn(
+        'flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between',
+        admin ? 'border-b border-slate-200/80 bg-slate-50/45' : 'border-b border-white/70 bg-white/35',
+      )}>
         <div className="relative w-full sm:max-w-xs">
           <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full rounded-xl border border-white/80 bg-white/75 py-2 pl-9 pr-9 text-sm shadow-sm transition focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className={cn(
+              'w-full rounded-xl py-2 pl-9 pr-9 text-sm shadow-sm transition focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
+              admin ? 'border border-slate-200 bg-white/90' : 'border border-white/80 bg-white/75',
+            )}
           />
           {globalFilter ? (
             <button
@@ -134,7 +147,10 @@ export function DataTable<T>({
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="border-b border-white/70 bg-white/45 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className={cn(
+              'text-left text-xs uppercase tracking-wide text-slate-500',
+              admin ? 'border-b border-slate-200 bg-slate-50/80' : 'border-b border-white/70 bg-white/45',
+            )}>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((h) => {
@@ -145,6 +161,7 @@ export function DataTable<T>({
                         key={h.id}
                         className={cn(
                           'px-4 py-3 font-semibold',
+                          admin && 'border-r border-slate-100 last:border-r-0',
                           canSort && 'cursor-pointer select-none hover:text-slate-700',
                         )}
                         onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
@@ -167,12 +184,13 @@ export function DataTable<T>({
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-white/65">
+            <tbody className={cn(admin ? 'divide-y divide-slate-200/80' : 'divide-y divide-white/65')}>
               {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
                   className={cn(
-                    'transition-colors hover:bg-white/35',
+                    'transition-colors',
+                    admin ? 'hover:bg-slate-50/70' : 'hover:bg-white/35',
                     onRowClick && 'cursor-pointer hover:bg-brand-50/45',
                   )}
                   onClick={
@@ -186,7 +204,10 @@ export function DataTable<T>({
                   }
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 align-middle text-slate-700">
+                    <td key={cell.id} className={cn(
+                      'px-4 py-3 align-middle text-slate-700',
+                      admin && 'border-r border-slate-100 last:border-r-0',
+                    )}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -198,7 +219,10 @@ export function DataTable<T>({
       )}
 
       {!disablePagination && totalRows > 0 ? (
-        <div className="flex flex-col gap-3 border-t border-white/70 bg-white/30 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className={cn(
+          'flex flex-col gap-3 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between',
+          admin ? 'border-t border-slate-200/80 bg-slate-50/45' : 'border-t border-white/70 bg-white/30',
+        )}>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-slate-500">
               <span>{labels?.show ?? 'Tampilkan'}</span>

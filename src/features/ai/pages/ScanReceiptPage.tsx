@@ -45,7 +45,7 @@ export function ScanReceiptPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [extractedData, setExtractedData] = useState<ExtractedReceipt | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const [history, setHistory] = useState<ScanHistoryEntry[]>([])
   const [viewing, setViewing] = useState<ScanHistoryEntry | null>(null)
@@ -290,10 +290,10 @@ export function ScanReceiptPage() {
       {!imagePreview ? (
         <div className="grid gap-8 lg:grid-cols-3">
           <ReceiptUploadPanel
-            inputRef={fileInputRef}
+            uploadInputRef={uploadInputRef}
             isDragging={isDragging}
             isPending={scanMutation.isPending}
-            onPickFile={() => fileInputRef.current?.click()}
+            onPickFile={() => uploadInputRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault()
               setIsDragging(true)

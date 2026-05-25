@@ -33,10 +33,11 @@ const SCAN_COPY = {
     processingReceipt: 'Memproses Struk...',
     processingHint: 'AI sedang membaca nominal, merchant, dan kategori.',
     uploadHint: 'Tarik & lepas foto, atau klik untuk memilih file. AI akan mengisi data otomatis.',
+    chooseFile: 'Pilih File',
     maxSize: 'Maks. 5 MB',
     stepsTitle: 'Cara Kerja Scan Struk',
     steps: [
-      ['Upload Struk', 'Ambil foto struk belanja Anda atau pilih file gambar dari perangkat.'],
+      ['Upload Struk', 'Pilih file gambar struk dari perangkat.'],
       ['AI Ekstraksi Data', 'AI akan membaca otomatis nominal, merchant, tanggal, dan kategori.'],
       ['Review Detail', 'Periksa kembali data transaksi hasil ekstraksi sebelum disimpan.'],
       ['Konfirmasi & Simpan', 'Simpan data ke dompet Anda sebagai transaksi baru.'],
@@ -80,10 +81,11 @@ const SCAN_COPY = {
     processingReceipt: 'Processing Receipt...',
     processingHint: 'AI is reading amount, merchant, and category.',
     uploadHint: 'Drag and drop a photo, or click to choose a file. AI will fill the data automatically.',
+    chooseFile: 'Choose File',
     maxSize: 'Max. 5 MB',
     stepsTitle: 'How Receipt Scan Works',
     steps: [
-      ['Upload Receipt', 'Take a receipt photo or choose an image from your device.'],
+      ['Upload Receipt', 'Choose a receipt image from your device.'],
       ['AI Data Extraction', 'AI reads amount, merchant, date, and category automatically.'],
       ['Review Details', 'Review extracted transaction details before saving.'],
       ['Confirm & Save', 'Save the data to your wallet as a new transaction.'],
@@ -134,7 +136,7 @@ const receiptSteps = [
     num: '01',
     Icon: HiOutlineCloudArrowUp,
     title: 'Upload Struk',
-    desc: 'Ambil foto struk belanja Anda atau pilih file gambar dari perangkat.',
+    desc: 'Pilih file gambar struk dari perangkat.',
     color: 'text-cyan-600',
     bg: 'rgba(236,254,255,0.90)',
     border: 'rgba(165,243,252,0.70)',
@@ -169,7 +171,7 @@ const receiptSteps = [
 ]
 
 export function ReceiptUploadPanel({
-  inputRef,
+  uploadInputRef,
   isDragging,
   isPending,
   onPickFile,
@@ -178,13 +180,13 @@ export function ReceiptUploadPanel({
   onDrop,
   onFileChange,
 }: {
-  inputRef: RefObject<HTMLInputElement | null>
+  uploadInputRef: RefObject<HTMLInputElement | null>
   isDragging: boolean
   isPending: boolean
   onPickFile: () => void
-  onDragOver: DragEventHandler<HTMLButtonElement>
+  onDragOver: DragEventHandler<HTMLDivElement>
   onDragLeave: () => void
-  onDrop: DragEventHandler<HTMLButtonElement>
+  onDrop: DragEventHandler<HTMLDivElement>
   onFileChange: ChangeEventHandler<HTMLInputElement>
 }) {
   const copy = useScanCopy()
@@ -199,13 +201,10 @@ export function ReceiptUploadPanel({
         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
       }}
     >
-      <button
-        type="button"
-        onClick={onPickFile}
+      <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        disabled={isPending}
         className={cn(
           'flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
           isDragging
@@ -215,17 +214,15 @@ export function ReceiptUploadPanel({
         )}
       >
         <input
-          ref={inputRef}
+          ref={uploadInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           aria-label={copy.upload}
           title={copy.upload}
           className="hidden"
           onChange={onFileChange}
           disabled={isPending}
         />
-
         <div className="relative mb-5">
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
             {isPending ? (
@@ -248,6 +245,15 @@ export function ReceiptUploadPanel({
           {isPending ? copy.processingHint : copy.uploadHint}
         </p>
 
+        {!isPending && (
+          <div className="mt-6 w-full max-w-xs">
+            <Button type="button" onClick={onPickFile} className="w-full gap-2">
+              <HiOutlineCloudArrowUp className="h-4 w-4" />
+              {copy.chooseFile}
+            </Button>
+          </div>
+        )}
+
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600">
             <HiOutlinePhoto className="h-3.5 w-3.5" /> JPG / PNG / WEBP
@@ -256,7 +262,7 @@ export function ReceiptUploadPanel({
             {copy.maxSize}
           </span>
         </div>
-      </button>
+      </div>
     </div>
   )
 }

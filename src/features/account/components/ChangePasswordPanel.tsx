@@ -24,6 +24,8 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
   const navigate = useNavigate()
   const { locale } = useLocale()
   const clearSession = useAuthStore((s) => s.clear)
+  const user = useAuthStore((s) => s.user)
+  const isGoogleOnly = user?.auth_provider === 'google'
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -36,7 +38,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         pageTitle: 'Pengaturan Keamanan',
         pageSubtitle: 'Kelola password dan preferensi keamanan akun.',
         title: 'Ubah Password',
-        description: 'Pilih password yang kuat dan unik untuk akun ini.',
+        description: isGoogleOnly ? 'Akun Google belum memiliki password SAKU. Buat password baru untuk login manual.' : 'Pilih password yang kuat dan unik untuk akun ini.',
         current: 'Password Sekarang',
         next: 'Password Baru',
         nextPlaceholder: 'Min. 8 karakter',
@@ -50,7 +52,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         strength: 'Kekuatan',
         strengthLabels: ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat'],
         success: 'Password berhasil diubah.',
-        currentRequired: 'Password sekarang wajib diisi.',
+        currentRequired: isGoogleOnly ? '' : 'Password sekarang wajib diisi.',
         invalidTitle: 'Password belum sesuai',
         samePassword: 'Password baru harus berbeda dari yang sekarang.',
         validation: {
@@ -66,7 +68,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         pageTitle: 'Security Settings',
         pageSubtitle: 'Manage your account password and security preferences.',
         title: 'Change Password',
-        description: 'Choose a strong and unique password for this account.',
+        description: isGoogleOnly ? 'Your Google account does not have a SAKU password yet. Create one for manual login.' : 'Choose a strong and unique password for this account.',
         current: 'Current Password',
         next: 'New Password',
         nextPlaceholder: 'Min. 8 characters',
@@ -80,7 +82,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         strength: 'Strength',
         strengthLabels: ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'],
         success: 'Password updated successfully.',
-        currentRequired: 'Current password is required.',
+        currentRequired: isGoogleOnly ? '' : 'Current password is required.',
         invalidTitle: 'Password does not meet requirements',
         samePassword: 'The new password must be different from the current one.',
         validation: {
@@ -95,7 +97,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
 
   const change = useMutation({
     mutationFn: () =>
-      changePassword({ current_password: current, new_password: next }),
+      changePassword({ current_password: isGoogleOnly ? '' : current, new_password: next }),
     onSuccess: () => {
       setCurrent('')
       setNext('')
@@ -109,7 +111,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!current) {
+    if (!isGoogleOnly && !current) {
       toast.error(copy.currentRequired)
       return
     }
@@ -118,7 +120,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
       toast.error(passwordError, copy.invalidTitle)
       return
     }
-    if (next === current) {
+    if (!isGoogleOnly && next === current) {
       toast.error(copy.samePassword)
       return
     }
@@ -155,22 +157,24 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         </div>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
-          <div className="relative">
-            <Input
-              label={copy.current}
-              type={showCurrent ? 'text' : 'password'}
-              value={current}
-              onChange={(e) => setCurrent(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
-            <EyeBtn
-              show={showCurrent}
-              labels={{ show: copy.show, hide: copy.hide }}
-              onToggle={() => setShowCurrent((v) => !v)}
-            />
-          </div>
+          {!isGoogleOnly ? (
+            <div className="relative">
+              <Input
+                label={copy.current}
+                type={showCurrent ? 'text' : 'password'}
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+              <EyeBtn
+                show={showCurrent}
+                labels={{ show: copy.show, hide: copy.hide }}
+                onToggle={() => setShowCurrent((v) => !v)}
+              />
+            </div>
+          ) : null}
 
           <div>
             <div className="relative">

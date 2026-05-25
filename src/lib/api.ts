@@ -7,6 +7,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 export const api = axios.create({
   baseURL,
   timeout: 30_000,
+  withCredentials: true,
 })
 
 api.interceptors.request.use((config) => {
@@ -126,6 +127,10 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
     'Source wallet balance is not enough': 'Saldo wallet sumber tidak cukup.',
     'Source and destination wallets must be different': 'Wallet sumber dan tujuan harus berbeda.',
     'Wallet currencies must match': 'Mata uang wallet harus sama.',
+    'account is not verified': 'Akun belum diverifikasi. Masukkan kode OTP dari email untuk menyelesaikan pendaftaran.',
+    'invalid credentials': 'Email atau password tidak sesuai.',
+    'invalid or expired OTP code': 'Kode OTP tidak valid atau sudah kedaluwarsa.',
+    'registration requires a Gmail address': 'Registrasi wajib menggunakan alamat Gmail agar OTP bisa diterima dengan aman.',
   }
   return map[normalized] ?? message
 }

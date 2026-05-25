@@ -6,11 +6,13 @@ export interface AuthUser {
   name: string
   email: string
   role: string
+  auth_provider?: string
   phone?: string
   status?: string
   photo_url?: string
   referral_code?: string
   referral_reward?: number
+  last_login_at?: string | null
 }
 
 interface AuthState {

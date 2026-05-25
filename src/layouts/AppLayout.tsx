@@ -24,7 +24,7 @@ import {
 import { LuPanelLeftClose, LuPanelLeftOpen } from 'react-icons/lu'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore, isAdminUser } from '@/stores/authStore'
-import { getMe } from '@/features/auth/api'
+import { getMe, logout } from '@/features/auth/api'
 import { notificationApi, type NotificationItem } from '@/features/notifications/api'
 import { subscriptionApi } from '@/features/subscription/api'
 import { Logo } from '@/components/Logo'
@@ -145,9 +145,11 @@ export function AppLayout() {
   ]
 
   const onLogout = () => {
-    qc.clear()
-    clear()
-    navigate('/', { replace: true })
+    logout().catch(() => undefined).finally(() => {
+      qc.clear()
+      clear()
+      navigate('/', { replace: true })
+    })
   }
 
   return (

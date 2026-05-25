@@ -1,4 +1,4 @@
-import { useEffect, type ComponentType, type InputHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, type ComponentType, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   HiOutlineEnvelope,
@@ -262,6 +262,82 @@ export function Field({ icon: Icon, label, rightSlot, className, ...rest }: Fiel
         {rightSlot ? <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightSlot}</div> : null}
       </div>
     </label>
+  )
+}
+
+export function OtpInput({
+  value,
+  onChange,
+  label = 'OTP',
+  disabled,
+}: {
+  value: string
+  onChange: (value: string) => void
+  label?: string
+  disabled?: boolean
+}) {
+  const refs = useRef<Array<HTMLInputElement | null>>([])
+  const digits = Array.from({ length: 6 }, (_, index) => value[index] ?? '')
+
+  const setDigit = (index: number, raw: string) => {
+    const cleaned = raw.replace(/\D/g, '')
+    if (!cleaned) {
+      const next = digits.slice()
+      next[index] = ''
+      onChange(next.join('').slice(0, 6))
+      return
+    }
+    const next = digits.slice()
+    cleaned.split('').slice(0, 6 - index).forEach((digit, offset) => {
+      next[index + offset] = digit
+    })
+    const nextValue = next.join('').slice(0, 6)
+    onChange(nextValue)
+    const focusIndex = Math.min(index + cleaned.length, 5)
+    refs.current[focusIndex]?.focus()
+  }
+
+  const handleKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Backspace' && !digits[index] && index > 0) {
+      refs.current[index - 1]?.focus()
+    }
+    if (event.key === 'ArrowLeft' && index > 0) {
+      event.preventDefault()
+      refs.current[index - 1]?.focus()
+    }
+    if (event.key === 'ArrowRight' && index < 5) {
+      event.preventDefault()
+      refs.current[index + 1]?.focus()
+    }
+  }
+
+  return (
+    <div>
+      <span className="mb-2 block text-xs font-semibold text-slate-700">{label}</span>
+      <div className="grid grid-cols-6 gap-2">
+        {digits.map((digit, index) => (
+          <input
+            key={index}
+            ref={(node) => { refs.current[index] = node }}
+            value={digit}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete={index === 0 ? 'one-time-code' : 'off'}
+            disabled={disabled}
+            aria-label={`${label} ${index + 1}`}
+            maxLength={1}
+            onChange={(event) => setDigit(index, event.target.value)}
+            onPaste={(event) => {
+              event.preventDefault()
+              setDigit(index, event.clipboardData.getData('text'))
+            }}
+            onKeyDown={(event) => handleKeyDown(index, event)}
+            className="h-12 rounded-xl border border-slate-200 bg-white/85 text-center text-lg font-extrabold tabular-nums text-slate-900 shadow-sm transition placeholder:text-slate-400 hover:border-blue-200 hover:bg-white focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:h-14"
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 

@@ -10,6 +10,7 @@ import {
   HiOutlineXMark,
   HiOutlineArrowDownTray,
   HiOutlineEye,
+  HiOutlineArrowPath,
 } from 'react-icons/hi2'
 import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
@@ -393,6 +394,14 @@ export function TransactionsListPage() {
         subtitle={t.transactions.subtitle}
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => q.refetch()}
+              loading={q.isFetching}
+              leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+            >
+              Refresh
+            </Button>
             <Button variant="outline" onClick={() => setExportOpen(true)}>
               <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
               {txCopy.exportExcel}

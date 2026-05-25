@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { HiOutlineArrowRight, HiOutlineCheckCircle } from 'react-icons/hi2'
+import { HiOutlineArrowRight, HiOutlineCheck } from 'react-icons/hi2'
 import { Button } from '@/components/ui'
 import { login } from '@/features/auth/api'
 import {
@@ -33,6 +33,7 @@ export function LoginPage() {
   const [showPw, setShowPw] = useState(false)
   const [remember, setRemember] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0)
   const [retryUntil, setRetryUntil] = useState<number | null>(() => {
     const saved = Number(window.localStorage.getItem(LOGIN_RETRY_KEY) || 0)
     return saved > Date.now() ? saved : null
@@ -69,6 +70,8 @@ export function LoginPage() {
     mutationFn: login,
     onSuccess: redirect,
     onError: (error) => {
+      setTurnstileToken('')
+      setTurnstileResetSignal((value) => value + 1)
       if (getErrorStatus(error) === 429) {
         const retryAfter = getRetryAfterSeconds(error) ?? 60
         const until = Date.now() + retryAfter * 1000
@@ -111,7 +114,7 @@ export function LoginPage() {
         />
 
         <div className="flex items-center justify-between gap-3 text-xs">
-          <label className="group inline-flex cursor-pointer items-center gap-2 text-slate-600">
+          <label className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-1 py-1 text-slate-600 transition hover:bg-blue-50/60 hover:text-blue-700">
             <span className="relative flex h-4 w-4 items-center justify-center">
               <input
                 type="checkbox"
@@ -119,7 +122,7 @@ export function LoginPage() {
                 onChange={(event) => setRemember(event.target.checked)}
                 className="peer h-4 w-4 cursor-pointer appearance-none rounded-md border border-slate-300 bg-white shadow-sm transition checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
-              <HiOutlineCheckCircle className="pointer-events-none absolute h-3.5 w-3.5 scale-75 text-white opacity-0 transition peer-checked:scale-100 peer-checked:opacity-100" />
+              <HiOutlineCheck className="pointer-events-none absolute h-3 w-3 scale-75 text-white opacity-0 transition peer-checked:scale-100 peer-checked:opacity-100" />
             </span>
             {t.auth.rememberMe}
           </label>
@@ -128,7 +131,7 @@ export function LoginPage() {
           </Link>
         </div>
 
-        <TurnstileWidget onVerify={setTurnstileToken} />
+        <TurnstileWidget onVerify={setTurnstileToken} resetSignal={turnstileResetSignal} />
 
         <Button
           type="submit"

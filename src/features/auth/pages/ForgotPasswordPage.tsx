@@ -1,14 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { HiOutlineArrowRight, HiOutlineShieldCheck } from 'react-icons/hi2'
+import { HiOutlineArrowRight } from 'react-icons/hi2'
 import { Button } from '@/components/ui'
 import { forgotPassword, resetPassword } from '@/features/auth/api'
 import {
   AuthShell,
-  Field,
   FieldEmail,
   FieldPassword,
+  OtpInput,
   PasswordPolicyPanel,
   formatCountdown,
   generateStrongPassword,
@@ -36,6 +36,7 @@ export function ForgotPasswordPage() {
   const [resendAt, setResendAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0)
 
   useEffect(() => {
     if (!otpSent || otpVerified) return
@@ -53,6 +54,8 @@ export function ForgotPasswordPage() {
       toast.success(t.auth.otpSentMessage, t.auth.otpSentTitle)
     },
     onError: (error) => {
+      setTurnstileToken('')
+      setTurnstileResetSignal((value) => value + 1)
       toast.error(localizedForgotError(toErrorMessage(error), locale) || t.auth.emailNotRegisteredMessage, t.auth.emailNotRegisteredTitle)
     },
   })
@@ -135,18 +138,15 @@ export function ForgotPasswordPage() {
           </div>
         )}
 
-        {!otpSent ? <TurnstileWidget onVerify={setTurnstileToken} /> : null}
+        {!otpSent ? <TurnstileWidget onVerify={setTurnstileToken} resetSignal={turnstileResetSignal} /> : null}
 
         {otpSent && !otpVerified ? (
           <>
-            <Field
-              icon={HiOutlineShieldCheck}
-              label={t.auth.otpCodeLabel}
+            <OtpInput
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder={t.auth.otpPlaceholder}
-              inputMode="numeric"
-              maxLength={6}
+              onChange={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+              label={t.auth.otpCodeLabel}
+              disabled={verifyM.isPending}
             />
             <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
