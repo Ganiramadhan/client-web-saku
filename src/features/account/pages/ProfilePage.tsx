@@ -26,7 +26,7 @@ import {
   deletePhoto,
 } from '@/features/auth/api'
 import { subscriptionApi } from '@/features/subscription/api'
-import { useAuthStore } from '@/stores/authStore'
+import { isAdminUser, useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
@@ -50,6 +50,7 @@ export function ProfilePage() {
         maxSize: 'Ukuran maksimum 5 MB.',
         paymentPending: 'Pembayaran belum selesai',
         paymentFailed: 'Pembayaran gagal',
+        paymentExpired: 'Sesi pembayaran sudah kedaluwarsa. Silakan buat checkout baru.',
         pendingPlanExists: 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.',
         subCanceled: 'Langganan berhasil dibatalkan.',
         accountInfo: 'Informasi Akun',
@@ -78,6 +79,7 @@ export function ProfilePage() {
         maxSize: 'Maximum size is 5 MB.',
         paymentPending: 'Payment is still pending',
         paymentFailed: 'Payment failed',
+        paymentExpired: 'The payment session has expired. Please start a new checkout.',
         pendingPlanExists: 'You still have a pending payment. Cancel it first before choosing another plan.',
         subCanceled: 'Subscription canceled.',
         accountInfo: 'Account Information',
@@ -100,6 +102,7 @@ export function ProfilePage() {
   const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
   const me = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const isBackofficeUser = isAdminUser(me.data ?? null)
   const sub = useQuery({ queryKey: ['subscription', 'active'], queryFn: subscriptionApi.active })
   const subscriptions = useQuery({ queryKey: ['subscriptions', 'me'], queryFn: subscriptionApi.mySubscriptions })
   const plans = useQuery({ queryKey: ['subscriptions', 'plans'], queryFn: subscriptionApi.listPlans })
@@ -245,14 +248,21 @@ export function ProfilePage() {
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
-        onError: () => toast.error(copy.paymentFailed),
+        onError: () => {
+          toast.error(copy.paymentFailed)
+          qc.invalidateQueries({ queryKey: ['subscriptions'] })
+          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+        },
         onClose: () => {
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
       })
     } catch (e) {
-      toast.error(toErrorMessage(e))
+      const message = toErrorMessage(e)
+      toast.error(/expired|kedaluwarsa/i.test(message) ? copy.paymentExpired : message)
+      qc.invalidateQueries({ queryKey: ['subscriptions'] })
+      qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
     } finally {
       setBusyPlan(null)
     }
@@ -465,34 +475,38 @@ export function ProfilePage() {
           </div>
 
           <div className="space-y-4">
-          <ReferralCard
-            code={me.data?.referral_code}
-            reward={me.data?.referral_reward ?? 0}
-          />
-          <SubscriptionCard
-            sub={sub.data ?? null}
-            pendingSub={pendingSubscription}
-            loading={sub.isLoading}
-            plans={paidPlans}
-            plansLoading={plans.isLoading}
-            busyPlan={busyPlan}
-            onSubscribe={handleSubscribe}
-            onCancel={async (id) => {
-              const ok = await confirm({
-                title: copy.cancelTitle,
-                description: copy.cancelDesc,
-                tone: 'danger',
-                confirmLabel: copy.cancelConfirm,
-              })
-              if (ok) cancelSubscription.mutate(id)
-            }}
-            cancelLoading={cancelSubscription.isPending}
-            activePlan={
-              sub.data
-                ? (plans.data ?? []).find((p) => p.code === sub.data?.plan_code) ?? null
-                : null
-            }
-          />
+          {!isBackofficeUser ? (
+            <>
+              <ReferralCard
+                code={me.data?.referral_code}
+                reward={me.data?.referral_reward ?? 0}
+              />
+              <SubscriptionCard
+                sub={sub.data ?? null}
+                pendingSub={pendingSubscription}
+                loading={sub.isLoading}
+                plans={paidPlans}
+                plansLoading={plans.isLoading}
+                busyPlan={busyPlan}
+                onSubscribe={handleSubscribe}
+                onCancel={async (id) => {
+                  const ok = await confirm({
+                    title: copy.cancelTitle,
+                    description: copy.cancelDesc,
+                    tone: 'danger',
+                    confirmLabel: copy.cancelConfirm,
+                  })
+                  if (ok) cancelSubscription.mutate(id)
+                }}
+                cancelLoading={cancelSubscription.isPending}
+                activePlan={
+                  sub.data
+                    ? (plans.data ?? []).find((p) => p.code === sub.data?.plan_code) ?? null
+                    : null
+                }
+              />
+            </>
+          ) : null}
 
           </div>
         </div>

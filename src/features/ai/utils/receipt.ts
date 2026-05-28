@@ -14,6 +14,7 @@ export interface ExtractedReceipt {
   confidence?: number
   line_items?: string[]
   image_key?: string
+  log_id?: string
 }
 
 export interface ScanHistoryEntry {

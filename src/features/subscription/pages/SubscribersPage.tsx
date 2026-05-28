@@ -3,11 +3,15 @@ import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   HiOutlineBanknotes,
+  HiOutlineCalendarDays,
   HiOutlineCheckCircle,
   HiOutlineClock,
   HiOutlineCreditCard,
   HiOutlineArrowPath,
   HiOutlineEye,
+  HiOutlineHashtag,
+  HiOutlineIdentification,
+  HiOutlineSparkles,
   HiOutlineUsers,
 } from 'react-icons/hi2'
 
@@ -307,43 +311,57 @@ function SubscriptionDetailModal({
       description={`${subscription.user_name || '-'} - ${subscription.plan_name || subscription.plan_code}`}
       footer={<Button variant="outline" onClick={onClose}>Close</Button>}
     >
-      <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Subscription</p>
-            <h3 className="mt-1 truncate text-lg font-extrabold text-slate-950">
+            <h3 className="mt-1 truncate text-xl font-extrabold text-slate-950">
               {subscription.plan_name || subscription.plan_code}
             </h3>
-            <p className="truncate text-sm text-slate-500">{subscription.user_email}</p>
+            <p className="mt-1 truncate text-sm text-slate-500">
+              {subscription.user_name || '-'} · {subscription.user_email || '-'}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone(subscription.status)}>{statusLabel[subscription.status] || subscription.status}</Badge>
             <Badge tone="blue">{paymentLabel(subscription)}</Badge>
           </div>
         </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <DetailItem label="Customer" value={subscription.user_name || '-'} helper={subscription.user_email} />
-        <DetailItem label="Plan" value={subscription.plan_name || subscription.plan_code} helper={subscription.plan_code} />
-        <DetailItem label="Amount" value={fmtIDR(subscription.amount, subscription.currency)} helper={subscription.currency} />
-        <DetailItem label="Status" value={statusLabel[subscription.status] || subscription.status} helper={paymentLabel(subscription)} />
-        <DetailItem label="Order ID" value={subscription.order_id} helper={subscription.payment_type || 'Payment type not recorded'} wide />
-        <DetailItem label="Started" value={fmtDate(subscription.starts_at)} />
-        <DetailItem label="Ends" value={fmtDate(subscription.ends_at)} />
-        <DetailItem label="Trial ends" value={fmtDate(subscription.trial_ends_at)} />
-        <DetailItem label="Created" value={fmtDate(subscription.created_at)} />
-        <DetailItem label="Updated" value={fmtDate(subscription.updated_at)} />
+
+        <div className="mt-4 divide-y divide-slate-100">
+          <DetailRow Icon={HiOutlineBanknotes} label="Amount" value={fmtIDR(subscription.amount, subscription.currency)} helper={subscription.currency} />
+          <DetailRow Icon={HiOutlineSparkles} label="Plan code" value={subscription.plan_code} />
+          <DetailRow Icon={HiOutlineHashtag} label="Order ID" value={subscription.order_id || '-'} helper={subscription.payment_type || 'Payment type not recorded'} />
+          <DetailRow Icon={HiOutlineCalendarDays} label="Period" value={`${fmtDate(subscription.starts_at)} - ${fmtDate(subscription.ends_at)}`} />
+          <DetailRow Icon={HiOutlineClock} label="Trial ends" value={fmtDate(subscription.trial_ends_at)} />
+          <DetailRow Icon={HiOutlineIdentification} label="Created" value={fmtDate(subscription.created_at)} helper={`Updated ${fmtDate(subscription.updated_at)}`} />
+        </div>
       </div>
     </Modal>
   )
 }
 
-function DetailItem({ label, value, helper, wide }: { label: string; value: string; helper?: string; wide?: boolean }) {
+function DetailRow({
+  Icon,
+  label,
+  value,
+  helper,
+}: {
+  Icon: typeof HiOutlineUsers
+  label: string
+  value: string
+  helper?: string
+}) {
   return (
-    <div className={wide ? 'sm:col-span-2 rounded-xl border border-slate-200 bg-white/70 p-3' : 'rounded-xl border border-slate-200 bg-white/70 p-3'}>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{value || '-'}</p>
-      {helper ? <p className="mt-1 break-words text-xs text-slate-500">{helper}</p> : null}
+    <div className="flex items-start gap-3 py-3">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="mt-0.5 break-words text-sm font-semibold text-slate-900">{value || '-'}</p>
+        {helper ? <p className="mt-0.5 break-words text-xs text-slate-500">{helper}</p> : null}
+      </div>
     </div>
   )
 }

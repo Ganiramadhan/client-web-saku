@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { HiOutlineArrowRight, HiOutlineEnvelope, HiOutlineUser } from 'react-icons/hi2'
+import { HiOutlineArrowRight, HiOutlineEnvelope, HiOutlineUser, HiOutlineXMark } from 'react-icons/hi2'
 import { Button } from '@/components/ui'
 import { register, resendRegistrationOTP, verifyRegistration } from '@/features/auth/api'
 import {
@@ -31,6 +31,8 @@ export function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
   const [otp, setOtp] = useState('')
   const [pendingEmail, setPendingEmail] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -58,6 +60,7 @@ export function RegisterPage() {
         name: sanitizeDisplayName(name),
         email: sanitizeEmail(email),
         password,
+        privacy_accepted: privacyAccepted,
         turnstile_token: turnstileToken,
       }),
     onSuccess: (data) => {
@@ -125,6 +128,15 @@ export function RegisterPage() {
       )
       return
     }
+    if (!privacyAccepted) {
+      toast.error(
+        locale === 'id'
+          ? 'Kamu perlu menyetujui S&K dan Privacy Policy sebelum daftar.'
+          : 'You need to agree to the Terms and Privacy Policy before registering.',
+        locale === 'id' ? 'Persetujuan diperlukan' : 'Agreement required',
+      )
+      return
+    }
     if (isTurnstileEnabled() && !turnstileToken) {
       toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
       return
@@ -188,39 +200,74 @@ export function RegisterPage() {
           </div>
         </form>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4">
-        <Field
-          icon={HiOutlineUser}
-          label={t.auth.name}
-          required
-          minLength={2}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t.auth.placeholders.name}
-        />
-        <FieldEmail value={email} onChange={setEmail} label={t.auth.email} />
-        <FieldPassword
-          value={password}
-          onChange={setPassword}
-          show={showPw}
-          onToggle={() => setShowPw((v) => !v)}
-          label={t.auth.password}
-          minLength={8}
-        />
-        <TurnstileWidget onVerify={setTurnstileToken} resetSignal={turnstileResetSignal} />
-        <Button
-          type="submit"
-          className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
-          loading={m.isPending}
-          disabled={isTurnstileEnabled() && !turnstileToken}
-          rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
-        >
-          {t.auth.submitRegister}
-        </Button>
+        <form onSubmit={onSubmit} className="space-y-3.5">
+          <Field
+            icon={HiOutlineUser}
+            label={t.auth.name}
+            required
+            minLength={2}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t.auth.placeholders.name}
+          />
+          <FieldEmail value={email} onChange={setEmail} label={t.auth.email} />
+          <FieldPassword
+            value={password}
+            onChange={setPassword}
+            show={showPw}
+            onToggle={() => setShowPw((v) => !v)}
+            label={t.auth.password}
+            minLength={8}
+          />
+          <TurnstileWidget onVerify={setTurnstileToken} resetSignal={turnstileResetSignal} />
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white/75 p-3 text-xs leading-5 text-slate-600">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              required
+            />
+            <span>
+              {locale === 'id'
+                ? 'Saya menyetujui '
+                : 'I agree to '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setTermsOpen(true)
+                }}
+                className="font-bold text-blue-700 underline underline-offset-2"
+              >
+                {locale === 'id' ? 'Syarat & Ketentuan dan Privacy Policy' : 'Terms & Conditions and Privacy Policy'}
+              </button>
+              {locale === 'id' ? ' SAKU.' : ' of SAKU.'}
+            </span>
+          </label>
+          <Button
+            type="submit"
+            className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
+            loading={m.isPending}
+            disabled={!privacyAccepted || (isTurnstileEnabled() && !turnstileToken)}
+            rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
+          >
+            {t.auth.submitRegister}
+          </Button>
 
-        <p className="text-center text-[11px] text-slate-400">{t.auth.registerConsent}</p>
+          <p className="text-center text-[11px] text-slate-400">{t.auth.registerConsent}</p>
         </form>
       )}
+
+      <TermsModal
+        open={termsOpen}
+        locale={locale}
+        onClose={() => setTermsOpen(false)}
+        onAgree={() => {
+          setPrivacyAccepted(true)
+          setTermsOpen(false)
+        }}
+      />
 
       {!pendingEmail ? (
         <>
@@ -241,4 +288,114 @@ export function RegisterPage() {
 
 function isGmailAddress(email: string) {
   return email.endsWith('@gmail.com') || email.endsWith('@googlemail.com')
+}
+
+function TermsModal({
+  open,
+  locale,
+  onClose,
+  onAgree,
+}: {
+  open: boolean
+  locale: string
+  onClose: () => void
+  onAgree: () => void
+}) {
+  if (!open) return null
+
+  const isId = locale === 'id'
+  const sections = isId
+    ? [
+        ['Penggunaan Layanan', 'SAKU membantu mencatat transaksi, membaca struk, mengelola wallet, target, split bill, billing, dan insight AI. Gunakan layanan secara wajar dan pastikan data yang kamu masukkan benar.'],
+        ['Data dan Privasi', 'Kami menggunakan data akun, transaksi, gambar struk, dan aktivitas aplikasi untuk menyediakan fitur inti, keamanan, analitik produk, dan pengalaman yang lebih relevan.'],
+        ['Keamanan Akun', 'Jaga password, OTP, dan akses perangkat kamu. SAKU tidak pernah meminta OTP melalui chat, telepon, atau email di luar alur resmi aplikasi.'],
+        ['AI dan Akurasi', 'Hasil AI membantu mempercepat pencatatan, tetapi tetap perlu kamu review sebelum disimpan sebagai data final.'],
+        ['Persetujuan', 'Dengan melanjutkan, kamu menyatakan sudah membaca dan menyetujui Syarat & Ketentuan serta Privacy Policy SAKU.'],
+      ]
+    : [
+        ['Service Usage', 'SAKU helps record transactions, scan receipts, manage wallets, goals, split bills, billing, and AI insights. Use the service responsibly and make sure submitted data is accurate.'],
+        ['Data and Privacy', 'We use account data, transactions, receipt images, and app activity to provide core features, security, product analytics, and a more relevant experience.'],
+        ['Account Security', 'Keep your password, OTP, and device access safe. SAKU never asks for OTP through chat, phone, or email outside the official app flow.'],
+        ['AI and Accuracy', 'AI results help speed up recording, but you should review them before saving as final data.'],
+        ['Agreement', 'By continuing, you confirm that you have read and agreed to SAKU Terms & Conditions and Privacy Policy.'],
+      ]
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/55 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/20">
+        <div className="flex items-start justify-between gap-4 border-b border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50/50 px-5 py-5 sm:px-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-blue-700 shadow-sm">
+              <img src="/logo.png" alt="SAKU" className="h-6 w-6 rounded-lg object-contain" />
+              SAKU Finance
+            </div>
+            <h2 className="mt-4 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
+              {isId ? 'Syarat & Privasi SAKU' : 'SAKU Terms & Privacy'}
+            </h2>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
+              {isId
+                ? 'Baca ringkasan ini sebelum membuat akun. Kamu bisa scroll untuk melihat seluruh poin penting.'
+                : 'Review this summary before creating your account. Scroll to see every important point.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:border-blue-200 hover:text-blue-700"
+            aria-label="Close"
+          >
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <p className="text-sm font-extrabold text-blue-950">
+              {isId ? 'Ringkasan persetujuan' : 'Agreement summary'}
+            </p>
+            <p className="mt-2 text-xs leading-6 text-blue-900/75">
+              {isId
+                ? 'Dengan mendaftar, kamu menyetujui pemrosesan data yang diperlukan agar fitur finansial, keamanan akun, dan verifikasi email berjalan dengan baik.'
+                : 'By registering, you agree to the data processing required for financial features, account security, and email verification to work properly.'}
+            </p>
+          </div>
+          {sections.map(([title, body], index) => (
+            <section key={title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
+              <div className="flex items-start gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-100 text-xs font-black text-slate-500">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-6 text-slate-600">{body}</p>
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+        <div className="border-t border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+          <p className="mb-3 text-[11px] leading-5 text-slate-500">
+            {isId
+              ? 'Klik setuju jika kamu memahami poin di atas dan ingin melanjutkan pendaftaran.'
+              : 'Click agree if you understand the points above and want to continue registration.'}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-[0.85fr_1.15fr]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:border-slate-300 hover:text-slate-900"
+          >
+            {isId ? 'Tutup' : 'Close'}
+          </button>
+          <button
+            type="button"
+            onClick={onAgree}
+            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200/70 hover:bg-blue-500"
+          >
+            {isId ? 'Saya Setuju' : 'I Agree'}
+          </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }

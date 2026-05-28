@@ -4,17 +4,11 @@ import {
   HiOutlineEnvelope,
   HiOutlineEye,
   HiOutlineEyeSlash,
-  HiOutlineHome,
+  HiOutlineArrowLeft,
   HiOutlineLockClosed,
   HiOutlineShieldCheck,
   HiOutlineSparkles,
 } from 'react-icons/hi2'
-import {
-  RiArrowUpLine,
-  RiChatSmile3Line,
-  RiShieldCheckLine,
-  RiSparklingLine,
-} from 'react-icons/ri'
 import { useT } from '@/i18n'
 import type { Dict } from '@/i18n/dictionaries'
 import { preloadTurnstileScript } from '@/features/auth/components/TurnstileWidget'
@@ -127,43 +121,16 @@ export function AuthShell({
   useEffect(() => {
     preloadTurnstileScript().catch(() => undefined)
   }, [])
-  const copy =
-    mode === 'login'
-      ? {
-          label: t.landing.heroEyebrow,
-          title: t.landing.heroTitle,
-          accent: '',
-          description: t.landing.heroDesc,
-          stats: [
-            { Icon: RiChatSmile3Line, value: 'AI', label: t.landing.featureAIDesc, color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
-            { Icon: RiShieldCheckLine, value: t.landing.featureSecureTitle, label: t.landing.featureSecureDesc, color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
-          ],
-        }
-      : mode === 'register'
-        ? {
-            label: t.landing.ctaJoinTitle,
-            title: t.auth.registerTitle,
-            accent: '',
-            description: t.landing.ctaJoinDesc,
-            stats: [
-              { Icon: RiArrowUpLine, value: t.landing.featureMultiWalletTitle, label: t.landing.featureMultiWalletDesc, color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
-              { Icon: RiSparklingLine, value: 'AI', label: t.landing.featureAIDesc, color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
-            ],
-          }
-        : {
-            label: t.auth.forgotTitle,
-            title: t.auth.forgotTitle,
-            accent: '',
-            description: t.auth.forgotSubtitle,
-            stats: [
-              { Icon: RiShieldCheckLine, value: 'Secure', label: t.landing.featureSecureDesc, color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
-              { Icon: RiSparklingLine, value: 'Quick', label: t.landing.howItWorksSubtitle, color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
-            ],
-          }
+  const leftTitle =
+    mode === 'register'
+      ? t.landing.ctaJoinTitle
+      : mode === 'forgot'
+        ? t.auth.forgotTitle
+        : t.landing.heroTitle
 
   return (
-    <div className="app-surface relative flex min-h-screen flex-col overflow-hidden font-sans antialiased">
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+    <div className="app-surface auth-page relative flex min-h-screen flex-col overflow-hidden font-sans antialiased">
+      <div className="auth-fixed-bg pointer-events-none absolute inset-x-0 top-0 z-0 min-h-screen overflow-hidden" aria-hidden="true">
         <div className="absolute -left-20 -top-40 h-[680px] w-[680px] rounded-full animate-[pulse_8s_ease-in-out_infinite]" style={{ background: 'radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 65%)' }} />
         <div className="absolute -right-40 top-1/4 h-[560px] w-[560px] rounded-full animate-[pulse_10s_ease-in-out_infinite_2s]" style={{ background: 'radial-gradient(circle, rgba(196,181,253,0.28) 0%, transparent 65%)' }} />
         <div className="absolute bottom-0 left-1/4 h-[480px] w-[480px] rounded-full animate-[pulse_9s_ease-in-out_infinite_1s]" style={{ background: 'radial-gradient(circle, rgba(167,243,208,0.22) 0%, transparent 65%)' }} />
@@ -171,44 +138,45 @@ export function AuthShell({
 
       <Link
         to="/"
-        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-3.5 py-2 text-xs font-bold text-slate-600 shadow-sm shadow-slate-200/50 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/80 hover:text-blue-700 hover:shadow-blue-100 sm:left-6 sm:top-6"
+        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 px-1 py-1 text-xs font-bold text-slate-600 hover:text-blue-700 sm:left-6 sm:top-6"
       >
-        <HiOutlineHome className="h-4 w-4" />
-        Home
+        <HiOutlineArrowLeft className="h-4 w-4" />
+        Back
       </Link>
 
-      <main className="relative z-10 flex flex-1 items-center px-4 py-8 sm:px-6">
-        <div className="mx-auto grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_440px] lg:items-center">
-          <section className="hidden lg:block">
-            <div className="relative max-w-xl">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-blue-700" style={{ background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(16px)', border: '1px solid rgba(191,219,254,0.70)', boxShadow: '0 2px 12px rgba(59,130,246,0.10)' }}>
-                <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
-                {copy.label}
+      <main className="relative z-10 flex flex-1 items-center px-4 pb-8 pt-16 sm:px-6 sm:py-10">
+        <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[minmax(0,600px)_440px] lg:items-stretch xl:gap-14">
+          <section className="hidden lg:flex">
+            <div className="relative flex min-h-[560px] flex-col justify-center pr-4">
+              <div className="pointer-events-none absolute -left-10 top-12 h-64 w-64 rounded-full bg-blue-100/45 blur-3xl" />
+              <div className="pointer-events-none absolute bottom-6 right-0 h-56 w-56 rounded-full bg-emerald-100/40 blur-3xl" />
+              <h5 className="relative mt-5 max-w-xl text-5xl font-black leading-[1.04] tracking-tight text-slate-950">
+                {leftTitle}
+              </h5>
+        
+              <AuthSideIllustration />
+
+              <div className="relative mt-6 grid max-w-lg gap-3">
+                {[
+                  [t.landing.featureAITitle, t.landing.featureAIDesc],
+                  [t.landing.featureInsightTitle, t.landing.featureInsightDesc],
+                  [t.landing.featureMultiWalletTitle, t.landing.featureMultiWalletDesc],
+                ].map(([label, description]) => (
+                  <div key={label} className="flex items-start gap-3">
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-950">{label}</p>
+                      <p className="mt-0.5 line-clamp-1 text-xs leading-5 text-slate-500">{description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h2 className="text-5xl font-extrabold leading-[1.06] tracking-tight text-slate-900">
-                {copy.title}
-                <span className="block text-blue-600">{copy.accent}</span>
-              </h2>
-              <p className="mt-6 max-w-md text-[17px] leading-7 text-slate-500">{copy.description}</p>
-            </div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {copy.stats.map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5 rounded-xl px-4 py-2.5" style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(226,232,240,0.70)' }}>
-                  <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', item.color)} style={{ background: item.bg }}>
-                    <item.Icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className={cn('text-xs font-extrabold', item.color)}>{item.value}</p>
-                    <p className="text-[10px] text-slate-400">{item.label}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </section>
 
-          <div className="mx-auto w-full max-w-md lg:mx-0">
-            <div className="rounded-2xl p-6 sm:p-8" style={{ background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(40px) saturate(200%)', WebkitBackdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(15,23,42,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
-              <div className="mb-6 text-center">
+          <div className="mx-auto flex w-full max-w-md items-center lg:mx-0">
+            <div className="w-full rounded-2xl p-5 sm:p-7" style={{ background: 'rgba(255,255,255,0.84)', backdropFilter: 'blur(40px) saturate(200%)', WebkitBackdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(15,23,42,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
+              <div className="mb-5 text-center">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600" style={{ border: '1px solid rgba(191,219,254,0.70)' }}>
                   <HiOutlineShieldCheck className="h-6 w-6" />
                 </div>
@@ -225,6 +193,47 @@ export function AuthShell({
         © {new Date().getFullYear()} SAKU Finance · v1.0
       </footer>
     </div>
+  )
+}
+
+function AuthSideIllustration() {
+  return (
+    <svg
+      className="relative mt-7 h-auto w-full max-w-xl"
+      viewBox="0 0 560 320"
+      fill="none"
+      role="img"
+      aria-label="SAKU finance illustration"
+    >
+      <defs>
+        <linearGradient id="authChart" x1="64" y1="258" x2="480" y2="78" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#2563EB" />
+          <stop offset="1" stopColor="#10B981" />
+        </linearGradient>
+        <linearGradient id="authPanel" x1="112" y1="56" x2="442" y2="276" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#EFF6FF" />
+        </linearGradient>
+      </defs>
+      <path d="M86 248C126 178 180 144 248 147c46 2 70 22 113 18 48-5 84-40 114-88" stroke="#DBEAFE" strokeWidth="34" strokeLinecap="round" />
+      <path d="M86 248C126 178 180 144 248 147c46 2 70 22 113 18 48-5 84-40 114-88" stroke="url(#authChart)" strokeWidth="11" strokeLinecap="round" />
+      <circle cx="86" cy="248" r="13" fill="#2563EB" />
+      <circle cx="248" cy="147" r="13" fill="#7C3AED" />
+      <circle cx="475" cy="77" r="13" fill="#10B981" />
+
+      <rect x="128" y="74" width="236" height="154" rx="30" fill="url(#authPanel)" stroke="#BFDBFE" />
+      <rect x="154" y="104" width="92" height="13" rx="6.5" fill="#93C5FD" />
+      <rect x="154" y="130" width="148" height="9" rx="4.5" fill="#DBEAFE" />
+      <rect x="154" y="152" width="116" height="9" rx="4.5" fill="#DBEAFE" />
+      <rect x="154" y="184" width="62" height="18" rx="9" fill="#2563EB" />
+      <rect x="232" y="184" width="86" height="18" rx="9" fill="#ECFDF5" />
+      <path d="M253 193h44" stroke="#059669" strokeWidth="5" strokeLinecap="round" />
+
+      <rect x="348" y="132" width="98" height="122" rx="26" fill="#FFFFFF" stroke="#BFDBFE" />
+      <path d="M378 172h38M378 194h28" stroke="#93C5FD" strokeWidth="9" strokeLinecap="round" />
+      <path d="M374 224l12 12 32-40" stroke="#10B981" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M130 258h316" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
+    </svg>
   )
 }
 

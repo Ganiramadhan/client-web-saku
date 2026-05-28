@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RiCheckLine, RiFlashlightLine, RiSparklingLine } from 'react-icons/ri'
 import { useLocale, useT } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
 import { subscriptionApi } from '@/features/subscription/api'
 import { Button, Input, Modal } from '@/components/ui'
 import { sanitizeReferralCode } from '@/features/subscription/utils/referral'
+import { toast } from '@/lib/toast'
+import { toErrorMessage } from '@/lib/api'
+import { loadSnap } from '@/lib/snap'
 import { isActiveSub } from '../components/landingUtils'
 import { SectionHeading } from '../components/SectionHeading'
 
@@ -106,10 +109,15 @@ function basePlanCode(code: string) {
 export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const t = useT()
   const { locale } = useLocale()
+  const qc = useQueryClient()
   const navigate = useNavigate()
+  const snapLoadedRef = useRef(false)
   const [referralCode, setReferralCode] = useState('')
   const [checkoutPlanCode, setCheckoutPlanCode] = useState<string | null>(null)
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
+  )
   const plansQ = useQuery({
     queryKey: ['landing', 'subscription-plans'],
     queryFn: subscriptionApi.listPlans,
@@ -120,11 +128,53 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     enabled: isAuthed,
     staleTime: 60 * 1000,
   })
+  const subscriptionsQ = useQuery({
+    queryKey: ['subscriptions', 'me'],
+    queryFn: subscriptionApi.mySubscriptions,
+    enabled: isAuthed,
+    staleTime: 60 * 1000,
+  })
   const checkoutM = useMutation({
-    mutationFn: ({ planCode, referralCode }: { planCode: string; referralCode?: string }) =>
-      subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? '')),
+    mutationFn: async ({ planCode, referralCode }: { planCode: string; referralCode?: string }) => {
+      const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
+      if (!snapLoadedRef.current) {
+        await loadSnap(checkout.client_key, checkout.is_production)
+        snapLoadedRef.current = true
+      }
+      return checkout
+    },
     onSuccess: (checkout) => {
-      window.location.href = checkout.redirect_url
+      if (!window.snap) {
+        window.location.href = checkout.redirect_url
+        return
+      }
+
+      window.snap.pay(checkout.snap_token, {
+        onSuccess: async (result) => {
+          const orderId =
+            result && typeof result === 'object' && 'order_id' in result
+              ? String((result as { order_id?: unknown }).order_id ?? '')
+              : checkout.order_id
+          if (orderId) await subscriptionApi.confirm(orderId)
+          qc.invalidateQueries({ queryKey: ['subscriptions'] })
+          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+          qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
+          navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
+        },
+        onPending: () => {
+          toast.info(locale === 'id' ? 'Pembayaran masih pending.' : 'Payment is still pending.')
+          qc.invalidateQueries({ queryKey: ['subscriptions'] })
+          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+        },
+        onError: () => toast.error(locale === 'id' ? 'Pembayaran gagal.' : 'Payment failed.'),
+        onClose: () => {
+          qc.invalidateQueries({ queryKey: ['subscriptions'] })
+          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+        },
+      })
+    },
+    onError: (error) => {
+      toast.error(toErrorMessage(error))
     },
   })
   const fallbackPlans = [
@@ -209,12 +259,30 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     : fallbackPlans
   const hasYearly = Boolean(plansQ.data?.some((plan) => plan.period === 'yearly' && plan.is_active))
 
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const onChange = () => setIsMobile(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
   const handlePlanClick = (plan: (typeof plans)[number]) => {
     if (!isAuthed) {
       navigate('/register')
       return
     }
     if (isActiveSub(activeQ.data)) {
+      navigate('/app/profile')
+      return
+    }
+    const pendingPlan = (subscriptionsQ.data ?? []).find((item) => item.status === 'pending')
+    if (pendingPlan && pendingPlan.plan_code !== plan.tier) {
+      toast.info(
+        locale === 'id'
+          ? 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.'
+          : 'You still have a pending payment. Cancel it first before choosing another plan.',
+      )
       navigate('/app/profile')
       return
     }
@@ -240,11 +308,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
 
   return (
     <section id="pricing" className="relative overflow-hidden py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/30 blur-3xl" />
-        <div className="absolute right-10 top-40 h-80 w-80 rounded-full bg-violet-200/30 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={t.nav.pricing}
@@ -275,39 +338,92 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           </div>
         ) : null}
 
-        <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
+        {isMobile ? (
+          <div className="mt-10 grid gap-3">
+            {plans.map((plan) => {
+              const baseTier = basePlanCode(String(plan.tier))
+              const isPro = baseTier === 'pro'
+              const isPremium = baseTier.includes('premium')
+
+              return (
+                <div
+                  key={plan.name}
+                  className={cn(
+                    'landing-mobile-hover rounded-2xl border bg-white/88 p-4 shadow-sm',
+                    isPro ? 'border-blue-200' : isPremium ? 'border-violet-200' : 'border-slate-200',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-extrabold text-slate-950">{plan.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{plan.desc}</p>
+                    </div>
+                    {plan.badge || (period === 'yearly' && plan.tier !== 'free') ? (
+                      <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold text-white">
+                        {period === 'yearly' && plan.tier !== 'free' ? (locale === 'id' ? 'Hemat' : 'Save') : plan.badge}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-end gap-x-1 gap-y-1">
+                    {plan.originalPrice ? (
+                      <span className="mr-2 text-xs font-semibold text-slate-400 line-through">
+                        {plan.originalPrice}
+                      </span>
+                    ) : null}
+                    <span className={cn('text-2xl font-black tracking-tight', isPro ? 'text-blue-700' : 'text-slate-950')}>
+                      {plan.price}
+                    </span>
+                    {plan.period ? <span className="pb-1 text-xs font-medium text-slate-400">{plan.period}</span> : null}
+                  </div>
+
+                  <ul className="mt-4 grid gap-1.5">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-600">
+                        <span className={cn('mt-2 h-1.5 w-1.5 shrink-0 rounded-full', isPro ? 'bg-blue-500' : isPremium ? 'bg-violet-500' : 'bg-slate-400')} />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    type="button"
+                    disabled={checkoutM.isPending}
+                    onClick={() => handlePlanClick(plan)}
+                    className={cn(
+                      'mt-4 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold',
+                      isPro
+                        ? 'bg-blue-600 text-white'
+                        : isPremium
+                          ? 'border border-violet-200 bg-violet-50 text-violet-700'
+                          : 'border border-slate-200 bg-white text-slate-700',
+                    )}
+                  >
+                    {checkoutM.isPending && isPro
+                      ? (locale === 'id' ? 'Memproses...' : 'Processing...')
+                      : plan.cta}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mt-14 grid gap-6 md:grid-cols-3 md:items-stretch">
           {plans.map((plan) => {
             const baseTier = basePlanCode(String(plan.tier))
             const isPro = baseTier === 'pro'
             const isPremium = baseTier.includes('premium')
+            const visibleFeatures = plan.features
 
             return (
               <div
                 key={plan.name}
                 className={cn(
-                  'group relative flex flex-col overflow-hidden rounded-3xl p-8 transition-all duration-500 hover:-translate-y-2',
-                  isPro && 'md:scale-105'
+                  'relative flex flex-col overflow-hidden border bg-white/88 shadow-sm sm:transition-transform sm:duration-200 sm:hover:-translate-y-0.5',
+                  'rounded-3xl p-8',
+                  isPro ? 'border-blue-200 md:scale-105' : 'border-slate-200'
                 )}
-                style={{
-                  background: isPro
-                    ? 'rgba(255,255,255,0.86)'
-                    : 'rgba(255,255,255,0.68)',
-                  backdropFilter: 'blur(36px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-                  border: isPro
-                    ? '1px solid rgba(59,130,246,0.34)'
-                    : '1px solid rgba(255,255,255,0.86)',
-                  boxShadow: isPro
-                    ? '0 24px 70px rgba(37,99,235,0.14), inset 0 1px 0 rgba(255,255,255,1)'
-                    : '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
-                }}
               >
-                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-                  <div className="absolute inset-0 rounded-3xl border border-blue-300/40" />
-                  <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-blue-300/20 blur-3xl" />
-                  <div className="absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-violet-300/20 blur-3xl" />
-                </div>
-
                 {(plan.badge || (period === 'yearly' && plan.tier !== 'free')) && (
                   <span className="absolute right-6 top-6 z-10 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-blue-200">
                     <RiSparklingLine className="h-3.5 w-3.5" />
@@ -333,7 +449,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                   <div className={cn('flex items-end gap-1', plan.originalPrice ? 'mt-2' : 'mt-6')}>
                     <span
                       className={cn(
-                        'text-4xl font-extrabold tracking-tight',
+                        'font-extrabold tracking-tight',
+                        'text-4xl',
                         isPro ? 'text-blue-700' : 'text-slate-950'
                       )}
                     >
@@ -349,7 +466,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                 </div>
 
                 <ul className="relative mt-7 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
+                  {visibleFeatures.map((feature) => (
                     <li key={feature} className="flex items-start gap-3 text-sm text-slate-600">
                       <span
                         className={cn(
@@ -371,10 +488,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                   disabled={checkoutM.isPending}
                   onClick={() => handlePlanClick(plan)}
                   className={cn(
-                    'relative mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-300',
+                    'relative inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition-colors duration-200',
+                    'mt-8',
                     isPremium && 'border-violet-200 bg-violet-50/80 text-violet-700 hover:border-violet-300 hover:bg-violet-50',
                     isPro
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-500 hover:shadow-blue-300'
+                      ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-500'
                       : 'border border-slate-200 bg-white/80 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
                   )}
                 >
@@ -386,7 +504,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
               </div>
             )
           })}
-        </div>
+          </div>
+        )}
 
         <div className="mt-10 flex flex-wrap justify-center gap-5 text-sm text-slate-500">
           {(locale === 'id' ? ['Mulai dari gratis', 'Upgrade kapan saja', 'Akses langsung'] : ['Start for free', 'Upgrade anytime', 'Instant access']).map((item) => (

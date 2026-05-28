@@ -28,22 +28,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
   ]
 
   return (
-    <footer
-      className="relative overflow-hidden border-t"
-      style={{
-        background: 'rgba(255,255,255,0.72)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        borderColor: 'rgba(226,232,240,0.60)',
-      }}
-    >
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-blue-200/25 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-violet-200/25 blur-3xl" />
-      </div>
-
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent" />
-
+    <footer className="relative z-10 overflow-hidden bg-transparent">
       <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
@@ -58,12 +43,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
                 <a
                   key={i}
                   href="#"
-                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl text-slate-400 transition-all duration-300 hover:-translate-y-1 hover:bg-blue-50 hover:text-blue-600"
-                  style={{
-                    background: 'rgba(255,255,255,0.78)',
-                    border: '1px solid rgba(226,232,240,0.80)',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.05)',
-                  }}
+                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl border border-slate-200 bg-white text-slate-400 hover:bg-blue-50 hover:text-blue-600"
                 >
                   <Icon className="h-4.5 w-4.5" />
                 </a>

@@ -93,8 +93,8 @@ export const aiApi = {
     unwrap<AICategorizeResponse>(await api.post('/ai/categorize', req)),
   scanReceipt: async (req: ScanReceiptRequest): Promise<AIScanReceiptResponse> =>
     unwrap<AIScanReceiptResponse>(await api.post('/ai/scan-receipt', req)),
-  promoteScanImage: async (image_key: string): Promise<PromoteScanImageResponse> =>
-    unwrap<PromoteScanImageResponse>(await api.post('/ai/scan-receipt/promote-image', { image_key })),
+  promoteScanImage: async (image_key: string, log_id?: string): Promise<PromoteScanImageResponse> =>
+    unwrap<PromoteScanImageResponse>(await api.post('/ai/scan-receipt/promote-image', { image_key, log_id })),
   insights: async (req: InsightsRequest): Promise<AIInsightsResponse> =>
     unwrap<AIInsightsResponse>(await api.post('/ai/insights', req)),
   suggestBudget: async (req: SuggestBudgetRequest): Promise<AISuggestBudgetResponse> =>

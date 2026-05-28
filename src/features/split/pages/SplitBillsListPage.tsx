@@ -61,7 +61,7 @@ export function SplitBillsListPage() {
         title={copy.title}
         subtitle={copy.subtitle}
         action={
-          <Link to="/app/split-bills/new" className="hidden sm:inline-flex">
+          <Link to="/app/split-bills/new" className="hidden sm:block">
             <Button leftIcon={<HiOutlinePlus className="h-4 w-4" />}>{copy.create}</Button>
           </Link>
         }

@@ -10,9 +10,21 @@ const LANGUAGES = [
 ]
 export function LanguageSwitcher() {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window === 'undefined' ? false : window.matchMedia('(max-width: 767px)').matches
+  ))
   const { locale, setLocale } = useLocale()
   const active = LANGUAGES.find((lang) => lang.code === locale) ?? LANGUAGES[0]
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(media.matches)
+
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -38,7 +50,11 @@ export function LanguageSwitcher() {
           'hover:-translate-y-0.5 hover:text-blue-700 active:translate-y-0',
           open && 'text-blue-700'
         )}
-        style={{
+        style={isMobile ? {
+          background: open ? 'rgba(239,246,255,0.96)' : 'rgba(255,255,255,0.92)',
+          border: open ? '1px solid rgba(96,165,250,0.75)' : '1px solid rgba(226,232,240,0.9)',
+          boxShadow: open ? '0 8px 20px rgba(37,99,235,0.12)' : '0 4px 12px rgba(15,23,42,0.05)',
+        } : {
           background: open
             ? 'linear-gradient(135deg, rgba(239,246,255,0.96), rgba(255,255,255,0.88))'
             : 'linear-gradient(135deg, rgba(255,255,255,0.74), rgba(248,250,252,0.56))',
@@ -76,7 +92,11 @@ export function LanguageSwitcher() {
             'absolute right-0 top-full z-50 mt-3 w-56 overflow-hidden rounded-[1.4rem] p-2',
             'origin-top-right animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200'
           )}
-          style={{
+          style={isMobile ? {
+            background: 'rgba(255,255,255,0.98)',
+            border: '1px solid rgba(226,232,240,0.9)',
+            boxShadow: '0 12px 30px rgba(15,23,42,0.12)',
+          } : {
             background:
               'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92))',
             backdropFilter: 'blur(34px) saturate(180%)',

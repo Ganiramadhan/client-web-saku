@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { transactionApi, type TransactionUpdatePayload } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
@@ -37,6 +37,19 @@ export function EditModal({
     transaction_date: tx?.transaction_date,
   }))
 
+  useEffect(() => {
+    if (!tx) return
+    setForm({
+      wallet_id: tx.wallet_id,
+      category_id: tx.category_id,
+      amount: Number(tx.amount),
+      type: tx.type,
+      description: tx.description ?? '',
+      merchant_name: tx.merchant_name ?? '',
+      transaction_date: tx.transaction_date,
+    })
+  }, [tx])
+
   const filteredCats = useMemo(
     () =>
       (categories.data ?? [])
@@ -58,7 +71,12 @@ export function EditModal({
     mutationFn: () => {
       if (!tx) throw new Error('No transaction')
       const payload: TransactionUpdatePayload = {
-        ...form,
+        wallet_id: form.wallet_id ? String(form.wallet_id) : undefined,
+        category_id: form.category_id ? String(form.category_id) : undefined,
+        amount: Number(form.amount ?? 0),
+        type: form.type,
+        description: form.description ?? '',
+        merchant_name: form.merchant_name ?? '',
         transaction_date: form.transaction_date
           ? new Date(form.transaction_date).toISOString()
           : undefined,
@@ -68,6 +86,7 @@ export function EditModal({
     onSuccess: () => {
       toast.success(copy.updated)
       qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['transaction', tx?.id] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
       onClose()

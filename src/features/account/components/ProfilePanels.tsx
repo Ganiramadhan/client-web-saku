@@ -123,6 +123,9 @@ export function SubscriptionCard({
         loading: 'Memuat...',
         pendingTitle: 'Pembayaran Belum Selesai',
         pendingDesc: 'Selesaikan pembayaran untuk mengaktifkan paket',
+        payBefore: 'Bayar sebelum',
+        expiresIn: 'Sisa waktu',
+        expired: 'Kedaluwarsa',
         continuePay: 'Lanjutkan Pembayaran',
         cancelPayment: 'Batalkan Pembayaran',
         freeDesc: 'Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.',
@@ -158,6 +161,9 @@ export function SubscriptionCard({
         loading: 'Loading...',
         pendingTitle: 'Payment Not Completed',
         pendingDesc: 'Complete payment to activate plan',
+        payBefore: 'Pay before',
+        expiresIn: 'Time left',
+        expired: 'Expired',
         continuePay: 'Continue Payment',
         cancelPayment: 'Cancel Payment',
         freeDesc: 'Your account is still on the Free plan. Choose a plan to unlock AI features, advanced reports, and richer financial workflows.',
@@ -190,6 +196,7 @@ export function SubscriptionCard({
       }
   const [referralCode, setReferralCode] = useState('')
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const cleanReferralCode = sanitizeReferralCode(referralCode)
   const monthlyPlans = new Map(plans.filter((plan) => plan.period === 'monthly').map((plan) => [basePlanCode(plan.code), plan]))
   const hasMonthly = plans.some((plan) => plan.period === 'monthly')
@@ -200,6 +207,12 @@ export function SubscriptionCard({
     if (!hasMonthly && hasYearly) setPeriod('yearly')
     else if (hasMonthly && !hasYearly) setPeriod('monthly')
   }, [hasMonthly, hasYearly])
+
+  useEffect(() => {
+    if (!pendingSub?.expires_at) return
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [pendingSub?.expires_at])
 
   if (loading) {
     return (
@@ -213,6 +226,9 @@ export function SubscriptionCard({
     )
   }
   if (!sub) {
+    const pendingExpiresAt = pendingSub?.expires_at ? new Date(pendingSub.expires_at) : null
+    const remainingMs = pendingExpiresAt ? pendingExpiresAt.getTime() - nowMs : null
+    const isPendingExpired = remainingMs !== null && remainingMs <= 0
     return (
       <Card>
         {pendingSub ? (
@@ -226,8 +242,29 @@ export function SubscriptionCard({
                 <p className="mt-1 text-xs font-semibold text-amber-900">
                   {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
                 </p>
+                {pendingExpiresAt ? (
+                  <div className="mt-2 grid gap-1 rounded-xl border border-amber-200/80 bg-white/70 px-3 py-2 text-xs text-amber-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-amber-700">{copy.payBefore}</span>
+                      <span className="font-bold">
+                        {pendingExpiresAt.toLocaleString(locale === 'id' ? 'id-ID' : 'en-US', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-amber-700">{copy.expiresIn}</span>
+                      <span className="font-mono font-bold">
+                        {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <Badge tone="amber">Pending</Badge>
+              <Badge tone={isPendingExpired ? 'red' : 'amber'}>{isPendingExpired ? copy.expired : 'Pending'}</Badge>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <Button
@@ -449,6 +486,21 @@ export function SubscriptionCard({
 
 function basePlanCode(code: string) {
   return code.replace('_yearly', '')
+}
+
+function formatPaymentRemaining(ms: number, locale: 'id' | 'en') {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return locale === 'id'
+      ? `${hours}j ${minutes}m ${seconds}d`
+      : `${hours}h ${minutes}m ${seconds}s`
+  }
+  return locale === 'id'
+    ? `${minutes}m ${seconds}d`
+    : `${minutes}m ${seconds}s`
 }
 
 function translatePlanFeature(

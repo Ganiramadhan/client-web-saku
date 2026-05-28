@@ -15,6 +15,7 @@ import { toErrorMessage } from '@/lib/api'
 import { confirm } from '@/lib/confirm'
 import {
   ReceiptImagePreviewCard,
+  ReceiptMobileProcessingBanner,
   ReceiptProcessingCard,
   ReceiptTransactionPanel,
   ReceiptStepsList,
@@ -48,6 +49,7 @@ export function ScanReceiptPage() {
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const [history, setHistory] = useState<ScanHistoryEntry[]>([])
+  const [localSavedHistory, setLocalSavedHistory] = useState<ScanHistoryEntry[]>([])
   const [viewing, setViewing] = useState<ScanHistoryEntry | null>(null)
   const [selectedHistory, setSelectedHistory] = useState<Set<string>>(() => new Set())
 
@@ -115,10 +117,13 @@ export function ScanReceiptPage() {
   useEffect(() => {
     const logs = scanLogsQ.data?.data
     if (!logs) return
-    const nextHistory = logs.map(scanLogToHistory).sort((a, b) => b.timestamp - a.timestamp)
+    const rows = logs.map(scanLogToHistory)
+    const seen = new Set(rows.map((item) => item.id))
+    const merged = [...rows, ...localSavedHistory.filter((item) => !seen.has(item.id))]
+    const nextHistory = merged.sort((a, b) => b.timestamp - a.timestamp)
     const timer = window.setTimeout(() => setHistory(nextHistory), 0)
     return () => window.clearTimeout(timer)
-  }, [scanLogsQ.data])
+  }, [localSavedHistory, scanLogsQ.data])
 
   const findCategoryId = useCallback((categoryName?: string, type?: TransactionType): string | undefined => {
     if (!categoryName) return undefined
@@ -173,8 +178,29 @@ export function ScanReceiptPage() {
     onSuccess: async (savedTx) => {
       void savedTx
       if (extractedData?.image_key) {
-        await aiApi.promoteScanImage(extractedData.image_key).catch(() => undefined)
+        await aiApi.promoteScanImage(extractedData.image_key, extractedData.log_id).catch(() => undefined)
       }
+      const categoryName =
+        (categories.data ?? []).find((category) => category.id === form.category_id)?.name ??
+        extractedData?.category
+      const savedHistory: ScanHistoryEntry = {
+        id: extractedData?.log_id || `local-${Date.now()}`,
+        timestamp: Date.now(),
+        imagePreview,
+        amount: form.amount,
+        type: form.type,
+        merchant: cleanMerchant(form.merchant_name),
+        description: form.description || resolveScanDescription(extractedData ?? {}),
+        transactionDate: form.transaction_date,
+        categoryName,
+        ocrText: extractedData?.ocr_text,
+        lineItems: extractedData?.line_items,
+        confidence: extractedData?.confidence,
+      }
+      setLocalSavedHistory((prev) => {
+        const next = prev.filter((item) => item.id !== savedHistory.id)
+        return [savedHistory, ...next].slice(0, 20)
+      })
       toast.success('Transaksi berhasil disimpan!')
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['transactions'] }),
@@ -286,6 +312,7 @@ export function ScanReceiptPage() {
       </div>
 
       <PageHeader title={t.scanReceipt.title} subtitle={t.scanReceipt.subtitle} />
+      {scanMutation.isPending ? <ReceiptMobileProcessingBanner /> : null}
 
       {!imagePreview ? (
         <div className="grid gap-8 lg:grid-cols-3">

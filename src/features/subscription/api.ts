@@ -23,6 +23,7 @@ export interface Subscription {
   currency: string
   order_id: string
   payment_type?: string
+  expires_at?: string | null
   referral_code?: string
   starts_at?: string | null
   ends_at?: string | null
@@ -47,6 +48,7 @@ export interface CheckoutResponse {
   order_id: string
   snap_token: string
   redirect_url: string
+  expires_at?: string | null
   client_key: string
   is_production: boolean
 }

@@ -123,6 +123,7 @@ export interface AICategorizeItem {
   description?: string
   date?: string
   transaction_date?: string
+  wallet_hint?: string
 }
 
 export interface AICategorizeResponse {
@@ -145,6 +146,7 @@ export interface AIScanReceiptResponse extends AICategorizeResponse {
   ocr_text?: string
   line_items?: string[]
   image_key?: string
+  log_id?: string
 }
 
 export interface AIInsightsResponse {

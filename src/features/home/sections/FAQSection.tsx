@@ -38,11 +38,6 @@ export function FAQSection() {
 
   return (
     <section id="faq" className="relative overflow-hidden py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-200/25 blur-3xl" />
-        <div className="absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-violet-200/25 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={t.nav.faq}
@@ -57,26 +52,11 @@ export function FAQSection() {
             return (
               <div
                 key={item.q}
-                className="group relative overflow-hidden rounded-3xl transition-all duration-300"
-                style={{
-                  background: isOpen
-                    ? 'rgba(255,255,255,0.82)'
-                    : 'rgba(255,255,255,0.68)',
-                  backdropFilter: 'blur(32px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-                  border: isOpen
-                    ? '1px solid rgba(59,130,246,0.35)'
-                    : '1px solid rgba(255,255,255,0.86)',
-                  boxShadow: isOpen
-                    ? '0 18px 48px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
-                    : '0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.95)',
-                }}
+                className={cn(
+                  'landing-mobile-hover relative overflow-hidden rounded-3xl border bg-white shadow-sm',
+                  isOpen ? 'border-blue-200' : 'border-slate-200',
+                )}
               >
-                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <div className="absolute inset-0 rounded-3xl border border-blue-300/30" />
-                  <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
-                </div>
-
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
@@ -85,10 +65,10 @@ export function FAQSection() {
                   <div className="flex items-center gap-4">
                     <span
                       className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-bold transition-all duration-300',
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-bold',
                         isOpen
                           ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                          : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600'
+                          : 'bg-slate-100 text-slate-500'
                       )}
                     >
                       {String(i + 1).padStart(2, '0')}
@@ -101,10 +81,10 @@ export function FAQSection() {
 
                   <span
                     className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300',
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
                       isOpen
                         ? 'bg-blue-50 text-blue-600'
-                        : 'bg-white/70 text-slate-400 group-hover:text-blue-600'
+                        : 'bg-white/70 text-slate-400'
                     )}
                   >
                     <HiOutlineChevronDown

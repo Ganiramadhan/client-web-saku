@@ -3,7 +3,13 @@ import { imageFileToWebP } from '@/lib/files'
 import type { AuthUser } from '@/stores/authStore'
 
 export interface LoginPayload { email: string; password: string; turnstile_token?: string }
-export interface RegisterPayload { name: string; email: string; password: string; turnstile_token?: string }
+export interface RegisterPayload {
+  name: string
+  email: string
+  password: string
+  privacy_accepted: boolean
+  turnstile_token?: string
+}
 
 interface AuthResponse { token: string; user: AuthUser }
 interface RegisterResponse { email: string; expires_in: number }

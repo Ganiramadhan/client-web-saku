@@ -12,6 +12,7 @@ export interface ExtractedTx {
   description?: string
   date?: string
   transaction_date?: string
+  wallet_hint?: string
 }
 
 export interface TxForm {
@@ -332,6 +333,7 @@ function buildNlpMessages(
     const merchant = cleanMerchant(typeof item.merchant_name === 'string' ? item.merchant_name : '')
     const category = typeof item.category === 'string' ? item.category : ''
     const description = typeof item.description === 'string' ? item.description : input
+    const walletHint = typeof item.wallet_hint === 'string' ? item.wallet_hint : ''
     const date =
       typeof item.date === 'string'
         ? item.date
@@ -351,6 +353,7 @@ function buildNlpMessages(
         type,
         confidence,
         description,
+        wallet_hint: walletHint,
         date,
         transaction_date: date,
       },

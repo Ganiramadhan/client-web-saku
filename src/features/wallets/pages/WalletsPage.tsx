@@ -187,15 +187,17 @@ export function WalletsPage() {
             >
               {copy.transfer}
             </Button>
-            <Button
-              leftIcon={<HiOutlinePlus className="h-4 w-4" />}
-              onClick={() => {
-                setEditing(null)
-                setOpen(true)
-              }}
-            >
-              {t.wallets.newWallet}
-            </Button>
+            <div className="hidden sm:block">
+              <Button
+                leftIcon={<HiOutlinePlus className="h-4 w-4" />}
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                {t.wallets.newWallet}
+              </Button>
+            </div>
           </div>
         }
       />

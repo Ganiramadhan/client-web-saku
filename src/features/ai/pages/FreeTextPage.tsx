@@ -189,7 +189,7 @@ export function FreeTextPage() {
           if (dbIds.has(session.id) || session.id.startsWith('legacy-') || session.id.startsWith('db-')) return false
           const signature = sessionHistorySignature(session)
           const dbMatch = signature ? dbBySignature.get(signature) : null
-          if (dbMatch && session.id === activeId && hasOpenReview(session)) {
+          if (dbMatch && session.id === activeId && shouldKeepActiveLocalSession(session)) {
             keepLocalSignatures.add(signature)
             return true
           }
@@ -395,6 +395,70 @@ export function FreeTextPage() {
     [categories.data],
   )
 
+  const resolveWalletIdFromText = useCallback(
+    (inputText: string): string | undefined => {
+      const normalizedText = normalizeCategoryName(inputText)
+      if (!normalizedText) return undefined
+      const list = wallets.data ?? []
+      const textTokens = new Set(normalizedText.split(' ').filter((token) => token.length >= 2))
+
+      const normalizedWallets = list.map((wallet) => {
+        const name = normalizeCategoryName(wallet.name)
+        const shortName = name
+          .replace(/\b(bank|rekening|akun|account|wallet|dompet)\b/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        const tokens = shortName
+          .split(' ')
+          .filter((token) => token.length >= 2 && !['bank', 'rekening', 'akun', 'account', 'wallet', 'dompet', 'dari', 'ke', 'pake', 'pakai', 'masuk', 'masukan', 'masukkan', 'untuk'].includes(token))
+        return { id: wallet.id, name, shortName, tokens }
+      })
+
+      const exact = normalizedWallets.find((wallet) => wallet.name && normalizedText.includes(wallet.name))
+      if (exact) return exact.id
+
+      const cashMentioned = /\b(cash|tunai|uang tunai|kas)\b/.test(normalizedText)
+      if (cashMentioned) {
+        const cashWallet = normalizedWallets.find((wallet) =>
+          /\b(cash|tunai|kas)\b/.test(wallet.name) ||
+          /\b(cash|tunai|kas)\b/.test(wallet.shortName),
+        )
+        if (cashWallet) return cashWallet.id
+      }
+
+      let best: { id: string; score: number } | null = null
+      for (const wallet of normalizedWallets) {
+        let score = 0
+        if (wallet.shortName && normalizedText.includes(wallet.shortName)) score += 80
+        const matchedTokens = wallet.tokens.filter((token) => textTokens.has(token))
+        if (wallet.tokens.length > 0 && matchedTokens.length === wallet.tokens.length) {
+          score += 65 + wallet.tokens.length
+        } else if (matchedTokens.length > 0) {
+          score += matchedTokens.reduce((sum, token) => sum + (token.length >= 4 ? 18 : 10), 0)
+        }
+        if (score > (best?.score ?? 0)) best = { id: wallet.id, score }
+      }
+      return best && best.score >= 18 ? best.id : undefined
+    },
+    [wallets.data],
+  )
+
+  const resolveWalletIdForItem = useCallback(
+    (inputText: string, item: ExtractedTx): string | undefined => {
+      const direct = resolveWalletIdFromText([
+        item.wallet_hint,
+        item.description,
+        item.merchant_name,
+        item.category,
+      ].filter(Boolean).join(' '))
+      if (direct) return direct
+
+      const segment = findAmountSegmentForWallet(inputText, Number(item.amount || 0))
+      return resolveWalletIdFromText(segment) ?? resolveWalletIdFromText(inputText)
+    },
+    [resolveWalletIdFromText],
+  )
+
   /* ─── Mutations ─── */
   const categorizeMutation = useMutation({
     mutationFn: (inputText: string) => aiApi.categorize({ text: inputText, session_id: active?.id ?? activeId ?? undefined, language: detectPreferredLanguage(inputText, locale) }),
@@ -414,11 +478,14 @@ export function FreeTextPage() {
                   confidence: data.confidence,
                   description: inputText,
                   date: data.date ?? data.transaction_date,
+                  wallet_hint: data.raw_response?.wallet_hint as string | undefined,
                 },
               ]
             : []
 
-      if (items.length === 0) {
+      const usableItems = items.filter((item) => Number(item.amount || 0) > 0)
+
+      if (usableItems.length === 0) {
         updateActive((prev) => [
           ...prev,
           {
@@ -431,23 +498,26 @@ export function FreeTextPage() {
         return
       }
 
-      const isBatch = items.length > 1
+      const isBatch = usableItems.length > 1
       const batchId = isBatch ? uid() : undefined
-      const defaultWallet =
-        wallets.data?.find((w) => w.is_default)?.id ?? wallets.data?.[0]?.id ?? ''
 
       const intro: Message = {
         id: uid(),
         role: 'assistant',
         content: isBatch
-          ? aiCopy.batchIntro(items.length)
+          ? aiCopy.batchIntro(usableItems.length)
           : aiCopy.singleIntro,
       }
-      const reviewMsgs: Message[] = items.map((item) => {
+      const reviewMsgs: Message[] = usableItems.map((item) => {
         const type = (item.type as TransactionType) || 'expense'
         const transactionDate = inferTransactionDate(inputText, item.date ?? item.transaction_date ?? data.date ?? data.transaction_date)
+        const walletId =
+          resolveWalletIdForItem(inputText, item) ??
+          wallets.data?.find((w) => w.is_default)?.id ??
+          wallets.data?.[0]?.id ??
+          ''
         const form: TxForm = {
-          wallet_id: defaultWallet,
+          wallet_id: walletId,
           category_id: findCategoryId(item.category, type, `${item.description ?? ''} ${item.merchant_name ?? ''} ${inputText}`) || '',
           amount: item.amount || 0,
           type,
@@ -467,6 +537,7 @@ export function FreeTextPage() {
             type: item.type,
             confidence: item.confidence,
             description: item.description,
+            wallet_hint: item.wallet_hint,
             date: transactionDate,
             transaction_date: transactionDate,
           },
@@ -945,7 +1016,14 @@ export function FreeTextPage() {
                   <AIAvatar />
                 )}
 
-                <div className={cn('max-w-[82%] sm:max-w-sm lg:max-w-md', msg.role === 'user' ? 'flex flex-col items-end' : '')}>
+                <div
+                  className={cn(
+                    msg.type === 'transaction-review' || msg.type === 'batch-actions'
+                      ? 'min-w-0 flex-1 sm:max-w-xl lg:max-w-2xl'
+                      : 'max-w-[82%] sm:max-w-sm lg:max-w-md',
+                    msg.role === 'user' ? 'flex flex-col items-end' : '',
+                  )}
+                >
                   {msg.content ? (
                     <div
                       className={cn(
@@ -1048,6 +1126,10 @@ function sessionHistorySignature(session: ChatSession): string {
 
 function hasOpenReview(session: ChatSession): boolean {
   return session.messages.some((message) => message.type === 'transaction-review' && !message.saved)
+}
+
+function shouldKeepActiveLocalSession(session: ChatSession): boolean {
+  return session.messages.length > 0 && (!session.logIds?.length || hasOpenReview(session))
 }
 
 function createEmptySession(locale: 'id' | 'en'): ChatSession {
@@ -1166,6 +1248,59 @@ function reviewSignatureFromReview(form: TxForm, extractedData?: ExtractedTx): s
     merchant.trim().toLowerCase(),
     description,
   ].join('|')
+}
+
+function findAmountSegmentForWallet(inputText: string, amount: number): string {
+  if (!inputText.trim() || amount <= 0) return ''
+  const decimalSafeText = inputText.replace(/(\d)[,.](\d)/g, '$1<decimal>$2')
+  const parts = decimalSafeText
+    .split(/[,.;]|\b(?:dan|lalu|terus|kemudian|then)\b/i)
+    .map((part) => part.replace(/<decimal>/g, ',').trim())
+    .filter(Boolean)
+  if (parts.length === 0) return ''
+
+  const amountTokens = amountMentionTokens(amount).map((token) => normalizeCategoryName(token))
+  const normalizedParts = parts.map((part) => normalizeCategoryName(part))
+  const index = normalizedParts.findIndex((part) => amountTokens.some((token) => token && part.includes(token)))
+  if (index < 0) return ''
+
+  return [
+    parts[index],
+    parts[index + 1] ?? '',
+    parts[index - 1] ?? '',
+  ].filter(Boolean).join(' ')
+}
+
+function amountMentionTokens(amount: number): string[] {
+  const rounded = Math.round(amount)
+  const tokens = new Set<string>([
+    String(rounded),
+    rounded.toLocaleString('id-ID'),
+    rounded.toLocaleString('en-US'),
+  ])
+
+  if (rounded >= 1000 && rounded % 1000 === 0) {
+    const thousands = rounded / 1000
+    tokens.add(`${formatCompactAmount(thousands)} ribu`)
+    tokens.add(`${formatCompactAmount(thousands)} rb`)
+    tokens.add(`${formatCompactAmount(thousands)}rb`)
+    tokens.add(`${formatCompactAmount(thousands)} k`)
+    tokens.add(`${formatCompactAmount(thousands)}k`)
+  }
+
+  if (rounded >= 1_000_000 && rounded % 100_000 === 0) {
+    const millions = rounded / 1_000_000
+    tokens.add(`${formatCompactAmount(millions)} juta`)
+    tokens.add(`${formatCompactAmount(millions)} jt`)
+    tokens.add(`${formatCompactAmount(millions)}jt`)
+  }
+
+  return Array.from(tokens)
+}
+
+function formatCompactAmount(value: number): string {
+  if (Number.isInteger(value)) return String(value)
+  return String(value).replace('.', ',')
 }
 
 function detectPreferredLanguage(text: string, fallback: 'id' | 'en'): 'id' | 'en' {

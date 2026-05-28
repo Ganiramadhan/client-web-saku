@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -11,16 +11,6 @@ import {
   HiOutlineSparkles,
   HiOutlineWallet,
 } from 'react-icons/hi2'
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-} from 'recharts'
 import { walletApi } from '@/features/wallets/api'
 import { transactionApi } from '@/features/transactions/api'
 import { categoryApi } from '@/features/categories/api'
@@ -34,15 +24,28 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
-import type { Budget, Category, SavingsGoal, Transaction } from '@/types/api'
+import type { Budget, Category, SavingsGoal, Transaction, Wallet } from '@/types/api'
 
 type TrendRange = 'today' | '7d' | '30d' | '6mo'
+
+const DashboardTrendChart = lazy(() =>
+  import('../components/DashboardTrendChart').then((module) => ({ default: module.DashboardTrendChart })),
+)
 
 interface CategoryInsight {
   id: string
   name: string
   amount: number
   count: number
+}
+
+interface DashboardGoal {
+  id: string
+  name: string
+  target_amount: number
+  current_amount: number
+  remaining: number
+  days_left?: number | null
 }
 
 const TONE = {
@@ -226,6 +229,9 @@ export function DashboardPage() {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
+  )
 
   const now = useMemo(() => new Date(), [])
   const monthStart = useMemo(
@@ -258,12 +264,12 @@ export function DashboardPage() {
   })
 
   const longRangeTxns = useQuery({
-    queryKey: ['transactions', '6mo'],
+    queryKey: ['transactions', '6mo', isMobile ? 'mobile' : 'desktop'],
     queryFn: () =>
       transactionApi.list({
         from: sixMonthStart.toISOString(),
         to: now.toISOString(),
-        limit: 1200,
+        limit: isMobile ? 360 : 1200,
       }),
   })
 
@@ -334,6 +340,18 @@ export function DashboardPage() {
     () => buildCategoryInsights(monthTxns.data?.data ?? [], categories.data ?? []),
     [monthTxns.data, categories.data],
   )
+  const dashboardGoals = useMemo(
+    () => buildDashboardGoals(goals.data ?? [], wallets.data ?? [], now),
+    [goals.data, wallets.data, now],
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const onChange = () => setIsMobile(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -408,7 +426,7 @@ export function DashboardPage() {
         insights={categoryInsights}
         expense={monthSummary.expense}
         billings={upcomingBillings.data ?? []}
-        goals={goals.data ?? []}
+        goals={dashboardGoals}
         copy={copy}
       />
 
@@ -429,48 +447,17 @@ export function DashboardPage() {
 
           {longRangeTxns.isLoading ? (
             <Shimmer className="h-72 w-full rounded-2xl" />
+          ) : isMobile ? (
+            <MobileTrendSummary data={trendData} copy={copy} />
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={trendData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={trendRange === 'today' ? 2 : trendRange === '30d' ? 4 : 0}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => compactCurrency(Number(value))}
-                  width={55}
-                />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area
-                  type="monotone"
-                  dataKey="income"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fill="#10b981"
-                  fillOpacity={0.12}
-                  name={copy.income}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expense"
-                  stroke="#f43f5e"
-                  strokeWidth={2}
-                  fill="#f43f5e"
-                  fillOpacity={0.1}
-                  name={copy.expense}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<Shimmer className="h-72 w-full rounded-2xl" />}>
+              <DashboardTrendChart
+                data={trendData}
+                trendRange={trendRange}
+                incomeLabel={copy.income}
+                expenseLabel={copy.expense}
+              />
+            </Suspense>
           )}
         </Card>
 
@@ -605,7 +592,7 @@ function StatCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl p-4 transition-all duration-500 hover:-translate-y-1 hover:shadow-md sm:p-6"
+      className="group relative overflow-hidden rounded-2xl p-4 sm:p-6 sm:transition-transform sm:duration-200 sm:hover:-translate-y-0.5"
       style={{
         background: color.bg,
         backdropFilter: 'blur(24px) saturate(160%)',
@@ -614,7 +601,7 @@ function StatCard({
         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.80)',
       }}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 max-sm:hidden">
         <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
       </div>
 
@@ -639,6 +626,44 @@ function StatCard({
           {value}
         </p>
       )}
+    </div>
+  )
+}
+
+function MobileTrendSummary({ data, copy }: { data: ReturnType<typeof buildTrendData>; copy: DashboardCopy }) {
+  const income = data.reduce((sum, item) => sum + item.income, 0)
+  const expense = data.reduce((sum, item) => sum + item.expense, 0)
+  const maxValue = Math.max(1, income, expense)
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
+          <p className="text-xs font-bold text-emerald-700">{copy.income}</p>
+          <p className="mt-2 text-lg font-extrabold text-emerald-900">{formatCurrency(income)}</p>
+        </div>
+        <div className="rounded-2xl border border-rose-100 bg-rose-50/80 p-4">
+          <p className="text-xs font-bold text-rose-700">{copy.expense}</p>
+          <p className="mt-2 text-lg font-extrabold text-rose-900">{formatCurrency(expense)}</p>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+        <div className="space-y-3">
+          {data.slice(-6).map((item) => (
+            <div key={item.label} className="grid grid-cols-[54px_1fr] items-center gap-3">
+              <span className="text-[11px] font-semibold text-slate-400">{item.label}</span>
+              <div className="space-y-1.5">
+                <div className="h-2 overflow-hidden rounded-full bg-emerald-50">
+                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(4, (item.income / maxValue) * 100)}%` }} />
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-rose-50">
+                  <div className="h-full rounded-full bg-rose-500" style={{ width: `${Math.max(4, (item.expense / maxValue) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -732,7 +757,7 @@ function FinancialActionEngine({
   insights: CategoryInsight[]
   expense: number
   billings: UpcomingBilling[]
-  goals: SavingsGoal[]
+  goals: DashboardGoal[]
   copy: DashboardCopy
 }) {
   const top = insights[0]
@@ -1385,54 +1410,39 @@ function buildCategoryInsights(txns: Transaction[], categories: Category[]): Cat
   return Array.from(totals.values()).sort((a, b) => b.amount - a.amount)
 }
 
-function compactCurrency(value: number): string {
-  if (Math.abs(value) >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}M`
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`
-  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}k`
+function buildDashboardGoals(goals: SavingsGoal[], wallets: Wallet[], now: Date): DashboardGoal[] {
+  const savedGoalWalletIds = new Set(goals.map((goal) => goal.wallet_id).filter(Boolean))
+  const walletGoals = wallets
+    .filter((wallet) => Number(wallet.target_amount ?? 0) > 0 && !savedGoalWalletIds.has(wallet.id))
+    .map((wallet) => {
+      const targetAmount = Number(wallet.target_amount ?? 0)
+      const currentAmount = Number(wallet.balance ?? 0)
+      const deadline = wallet.target_deadline ? new Date(wallet.target_deadline) : null
+      const daysLeft = deadline && Number.isFinite(deadline.getTime())
+        ? Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / 86_400_000))
+        : null
 
-  return String(value)
-}
+      return {
+        id: `wallet-${wallet.id}`,
+        name: wallet.target_name || wallet.name,
+        target_amount: targetAmount,
+        current_amount: currentAmount,
+        remaining: Math.max(0, targetAmount - currentAmount),
+        days_left: daysLeft,
+      }
+    })
 
-interface TooltipPayloadItem {
-  name?: string
-  value?: number
-  color?: string
-}
-
-function ChartTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: TooltipPayloadItem[]
-  label?: string
-}) {
-  if (!active || !payload?.length) return null
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">
-      {label ? <p className="mb-1 font-semibold text-slate-700">{label}</p> : null}
-
-      <div className="space-y-1">
-        {payload.map((item, index) => (
-          <div key={index} className="flex items-center justify-between gap-5">
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              {item.name}
-            </span>
-
-            <span className="font-semibold text-slate-950">
-              {formatCurrency(Number(item.value ?? 0))}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  return [
+    ...goals.map((goal) => ({
+      id: goal.id,
+      name: goal.name,
+      target_amount: Number(goal.target_amount ?? 0),
+      current_amount: Number(goal.current_amount ?? 0),
+      remaining: Number(goal.remaining ?? 0),
+      days_left: goal.days_left,
+    })),
+    ...walletGoals,
+  ]
 }
 
 export default DashboardPage

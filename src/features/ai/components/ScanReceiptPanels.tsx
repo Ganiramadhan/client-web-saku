@@ -48,6 +48,8 @@ const SCAN_COPY = {
     scanAgain: 'Ulangi / Foto Lain',
     processing: 'AI sedang memproses',
     processingDetail: 'Membaca nominal, merchant, tanggal, dan kategori transaksi...',
+    processingMobileTitle: 'Sedang membaca struk',
+    processingMobileDesc: 'Tunggu sebentar, AI sedang mengekstrak detail transaksi.',
     previewTitle: 'Preview Detail Transaksi',
     editTitle: 'Edit Detail Transaksi',
     previewDesc: 'Readonly hasil ekstraksi struk sebelum disimpan',
@@ -96,6 +98,8 @@ const SCAN_COPY = {
     scanAgain: 'Retake / Another Photo',
     processing: 'AI is processing',
     processingDetail: 'Reading amount, merchant, date, and transaction category...',
+    processingMobileTitle: 'Reading receipt',
+    processingMobileDesc: 'Hang tight, AI is extracting the transaction details.',
     previewTitle: 'Transaction Detail Preview',
     editTitle: 'Edit Transaction Details',
     previewDesc: 'Readonly receipt extraction before saving',
@@ -395,12 +399,37 @@ export function ReceiptProcessingCard() {
   )
 }
 
+export function ReceiptMobileProcessingBanner() {
+  const copy = useScanCopy()
+  return (
+    <div className="pointer-events-none fixed inset-x-3 bottom-4 z-40 md:hidden">
+      <div className="overflow-hidden rounded-3xl border border-brand-200 bg-white/96 px-4 py-5 text-center shadow-2xl shadow-brand-900/15 backdrop-blur-xl">
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 shadow-sm ring-1 ring-brand-100">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-200">
+            <span className="scan-pulse-motion absolute inset-0 rounded-2xl bg-brand-500/35" />
+            <HiOutlineArrowPath className="scan-spinner-motion relative h-6 w-6" />
+          </div>
+        </div>
+        <p className="text-sm font-extrabold text-slate-950">{copy.processing}</p>
+        <p className="mx-auto mt-1 max-w-[17rem] text-xs leading-5 text-slate-500">{copy.processingDetail}</p>
+        <div className="mx-auto mt-4 h-1.5 max-w-[14rem] overflow-hidden rounded-full bg-brand-100">
+          <div className="scan-progress-motion h-full w-1/2 rounded-full bg-brand-600" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ReceiptProcessingOverlay() {
   const copy = useScanCopy()
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-2 rounded-xl bg-white px-4 py-3 shadow">
-        <HiOutlineArrowPath className="h-6 w-6 animate-spin text-brand-600" />
+    <div className="absolute inset-0 flex items-center justify-center bg-slate-950/20 backdrop-blur-[2px]">
+      <div className="receipt-scan-motion pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-transparent via-brand-400/35 to-transparent" />
+      <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/80 bg-white/92 px-4 py-3 shadow-xl">
+        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50">
+          <span className="scan-pulse-motion absolute inset-0 rounded-xl bg-brand-400/25" />
+          <HiOutlineArrowPath className="scan-spinner-motion relative h-6 w-6 text-brand-600" />
+        </div>
         <span className="text-xs font-semibold text-slate-700">{copy.processing}</span>
       </div>
     </div>

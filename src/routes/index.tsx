@@ -12,6 +12,7 @@ const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotP
 const LoginPage = lazyRoute(() => import('@/features/auth/pages/LoginPage'), 'LoginPage')
 const RegisterPage = lazyRoute(() => import('@/features/auth/pages/RegisterPage'), 'RegisterPage')
 const DashboardPage = lazyRoute(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage')
+const AdminDashboardPage = lazyRoute(() => import('@/features/adminDashboard/pages/AdminDashboardPage'), 'AdminDashboardPage')
 const WalletsPage = lazyRoute(() => import('@/features/wallets/pages/WalletsPage'), 'WalletsPage')
 const CategoriesPage = lazyRoute(() => import('@/features/categories/pages/CategoriesPage'), 'CategoriesPage')
 const TransactionsListPage = lazyRoute(() => import('@/features/transactions/pages/TransactionsListPage'), 'TransactionsListPage')
@@ -96,7 +97,9 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/super-admin/ai-logs" replace />} />
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="subscriptions" element={<SubscribersPage />} />
         <Route path="ai-logs" element={<AILogsPage />} />
       </Route>
 

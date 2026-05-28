@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   HiOutlineHome,
   HiOutlineCreditCard,
@@ -53,6 +53,7 @@ const SIDEBAR_COLLAPSED_KEY = 'saku_sidebar_collapsed'
 export function AppLayout() {
   const t = useT()
   const navigate = useNavigate()
+  const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
   const token = useAuthStore((s) => s.token)
@@ -134,15 +135,26 @@ export function AppLayout() {
   ]
 
   const superAdminItems: NavItem[] = [
+    { to: '/super-admin', label: t.nav.dashboard, end: true, icon: HiOutlineHome },
+    { to: '/super-admin/users', label: t.nav.adminUsers, icon: HiOutlineUsers },
+    { to: '/super-admin/subscriptions', label: t.nav.subscribers, icon: HiOutlineSparkles },
     { to: '/super-admin/ai-logs', label: t.nav.aiLogs, icon: HiOutlineSparkles },
   ]
 
   // Build sections based on user role
-  const sections: NavSection[] = [
-    { label: 'Workspace', items: userItems },
-    ...(isAdmin ? [{ label: 'Admin', items: adminItems }] : []),
-    ...(isSuperAdmin ? [{ label: 'Super Admin', items: superAdminItems }] : []),
-  ]
+  const sections: NavSection[] = isSuperAdmin
+    ? [{ label: 'Super Admin', items: superAdminItems }]
+    : [
+        { label: 'Workspace', items: userItems },
+        ...(isAdmin ? [{ label: 'Admin', items: adminItems }] : []),
+      ]
+
+  useEffect(() => {
+    if (!isSuperAdmin) return
+    if (location.pathname === '/app' || location.pathname.startsWith('/app/transactions') || location.pathname.startsWith('/app/scan-receipt') || location.pathname.startsWith('/app/free-text') || location.pathname.startsWith('/app/wallets') || location.pathname.startsWith('/app/targets') || location.pathname.startsWith('/app/upcoming-billings') || location.pathname.startsWith('/app/split-bills')) {
+      navigate('/super-admin', { replace: true })
+    }
+  }, [isSuperAdmin, location.pathname, navigate])
 
   const onLogout = () => {
     logout().catch(() => undefined).finally(() => {
@@ -157,7 +169,7 @@ export function AppLayout() {
       className="app-surface relative flex min-h-screen items-stretch"
     >
       {/* Ambient background */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <div className="app-ambient-bg pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
