@@ -43,12 +43,12 @@ const statusTone = (s: AdminSubscription['status']) => {
 }
 
 const statusLabel: Record<AdminSubscription['status'], string> = {
-  active: 'Aktif',
+  active: 'Active',
   trialing: 'Trial',
-  pending: 'Menunggu',
-  expired: 'Kadaluarsa',
-  cancelled: 'Dibatalkan',
-  failed: 'Gagal',
+  pending: 'Pending',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
 }
 
 const fmtIDR = (n: number, ccy = 'IDR') =>
@@ -96,7 +96,7 @@ export function SubscribersPage() {
     const set = new Map<string, string>()
     rows.forEach((r) => set.set(r.plan_code, r.plan_name || r.plan_code))
     return [
-      { value: 'all', label: 'Semua paket' },
+      { value: 'all', label: 'All plans' },
       ...Array.from(set.entries()).map(([value, label]) => ({ value, label })),
     ]
   }, [rows])
@@ -119,7 +119,7 @@ export function SubscribersPage() {
       },
       {
         id: 'user',
-        header: 'Pelanggan',
+        header: 'Subscriber',
         accessorFn: (r) => `${r.user_name} ${r.user_email}`,
         cell: ({ row }) => {
           const r = row.original
@@ -148,7 +148,7 @@ export function SubscribersPage() {
       },
       {
         id: 'plan',
-        header: 'Paket',
+        header: 'Plan',
         accessorFn: (r) => r.plan_name,
         cell: ({ row }) => {
           const r = row.original
@@ -162,7 +162,7 @@ export function SubscribersPage() {
       },
       {
         id: 'amount',
-        header: 'Nominal',
+        header: 'Amount',
         accessorFn: (r) => r.amount,
         cell: ({ row }) => (
           <div className="min-w-[120px]">
@@ -208,7 +208,7 @@ export function SubscribersPage() {
               type="button"
               onClick={() => setViewing(row.original)}
               className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:text-blue-700"
-              title="Detail"
+              title="Details"
             >
               <HiOutlineEye className="h-4 w-4" />
             </button>
@@ -223,7 +223,7 @@ export function SubscribersPage() {
     <div className="space-y-6">
       <PageHeader
         title={t.nav.subscribers}
-        subtitle="Daftar semua pengguna yang telah berlangganan SAKU."
+        subtitle="All users with SAKU subscriptions."
         action={
           <Button
             variant="outline"
@@ -237,18 +237,18 @@ export function SubscribersPage() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SubStatCard label="Total Subscriber" value={String(stats.total)} Icon={HiOutlineUsers} tone="blue" />
-        <SubStatCard label="Aktif / Trial" value={String(stats.active)} Icon={HiOutlineCheckCircle} tone="emerald" />
-        <SubStatCard label="Belum Selesai" value={String(stats.pending)} Icon={HiOutlineClock} tone="amber" />
-        <SubStatCard label="Revenue Aktif" value={fmtIDR(stats.revenue)} Icon={HiOutlineBanknotes} tone="violet" />
+        <SubStatCard label="Total Subscribers" value={String(stats.total)} Icon={HiOutlineUsers} tone="blue" />
+        <SubStatCard label="Active / Trial" value={String(stats.active)} Icon={HiOutlineCheckCircle} tone="emerald" />
+        <SubStatCard label="Pending Payments" value={String(stats.pending)} Icon={HiOutlineClock} tone="amber" />
+        <SubStatCard label="Active Revenue" value={fmtIDR(stats.revenue)} Icon={HiOutlineBanknotes} tone="violet" />
       </section>
 
       <AdminDataTable
         data={filtered}
         columns={columns}
         loading={q.isLoading}
-        searchPlaceholder="Cari nama, email, order…"
-        emptyTitle="Belum ada pelanggan"
+        searchPlaceholder="Search name, email, or order..."
+        emptyTitle="No subscribers yet"
         getRowId={(r) => r.id}
         toolbar={
           <>
@@ -256,13 +256,13 @@ export function SubscribersPage() {
               <RSelect
                 value={status}
                 options={[
-                  { value: 'all', label: 'Semua status' },
-                  { value: 'active', label: 'Aktif' },
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'active', label: 'Active' },
                   { value: 'trialing', label: 'Trial' },
-                  { value: 'pending', label: 'Menunggu' },
-                  { value: 'expired', label: 'Kadaluarsa' },
-                  { value: 'cancelled', label: 'Dibatalkan' },
-                  { value: 'failed', label: 'Gagal' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'expired', label: 'Expired' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                  { value: 'failed', label: 'Failed' },
                 ]}
                 onChange={(v) => setStatus((v as StatusFilter) ?? 'all')}
               />
@@ -311,7 +311,7 @@ function SubscriptionDetailModal({
       description={`${subscription.user_name || '-'} - ${subscription.plan_name || subscription.plan_code}`}
       footer={<Button variant="outline" onClick={onClose}>Close</Button>}
     >
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Subscription</p>

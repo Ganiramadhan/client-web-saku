@@ -84,31 +84,20 @@ export function LandingNavbar({
                     type="button"
                     onClick={() => smoothScrollTo(item.href)}
                     className={cn(
-                      'group relative cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold',
+                      'group relative cursor-pointer overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300 ease-out',
                       isActive
-                        ? 'text-blue-700'
+                        ? 'bg-blue-50/90 text-blue-700 shadow-sm shadow-blue-100/60'
                         : 'text-slate-600 hover:bg-white/80 hover:text-blue-700'
                     )}
                   >
+                    <span
+                      className={cn(
+                        'absolute inset-x-3 bottom-1 h-0.5 origin-center rounded-full bg-blue-500 transition-all duration-300 ease-out',
+                        isActive ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0 group-hover:scale-x-75 group-hover:opacity-60',
+                      )}
+                      aria-hidden
+                    />
                     {item.label}
-
-                    {isActive ? (
-                      <svg
-                        className="absolute -bottom-1 left-1/2 h-2.5 w-16 -translate-x-1/2 text-blue-500"
-                        viewBox="0 0 96 12"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M3 8.5C19 2.5 36 2.5 48 5.5C62 9 76 9 93 3.5"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    ) : (
-                      <span className="absolute inset-x-4 -bottom-0.5 h-px scale-x-0 rounded-full bg-blue-500 group-hover:scale-x-100" />
-                    )}
                   </button>
                 )
               })}
@@ -180,28 +169,20 @@ export function LandingNavbar({
                         setNavOpen(false)
                       }}
                       className={cn(
-                        'relative flex w-full cursor-pointer items-center rounded-xl px-4 py-3 text-sm font-semibold',
+                        'relative flex w-full cursor-pointer items-center rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ease-out',
                         isActive
-                          ? 'text-blue-700'
+                          ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/60'
                           : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
                       )}
                     >
                       {item.label}
-                      {isActive ? (
-                        <svg
-                          className="absolute bottom-1 left-4 h-2.5 w-16 text-blue-500"
-                          viewBox="0 0 96 12"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M3 8.5C19 2.5 36 2.5 48 5.5C62 9 76 9 93 3.5"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      ) : null}
+                      <span
+                        className={cn(
+                          'absolute bottom-1 left-4 h-0.5 w-12 rounded-full bg-blue-500 transition-all duration-300 ease-out',
+                          isActive ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0',
+                        )}
+                        aria-hidden
+                      />
                     </button>
                   )
                 })}

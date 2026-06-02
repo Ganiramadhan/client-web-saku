@@ -37,13 +37,16 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-500">
               {t.landing.footerTagline}
             </p>
+            <p className="mt-3 max-w-md text-xs font-semibold uppercase tracking-wider text-blue-600">
+              {locale === 'id' ? 'AI finance assistant untuk keputusan harian' : 'AI finance assistant for daily decisions'}
+            </p>
 
             <div className="mt-6 flex items-center gap-2">
               {[RiInstagramLine, RiLinkedinLine, RiGithubLine].map((Icon, i) => (
                 <a
                   key={i}
                   href="#"
-                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl border border-slate-200 bg-white text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md hover:shadow-blue-100/50"
                 >
                   <Icon className="h-4.5 w-4.5" />
                 </a>
@@ -57,7 +60,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
                 key={link.label}
                 type="button"
                 onClick={() => onNavClick(link.id)}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
               >
                 {link.label}
               </button>
@@ -69,7 +72,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
               <a
                 key={link.label}
                 href={link.href}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
               >
                 {link.label}
               </a>
@@ -81,7 +84,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
               <a
                 key={link.label}
                 href={link.href}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-colors duration-300 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
               >
                 {link.label}
               </a>

@@ -149,8 +149,8 @@ export function AILogsPage() {
         data={rows}
         columns={columns}
         loading={q.isLoading}
-        searchPlaceholder="Cari user, model, error…"
-        emptyTitle={t.common.empty}
+        searchPlaceholder="Search user, model, or error..."
+        emptyTitle="No AI logs yet"
         getRowId={(r) => r.id}
       />
 

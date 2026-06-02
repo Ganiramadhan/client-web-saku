@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react'
-import { HiOutlineArrowDownCircle, HiOutlineArrowUpCircle, HiOutlineEye, HiOutlinePencilSquare, HiOutlineTrash } from 'react-icons/hi2'
+import {
+  HiOutlineArrowDownCircle,
+  HiOutlineArrowUpCircle,
+  HiOutlineEye,
+  HiOutlinePencilSquare,
+  HiOutlineTrash,
+} from 'react-icons/hi2'
 import { Badge } from '@/components/ui'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Transaction } from '@/types/api'
@@ -46,6 +52,7 @@ export function MobileTransactionList({
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
+  const pageItems = buildMobilePageList(safePage, totalPages)
   const start = (safePage - 1) * pageSize
   const visible = filtered.slice(start, start + pageSize)
 
@@ -160,24 +167,64 @@ export function MobileTransactionList({
           ) : null}
 
           {filtered.length > pageSize ? (
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-              <span>
+            <div className="px-1 text-xs text-slate-600">
+              <span className="font-semibold text-slate-500">
                 {safePage}/{totalPages}
               </span>
-              <div className="flex gap-1">
+              <div className="no-scrollbar mt-2 flex items-center gap-1 overflow-x-auto rounded-xl border border-white/60 bg-white/40 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md">
+                <button
+                  disabled={safePage <= 1}
+                  onClick={() => setPage(1)}
+                  aria-label="First page"
+                  className="h-8 shrink-0 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold transition-all duration-200 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+                >
+                  First
+                </button>
                 <button
                   disabled={safePage <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40"
+                  aria-label="Previous page"
+                  className="h-8 shrink-0 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold transition-all duration-200 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
                 >
-                  ‹
+                  Prev
                 </button>
+                {pageItems.map((item, index) =>
+                  item === '...' ? (
+                    <span key={`gap-${index}`} className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 font-bold text-slate-400" aria-hidden>
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setPage(item)}
+                      aria-current={item === safePage ? 'page' : undefined}
+                      className={
+                        'h-8 min-w-8 shrink-0 rounded-lg border px-2 font-semibold transition-all duration-200 ' +
+                        (item === safePage
+                          ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
+                          : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm')
+                      }
+                    >
+                      {item}
+                    </button>
+                  ),
+                )}
                 <button
                   disabled={safePage >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40"
+                  aria-label="Next page"
+                  className="h-8 shrink-0 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold transition-all duration-200 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
                 >
-                  ›
+                  Next
+                </button>
+                <button
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage(totalPages)}
+                  aria-label="Last page"
+                  className="h-8 shrink-0 rounded-lg border border-transparent bg-transparent px-2.5 font-semibold transition-all duration-200 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+                >
+                  Last
                 </button>
               </div>
             </div>
@@ -186,4 +233,12 @@ export function MobileTransactionList({
       )}
     </div>
   )
+}
+
+function buildMobilePageList(page: number, totalPages: number): Array<number | '...'> {
+  const out: Array<number | '...'> = []
+  if (page > 1) out.push('...')
+  out.push(page)
+  if (page < totalPages) out.push('...')
+  return out
 }

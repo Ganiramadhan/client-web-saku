@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   HiOutlineCheckCircle,
   HiOutlineClipboardDocument,
+  HiOutlineClock,
   HiOutlineStar,
 } from 'react-icons/hi2'
 import {
@@ -101,6 +102,7 @@ export function SubscriptionCard({
   plans,
   plansLoading,
   busyPlan,
+  resumeLoading,
   onSubscribe,
   onCancel,
   cancelLoading,
@@ -112,7 +114,8 @@ export function SubscriptionCard({
   plans: Plan[]
   plansLoading: boolean
   busyPlan: string | null
-  onSubscribe: (planCode: string, referralCode?: string) => void
+  resumeLoading: boolean
+  onSubscribe: (planCode: string, referralCode?: string, resumePending?: boolean) => void
   onCancel: (id: string) => void
   cancelLoading: boolean
 }) {
@@ -155,6 +158,9 @@ export function SubscriptionCard({
         featureBudget: 'Anggaran bulanan',
         unavailable: 'Belum tersedia',
         cancel: 'Batalkan Langganan',
+        trialWarning: 'Trial akan segera berakhir',
+        renewalWarning: 'Langganan mendekati tanggal perpanjangan',
+        autoCharge: 'Auto charge akan digunakan saat metode pembayaran recurring sudah tersedia.',
       }
     : {
         info: 'Subscription Information',
@@ -193,6 +199,9 @@ export function SubscriptionCard({
         featureBudget: 'Monthly budgets',
         unavailable: 'Unavailable',
         cancel: 'Cancel Subscription',
+        trialWarning: 'Trial ends soon',
+        renewalWarning: 'Subscription renewal is coming up',
+        autoCharge: 'Auto charge will be used once recurring payment method is available.',
       }
   const [referralCode, setReferralCode] = useState('')
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
@@ -232,58 +241,51 @@ export function SubscriptionCard({
     return (
       <Card>
         {pendingSub ? (
-          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-extrabold text-amber-900">{copy.pendingTitle}</p>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  {copy.pendingDesc} {pendingSub.plan_name}.
-                </p>
-                <p className="mt-1 text-xs font-semibold text-amber-900">
-                  {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-bold text-slate-900">{copy.pendingTitle}</p>
+                  <Badge tone={isPendingExpired ? 'red' : 'amber'}>{isPendingExpired ? copy.expired : 'Pending'}</Badge>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-700">
+                  {pendingSub.plan_name} · {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
                 </p>
                 {pendingExpiresAt ? (
-                  <div className="mt-2 grid gap-1 rounded-xl border border-amber-200/80 bg-white/70 px-3 py-2 text-xs text-amber-900">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-amber-700">{copy.payBefore}</span>
-                      <span className="font-bold">
-                        {pendingExpiresAt.toLocaleString(locale === 'id' ? 'id-ID' : 'en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-amber-700">{copy.expiresIn}</span>
-                      <span className="font-mono font-bold">
-                        {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
-                      </span>
-                    </div>
-                  </div>
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+                    <HiOutlineClock className="h-4 w-4" />
+                    {copy.payBefore}{' '}
+                    {pendingExpiresAt.toLocaleString(locale === 'id' ? 'id-ID' : 'en-US', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {' · '}
+                    {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
+                  </p>
                 ) : null}
               </div>
-              <Badge tone={isPendingExpired ? 'red' : 'amber'}>{isPendingExpired ? copy.expired : 'Pending'}</Badge>
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <Button
-                size="sm"
-                className="w-full"
-                loading={busyPlan === pendingSub.plan_code}
-                onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode)}
-              >
-                {copy.continuePay}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full border-amber-200 bg-white/80 text-amber-800 hover:border-amber-300 hover:bg-amber-50"
-                loading={cancelLoading}
-                onClick={() => onCancel(pendingSub.id)}
-              >
-                {copy.cancelPayment}
-              </Button>
+              <div className="grid gap-2 sm:w-56">
+                <Button
+                  size="sm"
+                  className="w-full"
+                  loading={resumeLoading}
+                  onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode, true)}
+                >
+                  {copy.continuePay}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-amber-200 bg-white/80 text-amber-800 hover:border-amber-300 hover:bg-amber-50"
+                  loading={cancelLoading}
+                  onClick={() => onCancel(pendingSub.id)}
+                >
+                  {copy.cancelPayment}
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -402,6 +404,8 @@ export function SubscriptionCard({
   const isTrial = sub.is_trial || sub.status === 'trialing'
   const trialEnd = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null
   const periodEnd = sub.ends_at ? new Date(sub.ends_at) : null
+  const warningDate = isTrial ? trialEnd : periodEnd
+  const daysLeft = warningDate ? Math.ceil((warningDate.getTime() - Date.now()) / 86_400_000) : null
   const tone: 'green' | 'amber' | 'red' =
     sub.status === 'active' ? 'green' : isTrial ? 'amber' : 'red'
   return (
@@ -460,6 +464,14 @@ export function SubscriptionCard({
               </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+      {daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-extrabold text-amber-950">{isTrial ? copy.trialWarning : copy.renewalWarning}</p>
+          <p className="mt-1 leading-5">
+            {daysLeft === 0 ? (locale === 'id' ? 'Berakhir hari ini.' : 'Ends today.') : `${daysLeft} ${locale === 'id' ? 'hari tersisa' : 'days left'}.`} {copy.autoCharge}
+          </p>
         </div>
       ) : null}
       <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-700">

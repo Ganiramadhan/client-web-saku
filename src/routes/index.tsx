@@ -1,8 +1,9 @@
-import { Suspense, lazy, type ComponentType } from 'react'
+import { Suspense, lazy, type ComponentType, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProRoute } from '@/components/ProRoute'
 import { AppLayout } from '@/layouts/AppLayout'
+import { useAuthStore } from '@/stores/authStore'
 
 const lazyRoute = (loader: () => Promise<Record<string, unknown>>, exportName: string): ComponentType<any> =>
   lazy(async () => ({ default: (await loader())[exportName] as ComponentType<any> }))
@@ -28,6 +29,7 @@ const SettingsPage = lazyRoute(() => import('@/features/account/pages/SettingsPa
 const UpcomingBillingPage = lazyRoute(() => import('@/features/billing/pages/UpcomingBillingPage'), 'UpcomingBillingPage')
 const ThanksPage = lazyRoute(() => import('@/features/subscription/pages/ThanksPage'), 'ThanksPage')
 const SubscribersPage = lazyRoute(() => import('@/features/subscription/pages/SubscribersPage'), 'SubscribersPage')
+const CustomerServicePage = lazyRoute(() => import('@/features/support/pages/CustomerServicePage'), 'CustomerServicePage')
 const SplitBillsListPage = lazyRoute(() => import('@/features/split/pages/SplitBillsListPage'), 'SplitBillsListPage')
 const SplitBillFormPage = lazyRoute(() => import('@/features/split/pages/SplitBillFormPage'), 'SplitBillFormPage')
 const SplitBillDetailPage = lazyRoute(() => import('@/features/split/pages/SplitBillDetailPage'), 'SplitBillDetailPage')
@@ -38,10 +40,12 @@ export function AppRoutes() {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
       {/* Public */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/" element={<HomeRedirect><HomePage /></HomeRedirect>} />
+      <Route path="/landing" element={<HomePage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
 
       {/* Authenticated workspace */}
       <Route
@@ -61,10 +65,11 @@ export function AppRoutes() {
         <Route path="free-text" element={<FreeTextPage />} />
         <Route path="targets" element={<TargetsPage />} />
         <Route path="upcoming-billings" element={<UpcomingBillingPage />} />
-        <Route path="split-bills" element={<ProRoute feature="splitbill"><SplitBillsListPage /></ProRoute>} />
-        <Route path="split-bills/new" element={<ProRoute feature="splitbill"><SplitBillFormPage /></ProRoute>} />
-        <Route path="split-bills/:id" element={<ProRoute feature="splitbill"><SplitBillDetailPage /></ProRoute>} />
-        <Route path="split-bills/:id/edit" element={<ProRoute feature="splitbill"><SplitBillFormPage /></ProRoute>} />
+        <Route path="split-bills" element={<SplitBillsListPage />} />
+        <Route path="split-bills/new" element={<SplitBillFormPage />} />
+        <Route path="split-bills/:id" element={<SplitBillDetailPage />} />
+        <Route path="split-bills/:id/edit" element={<SplitBillFormPage />} />
+        <Route path="customer-service" element={<ProRoute><CustomerServicePage /></ProRoute>} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="subscription" element={<Navigate to="/app/profile" replace />} />
@@ -85,6 +90,7 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="customer-service" element={<CustomerServicePage />} />
         <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
 
@@ -101,12 +107,31 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
         <Route path="ai-logs" element={<AILogsPage />} />
+        <Route path="customer-service" element={<CustomerServicePage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   )
+}
+
+function PublicRoute({ children }: { children: ReactNode }) {
+  const token = useAuthStore((s) => s.token)
+  if (token) return <Navigate to="/app" replace />
+  return <>{children}</>
+}
+
+function HomeRedirect({ children }: { children: ReactNode }) {
+  const token = useAuthStore((s) => s.token)
+  if (token && typeof window !== 'undefined') {
+    const key = 'saku-root-auto-dashboard-v1'
+    if (window.sessionStorage.getItem(key) !== '1') {
+      window.sessionStorage.setItem(key, '1')
+      return <Navigate to="/app" replace />
+    }
+  }
+  return <>{children}</>
 }
 
 function RouteFallback() {

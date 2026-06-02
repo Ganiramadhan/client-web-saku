@@ -30,7 +30,7 @@ export function FAQSection() {
     },
     {
       q: locale === 'id' ? 'Apakah bisa upgrade kapan saja?' : 'Can I upgrade anytime?',
-      a: locale === 'id' ? 'Bisa. Kamu dapat memakai Starter dulu, lalu upgrade ke Pro saat membutuhkan fitur AI dan kapasitas tambahan.' : 'Yes. You can stay on Starter first, then upgrade to Pro when you need AI features and extra capacity.',
+      a: locale === 'id' ? 'Bisa. Kamu dapat memakai Free dulu, lalu upgrade ke Pro saat membutuhkan fitur AI dan kapasitas tambahan.' : 'Yes. You can stay on Free first, then upgrade to Pro when you need AI features and extra capacity.',
     },
   ]
 
@@ -53,14 +53,14 @@ export function FAQSection() {
               <div
                 key={item.q}
                 className={cn(
-                  'landing-mobile-hover relative overflow-hidden rounded-3xl border bg-white shadow-sm',
-                  isOpen ? 'border-blue-200' : 'border-slate-200',
+                  'landing-mobile-hover relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/35',
+                  isOpen ? 'border-blue-200 shadow-blue-100/40' : 'border-slate-200',
                 )}
               >
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="relative flex w-full items-center justify-between gap-5 px-6 py-5 text-left"
+                  className="relative flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors duration-300 hover:bg-blue-50/35"
                 >
                   <div className="flex items-center gap-4">
                     <span

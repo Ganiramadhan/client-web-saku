@@ -20,6 +20,7 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineBell,
   HiOutlineCalendarDays,
+  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2'
 import { LuPanelLeftClose, LuPanelLeftOpen } from 'react-icons/lu'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -125,13 +126,15 @@ export function AppLayout() {
     { to: '/app/wallets', label: t.nav.wallets, icon: HiOutlineCreditCard },
     { to: '/app/targets', label: t.nav.targets, icon: HiOutlineTrophy },
     { to: '/app/upcoming-billings', label: t.nav.upcomingBillings, icon: HiOutlineCalendarDays },
-    { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup, tier: 'pro' },
+    { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup },
+    ...(hasPro ? [{ to: '/app/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight }] : []),
   ]
 
   const adminItems: NavItem[] = [
     { to: '/admin/users', label: t.nav.adminUsers, icon: HiOutlineUsers },
     { to: '/admin/categories', label: t.nav.categories, icon: HiOutlineTag },
     { to: '/admin/subscriptions', label: t.nav.subscribers, icon: HiOutlineSparkles },
+    { to: '/admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
   ]
 
   const superAdminItems: NavItem[] = [
@@ -139,6 +142,7 @@ export function AppLayout() {
     { to: '/super-admin/users', label: t.nav.adminUsers, icon: HiOutlineUsers },
     { to: '/super-admin/subscriptions', label: t.nav.subscribers, icon: HiOutlineSparkles },
     { to: '/super-admin/ai-logs', label: t.nav.aiLogs, icon: HiOutlineSparkles },
+    { to: '/super-admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
   ]
 
   // Build sections based on user role

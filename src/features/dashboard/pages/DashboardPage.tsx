@@ -85,14 +85,23 @@ const TONE = {
 
 const DASHBOARD_COPY = {
   id: {
-    subtitle: 'Ringkasan keuanganmu dalam sekejap. Lihat saldo, pengeluaran, dan insight penting lainnya di dashboard ini.',
+    subtitle: 'Dashboard ini fokus ke keputusan harian: sisa ruang belanja, proyeksi akhir bulan, tagihan dekat, dan prioritas AI.',
     savingRate: 'Saving rate',
+    cashflowTitle: 'Briefing cashflow',
+    cashflowDesc: 'Angka praktis untuk menjaga bulan ini tetap terkendali.',
+    projectedSpending: 'Proyeksi pengeluaran',
+    safeDailySpend: 'Ruang belanja harian',
+    aiPriority: 'Prioritas AI',
+    aiPriorityCategory: 'Kategori terbesar bulan ini perlu dicek sebelum belanja lagi.',
+    aiPriorityBills: 'Ada tagihan dekat. Siapkan dana lebih awal.',
+    aiPriorityPositive: 'Cashflow sehat. Pertahankan ritme dan alokasikan surplus ke target.',
+    aiPriorityDeficit: 'Pengeluaran melewati pemasukan. Review transaksi terbesar hari ini.',
     trendDescription: 'Perbandingan pemasukan dan pengeluaran berdasarkan periode.',
     income: 'Pemasukan',
     expense: 'Pengeluaran',
     recentDescription: 'Aktivitas transaksi terbaru dari semua wallet.',
-    actionTitle: 'Insight yang bisa langsung ditindaklanjuti',
-    actionDesc: 'SAKU mengubah pola transaksi menjadi rekomendasi operasional, bukan sekadar laporan.',
+    actionTitle: 'Prioritas hari ini',
+    actionDesc: 'Fokus ke keputusan yang paling membantu: kategori terbesar, tagihan terdekat, dan target yang perlu dijaga.',
     categoryTitle: 'Kategori Pengeluaran',
     categoryDesc: 'Ringkasan kategori terbesar bulan ini dari transaksi yang sudah tercatat.',
     emptyInsight: 'Belum ada pengeluaran bulan ini. Insight kategori akan muncul setelah ada transaksi.',
@@ -127,7 +136,7 @@ const DASHBOARD_COPY = {
     emptyBilling: 'Belum ada reminder tagihan. Tambahkan VPS, domain, SaaS, atau langganan lain dari menu Upcoming Billing.',
     walletDesc: 'Saldo dari wallet yang kamu miliki.',
     actionBadge: 'Aksi',
-    recurringTitle: 'Recurring yang bisa dibuat',
+    recurringTitle: 'Tagihan terdekat',
     recurringWithCategory: 'Kategori',
     recurringDesc: 'muncul cukup sering. Pertimbangkan jadwal recurring agar arus kas lebih mudah diprediksi.',
     recurringEmpty: 'Kalau kamu membayar layanan yang sama beberapa bulan berturut-turut, jadikan recurring agar tidak terlewat.',
@@ -151,14 +160,23 @@ const DASHBOARD_COPY = {
     dailyBudgetCreated: 'Budget harian berhasil dibuat.',
   },
   en: {
-    subtitle: 'Your financial summary at a glance. Review balance, spending, and important insights in one dashboard.',
+    subtitle: 'This dashboard focuses on daily decisions: spending room, month-end projection, upcoming bills, and AI priorities.',
     savingRate: 'Saving rate',
+    cashflowTitle: 'Cashflow briefing',
+    cashflowDesc: 'Practical numbers to keep this month under control.',
+    projectedSpending: 'Projected spending',
+    safeDailySpend: 'Daily spending room',
+    aiPriority: 'AI priority',
+    aiPriorityCategory: 'Your largest category needs review before adding more spending.',
+    aiPriorityBills: 'Upcoming bills are close. Set aside cash early.',
+    aiPriorityPositive: 'Cashflow is healthy. Keep the rhythm and move surplus into goals.',
+    aiPriorityDeficit: 'Spending is above income. Review the largest transactions today.',
     trendDescription: 'Income and spending comparison by selected period.',
     income: 'Income',
     expense: 'Spending',
     recentDescription: 'Latest transaction activity across all wallets.',
-    actionTitle: 'Insights you can act on immediately',
-    actionDesc: 'SAKU turns transaction patterns into practical recommendations, not just reports.',
+    actionTitle: 'Today priority',
+    actionDesc: 'Focus on the most helpful decisions: top category, closest bill, and goals to protect.',
     categoryTitle: 'Spending Categories',
     categoryDesc: 'Largest spending categories this month based on recorded transactions.',
     emptyInsight: 'No spending this month yet. Category insights will appear after transactions are recorded.',
@@ -193,7 +211,7 @@ const DASHBOARD_COPY = {
     emptyBilling: 'No bill reminders yet. Add VPS, domain, SaaS, or other subscriptions from Upcoming Billing.',
     walletDesc: 'Balance from wallets you own.',
     actionBadge: 'Action',
-    recurringTitle: 'Recurring item to create',
+    recurringTitle: 'Closest bill',
     recurringWithCategory: 'Category',
     recurringDesc: 'appears often enough. Consider a recurring schedule so cashflow is easier to predict.',
     recurringEmpty: 'If you pay the same service for multiple months, make it recurring so it is not missed.',
@@ -345,6 +363,34 @@ export function DashboardPage() {
     [goals.data, wallets.data, now],
   )
 
+  const cashflowBriefing = useMemo(() => {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const dayOfMonth = Math.max(1, now.getDate())
+    const remainingDays = Math.max(1, daysInMonth - dayOfMonth + 1)
+    const projectedExpense = dayOfMonth > 0 ? (monthSummary.expense / dayOfMonth) * daysInMonth : monthSummary.expense
+    const activeBills = (upcomingBillings.data ?? []).filter((bill) => bill.status !== 'paused')
+    const unpaidBills = activeBills
+      .reduce((sum, bill) => sum + Number(bill.amount ?? 0), 0)
+    const dailyRoom = Math.max(0, (monthSummary.income - monthSummary.expense - unpaidBills) / remainingDays)
+    const topCategory = categoryInsights[0]
+    const nextBill = activeBills
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]
+    const priority =
+      monthSummary.saved < 0
+        ? copy.aiPriorityDeficit
+        : nextBill
+          ? copy.aiPriorityBills
+          : topCategory && topCategory.amount > 0
+            ? `${topCategory.name}: ${copy.aiPriorityCategory}`
+            : copy.aiPriorityPositive
+
+    return {
+      projectedExpense,
+      dailyRoom,
+      priority,
+    }
+  }, [categoryInsights, copy, monthSummary.expense, monthSummary.income, monthSummary.saved, now, upcomingBillings.data])
+
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
     const onChange = () => setIsMobile(media.matches)
@@ -393,6 +439,14 @@ export function DashboardPage() {
           tone="rose"
         />
       </section>
+
+      <CashflowBriefing
+        loading={monthTxns.isLoading || upcomingBillings.isLoading}
+        projectedExpense={cashflowBriefing.projectedExpense}
+        dailyRoom={cashflowBriefing.dailyRoom}
+        priority={cashflowBriefing.priority}
+        copy={copy}
+      />
 
       <section className="grid gap-6 xl:grid-cols-3">
         <AiCategoryInsight
@@ -571,6 +625,75 @@ export function DashboardPage() {
           description={copy.walletDesc}
         />
       </section>
+    </div>
+  )
+}
+
+function CashflowBriefing({
+  loading,
+  projectedExpense,
+  dailyRoom,
+  priority,
+  copy,
+}: {
+  loading?: boolean
+  projectedExpense: number
+  dailyRoom: number
+  priority: string
+  copy: DashboardCopy
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-700">
+              <HiOutlineSparkles className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-extrabold text-slate-950">{copy.cashflowTitle}</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{copy.cashflowDesc}</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:w-[68%] lg:grid-cols-3">
+          <BriefingItem label={copy.projectedSpending} value={formatCurrency(projectedExpense)} loading={loading} tone="rose" />
+          <BriefingItem label={copy.safeDailySpend} value={formatCurrency(dailyRoom)} loading={loading} tone="emerald" />
+          <BriefingItem label={copy.aiPriority} value={priority} loading={loading} tone="blue" compact />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function BriefingItem({
+  label,
+  value,
+  loading,
+  tone,
+  compact,
+}: {
+  label: string
+  value: string
+  loading?: boolean
+  tone: 'blue' | 'emerald' | 'rose'
+  compact?: boolean
+}) {
+  const toneClass = {
+    blue: 'bg-blue-50 text-blue-900 border-blue-100',
+    emerald: 'bg-emerald-50 text-emerald-900 border-emerald-100',
+    rose: 'bg-rose-50 text-rose-900 border-rose-100',
+  }[tone]
+  return (
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="text-[11px] font-black uppercase tracking-wide opacity-70">{label}</p>
+      {loading ? (
+        <Shimmer className="mt-3 h-6 w-28 rounded-xl bg-white/60" />
+      ) : (
+        <p className={`${compact ? 'mt-2 line-clamp-2 text-sm leading-5' : 'mt-2 text-xl'} font-black`}>
+          {value}
+        </p>
+      )}
     </div>
   )
 }
@@ -762,9 +885,11 @@ function FinancialActionEngine({
 }) {
   const top = insights[0]
   const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
-  const monthlyBills = billings
+  const activeBills = billings
     .filter((item) => item.status === 'active')
-    .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+  const nextBill = activeBills[0]
+  const monthlyBills = activeBills.reduce((sum, item) => sum + Number(item.amount || 0), 0)
   const activeGoal = goals
     .filter((goal) => Number(goal.remaining ?? 0) > 0)
     .sort((a, b) => Number(a.days_left ?? 9999) - Number(b.days_left ?? 9999))[0]
@@ -778,7 +903,7 @@ function FinancialActionEngine({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-              Financial Action Engine
+              AI Focus
             </p>
             <h2 className="mt-1 text-base font-bold text-slate-950">
               {copy.actionTitle}
@@ -814,11 +939,11 @@ function FinancialActionEngine({
             />
             <ActionCard
               tone="violet"
-              title={copy.recurringTitle}
+              title={nextBill ? nextBill.name : copy.recurringTitle}
               description={
-                billings.length > 0
-                  ? `${billings.length} ${copy.upcomingTitle.toLowerCase()} ${copy.billsNeedReview.toLowerCase()}.`
-                  : copy.recurringEmpty
+                nextBill
+                  ? `${formatCurrency(Number(nextBill.amount || 0))} ${copy.dueOn} ${formatDate(nextBill.due_date)}. ${copy.setAsideEarly}`
+                  : copy.monthlyBillsEmpty
               }
               actionLabel={copy.setupBilling}
               to="/app/upcoming-billings"

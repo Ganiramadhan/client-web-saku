@@ -34,8 +34,8 @@ export async function loginWithGoogle(idToken: string, mode: 'login' | 'register
   return unwrap<AuthResponse>(await api.post('/auth/google', { id_token: idToken, mode }))
 }
 
-export async function forgotPassword(email: string, turnstile_token?: string): Promise<void> {
-  await api.post('/auth/forgot-password', { email, turnstile_token })
+export async function forgotPassword(email: string, turnstile_token?: string, resend = false): Promise<void> {
+  await api.post('/auth/forgot-password', { email, turnstile_token, resend })
 }
 
 export async function resetPassword(payload: {

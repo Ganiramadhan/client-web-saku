@@ -437,31 +437,102 @@ export function Pagination({
   onChange: (p: number) => void
 }) {
   if (totalPages <= 1) return null
+  const safePage = Math.min(Math.max(page, 1), totalPages)
+  const pages = buildPaginationPages(safePage, totalPages)
+
   return (
-    <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+    <div className="mt-4 flex flex-col gap-3 px-1 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
       <span>
-        Page <strong>{page}</strong> / {totalPages}
+        Page <strong>{safePage}</strong> / {totalPages}
       </span>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => onChange(page - 1)}
+      <div className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200/70 bg-white/45 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md sm:w-auto sm:flex-wrap sm:overflow-visible">
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => onChange(1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+        >
+          <span className="sm:hidden">First</span>
+          <span className="hidden sm:inline">First page</span>
+        </button>
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => onChange(safePage - 1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
         >
           Prev
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => onChange(page + 1)}
+        </button>
+        {pages.map((item, index) =>
+          item === '...' ? (
+            <span key={`gap-${index}`} className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-slate-400" aria-hidden>
+              ...
+            </span>
+          ) : (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onChange(item)}
+              aria-current={item === safePage ? 'page' : undefined}
+              className={cn(
+                'h-8 min-w-8 shrink-0 rounded-lg border px-2 text-xs font-semibold transition-all duration-200 ease-out',
+                item === safePage
+                  ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
+                  : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
+                item !== safePage && 'max-sm:hidden',
+              )}
+            >
+              {item}
+            </button>
+          ),
+        )}
+        <button
+          type="button"
+          disabled={safePage >= totalPages}
+          onClick={() => onChange(safePage + 1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
         >
           Next
-        </Button>
+        </button>
+        <button
+          type="button"
+          disabled={safePage >= totalPages}
+          onClick={() => onChange(totalPages)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+        >
+          <span className="sm:hidden">Last</span>
+          <span className="hidden sm:inline">Last page</span>
+        </button>
       </div>
     </div>
   )
+}
+
+function buildPaginationPages(page: number, totalPages: number): Array<number | '...'> {
+  if (totalPages <= 3) return Array.from({ length: totalPages }, (_, index) => index + 1)
+  const pages = new Set<number>([page - 1, page, page + 1])
+  if (page <= 2) {
+    pages.add(1)
+    pages.add(2)
+    pages.add(3)
+  }
+  if (page >= totalPages - 1) {
+    pages.add(totalPages - 2)
+    pages.add(totalPages - 1)
+    pages.add(totalPages)
+  }
+  const sorted = Array.from(pages)
+    .filter((item) => item >= 1 && item <= totalPages)
+    .sort((a, b) => a - b)
+  const out: Array<number | '...'> = []
+  if ((sorted[0] ?? 1) > 1) out.push('...')
+  for (const item of sorted) {
+    const prev = out[out.length - 1]
+    if (typeof prev === 'number' && item - prev > 1) out.push('...')
+    out.push(item)
+  }
+  if ((sorted[sorted.length - 1] ?? totalPages) < totalPages) out.push('...')
+  return out
 }
 
 

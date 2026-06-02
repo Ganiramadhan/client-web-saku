@@ -44,13 +44,15 @@ export function ForgotPasswordPage() {
     return () => window.clearInterval(timer)
   }, [otpSent, otpVerified])
 
-  const m = useMutation({
-    mutationFn: () => forgotPassword(email.trim(), turnstileToken),
+  const m = useMutation<void, Error, boolean>({
+    mutationFn: (resend) => forgotPassword(email.trim(), resend ? undefined : turnstileToken, resend),
     onSuccess: () => {
       setOtpSent(true)
       setOtp('')
       setOtpExpiresAt(Date.now() + 10 * 60 * 1000)
       setResendAt(Date.now() + 60 * 1000)
+      setTurnstileToken('')
+      setTurnstileResetSignal((value) => value + 1)
       toast.success(t.auth.otpSentMessage, t.auth.otpSentTitle)
     },
     onError: (error) => {
@@ -108,7 +110,7 @@ export function ForgotPasswordPage() {
         toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
         return
       }
-      m.mutate()
+      m.mutate(false)
       return
     }
     if (!otpVerified) {
@@ -164,11 +166,7 @@ export function ForgotPasswordPage() {
                       toast.error(t.auth.emailRequiredMessage, t.auth.emailRequiredTitle)
                       return
                     }
-                    if (isTurnstileEnabled() && !turnstileToken) {
-                      toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
-                      return
-                    }
-                    m.mutate()
+                    m.mutate(true)
                   }}
                   className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >

@@ -55,10 +55,10 @@ export function HowItWorksSection() {
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
                       className={cn(
-                        'inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200',
+                        'inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-out',
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-slate-500 hover:bg-blue-50 hover:text-blue-700'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-200/70'
+                          : 'text-slate-500 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm'
                       )}
                     >
                       <tab.Icon className="h-4 w-4" />
@@ -105,7 +105,7 @@ function MobileHowItWorks({
   return (
     <div className="mt-10 grid gap-2.5">
       {tabs.map((tab, index) => (
-        <div key={tab.id} className="landing-mobile-hover rounded-2xl border border-slate-200 bg-white/90 p-4">
+        <div key={tab.id} className="landing-mobile-hover rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm transition-all duration-300 hover:border-blue-100 hover:shadow-md hover:shadow-blue-100/40">
           <div className="flex items-start gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
               <tab.Icon className="h-4 w-4" />

@@ -74,6 +74,12 @@ export function unwrapList<T>(
 export function toErrorMessage(err: unknown): string {
   const locale = currentLocale()
   if (axios.isAxiosError(err)) {
+    const status = err.response?.status
+    if (status === 502 || status === 503 || status === 504) {
+      return locale === 'id'
+        ? 'Layanan sedang sibuk. Coba lagi sebentar lagi.'
+        : 'The service is busy. Please try again in a moment.'
+    }
     return translateApiMessage(err.response?.data?.message || err.message || 'Network error', locale)
   }
   if (err instanceof Error) return translateApiMessage(err.message, locale)
@@ -100,27 +106,27 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
       'Paket Free bisa membuat maksimal 2 wallet. Upgrade ke Pro untuk kapasitas wallet lebih besar.',
     'Free plan can create up to 2 wallets. Upgrade to Pro for more wallets':
       'Paket Free bisa membuat maksimal 2 wallet. Upgrade ke Pro untuk kapasitas wallet lebih besar.',
-    'Pro plan can create up to 10 wallets. Upgrade to Premium for more wallets':
-      'Paket Pro bisa membuat maksimal 10 wallet. Upgrade ke Premium untuk kapasitas wallet lebih besar.',
-    'Premium plan can create up to 50 wallets':
-      'Paket Premium bisa membuat maksimal 50 wallet.',
-    'Free plan can use Chat with AI up to 5 times per day. Upgrade to Pro for unlimited AI chat':
-      'Paket Free bisa memakai Chat with AI maksimal 5 kali per hari. Upgrade ke Pro untuk kuota AI lebih besar.',
-    'Free plan can scan receipts up to 3 times per day. Upgrade to Pro for unlimited receipt scanning':
-      'Paket Free bisa scan struk maksimal 3 kali per hari. Upgrade ke Pro untuk kuota scan lebih besar.',
+    'Pro plan includes unlimited wallets':
+      'Paket Pro mencakup wallet tanpa batas.',
+    'Premium plan includes unlimited wallets':
+      'Paket Premium mencakup wallet tanpa batas.',
+    'Free plan includes 20 AI chat prompts per month. Upgrade to Pro for 300 prompts/month':
+      'Paket Free mencakup 20 prompt AI per bulan. Upgrade ke Pro untuk 300 prompt per bulan.',
+    'Free plan includes 10 OCR scans per month. Upgrade to Pro for 100 scans/month':
+      'Paket Free mencakup 10 scan OCR per bulan. Upgrade ke Pro untuk 100 scan per bulan.',
     'Free plan can create up to 3 upcoming billings. Upgrade to Pro for more billing reminders':
       'Paket Free bisa membuat maksimal 3 upcoming billing. Upgrade ke Pro untuk reminder billing lebih banyak.',
-    'Pro plan can create up to 20 upcoming billings. Upgrade to Premium for more billing reminders':
-      'Paket Pro bisa membuat maksimal 20 upcoming billing. Upgrade ke Premium untuk reminder billing lebih banyak.',
-    'Premium plan can create up to 100 upcoming billings':
-      'Paket Premium bisa membuat maksimal 100 upcoming billing.',
+    'Pro plan includes unlimited upcoming billings':
+      'Paket Pro mencakup upcoming billing tanpa batas.',
+    'Premium plan includes unlimited upcoming billings':
+      'Paket Premium mencakup upcoming billing tanpa batas.',
     'Pro plan monthly AI limit reached. Upgrade to Premium for more AI prompts':
       'Kuota AI bulanan paket Pro sudah habis. Upgrade ke Premium untuk prompt AI lebih banyak.',
-    'Pro plan monthly receipt scan limit reached. Upgrade to Premium for more receipt scans':
+    'Pro plan monthly OCR limit reached. Upgrade to Premium for more receipt scans':
       'Kuota scan struk bulanan paket Pro sudah habis. Upgrade ke Premium untuk scan lebih banyak.',
     'Premium plan monthly AI limit reached':
       'Kuota AI bulanan paket Premium sudah habis.',
-    'Premium plan monthly receipt scan limit reached':
+    'Premium plan monthly OCR limit reached':
       'Kuota scan struk bulanan paket Premium sudah habis.',
     'Source wallet has an active target. Confirm target removal before transferring balance':
       'Wallet sumber memiliki target aktif. Konfirmasi penghapusan target sebelum memindahkan saldo.',

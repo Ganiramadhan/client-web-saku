@@ -52,6 +52,17 @@ import {
 
 const FREE_TEXT_DRAFT_KEY = 'saku-free-text-draft-v1'
 const FREE_TEXT_SAVED_KEY = 'saku-free-text-saved-reviews-v1'
+const currentAIReference = () => ({
+  reference_date: localDateKey(new Date()),
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
+})
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 export function FreeTextPage() {
   const t = useT()
@@ -75,7 +86,7 @@ export function FreeTextPage() {
           '4. Kalau bingung, ketik "help" kapan saja untuk melihat panduan ini.',
         ].join('\n'),
         parseFailed: 'Saya belum berhasil menangkap detail transaksinya. Coba tulis lebih spesifik, misalnya: "beli bubur ayam 14rb". Kalau butuh panduan, ketik "help".',
-        errorPrefix: 'Maaf, terjadi kesalahan:',
+        errorPrefix: 'Maaf, AI sedang belum bisa memproses pesan itu.',
         singleIntro: 'Silakan cek dan konfirmasi detailnya di bawah:',
         batchIntro: (count: number) => `Saya menangkap ${count} transaksi. Pilih yang ingin disimpan, lalu klik "Simpan terpilih".`,
         selectOne: 'Pilih minimal satu transaksi yang ingin disimpan.',
@@ -102,7 +113,7 @@ export function FreeTextPage() {
           '4. Type "help" anytime to see this guide.',
         ].join('\n'),
         parseFailed: 'I could not detect the transaction details yet. Try something more specific, for example: "chicken porridge 14k". Type "help" if you need guidance.',
-        errorPrefix: 'Sorry, something went wrong:',
+        errorPrefix: 'Sorry, SAKU AI could not process that message right now.',
         singleIntro: 'Please review and confirm the details below:',
         batchIntro: (count: number) => `I found ${count} transactions. Select the ones to save, then click "Save selected".`,
         selectOne: 'Select at least one transaction to save.',
@@ -122,7 +133,7 @@ export function FreeTextPage() {
     return [fresh]
   })
 
-  const [activeId, setActiveId] = useState<string | null>(() => initialDraft.activeId ?? sessions[0]?.id ?? null)
+  const [activeId, setActiveId] = useState<string | null>(() => sessions[0]?.id ?? null)
 
   const [text, setText] = useState('')
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null)
@@ -133,6 +144,7 @@ export function FreeTextPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const savingIdsRef = useRef<Set<string>>(new Set())
+  const pickedInitialLatestRef = useRef(false)
 
   useEffect(() => {
     saveFreeTextDraft(sessions, activeId, user?.id)
@@ -141,13 +153,16 @@ export function FreeTextPage() {
   useEffect(() => {
     const nextDraft = loadFreeTextDraft(locale, user?.id)
     if (nextDraft.sessions.length > 0) {
-      setSessions(nextDraft.sessions)
-      setActiveId(nextDraft.activeId ?? nextDraft.sessions[0]?.id ?? null)
+      const sorted = [...nextDraft.sessions].sort((a, b) => b.updatedAt - a.updatedAt)
+      setSessions(sorted)
+      setActiveId(sorted[0]?.id ?? null)
+      pickedInitialLatestRef.current = false
       return
     }
     const fresh = createEmptySession(locale)
     setSessions([fresh])
     setActiveId(fresh.id)
+    pickedInitialLatestRef.current = false
   }, [user?.id, locale])
 
   const wallets = useQuery({ queryKey: ['wallets', user?.id], queryFn: walletApi.list, enabled: Boolean(user?.id) })
@@ -175,9 +190,17 @@ export function FreeTextPage() {
 
     const timer = window.setTimeout(() => {
       let shouldActivateDb = false
+      let latestSessionId: string | null = null
       setSessions((prev) => {
         const currentSession = prev.find((session) => session.id === activeId)
-        shouldActivateDb = dbSessions.length > 0 && (!activeId || !currentSession || currentSession.messages.length === 0)
+        const sortedDbSessions = [...dbSessions].sort((a, b) => b.updatedAt - a.updatedAt)
+        latestSessionId = sortedDbSessions[0]?.id ?? null
+        shouldActivateDb = sortedDbSessions.length > 0 && (
+          !pickedInitialLatestRef.current ||
+          !activeId ||
+          !currentSession ||
+          currentSession.messages.length === 0
+        )
         const dbIds = new Set(dbSessions.map((session) => session.id))
         const dbBySignature = new Map(
           dbSessions
@@ -212,7 +235,10 @@ export function FreeTextPage() {
           },
         ]
       })
-      if (shouldActivateDb && dbSessions[0]) setActiveId(dbSessions[0].id)
+      if (shouldActivateDb && latestSessionId) {
+        setActiveId(latestSessionId)
+        pickedInitialLatestRef.current = true
+      }
     }, 0)
     return () => window.clearTimeout(timer)
   }, [chatLogs.data, nlpLogs.data, activeId, locale, user?.id])
@@ -461,7 +487,12 @@ export function FreeTextPage() {
 
   /* ─── Mutations ─── */
   const categorizeMutation = useMutation({
-    mutationFn: (inputText: string) => aiApi.categorize({ text: inputText, session_id: active?.id ?? activeId ?? undefined, language: detectPreferredLanguage(inputText, locale) }),
+    mutationFn: (inputText: string) => aiApi.categorize({
+      text: inputText,
+      session_id: active?.id ?? activeId ?? undefined,
+      language: detectPreferredLanguage(inputText, locale),
+      ...currentAIReference(),
+    }),
     onSuccess: (data, inputText) => {
       // Prefer the multi-transaction array when the model returned one.
       // Fallback to the single top-level fields for older responses.
@@ -538,6 +569,7 @@ export function FreeTextPage() {
             confidence: item.confidence,
             description: item.description,
             wallet_hint: item.wallet_hint,
+            recurring_hint: item.recurring_hint,
             date: transactionDate,
             transaction_date: transactionDate,
           },
@@ -566,7 +598,7 @@ export function FreeTextPage() {
         {
           id: uid(),
           role: 'assistant',
-            content: `${aiCopy.errorPrefix} ${toErrorMessage(e)}`,
+          content: friendlyAIError(e, locale),
         },
       ])
     },
@@ -590,7 +622,14 @@ export function FreeTextPage() {
           role: m.role as 'user' | 'assistant',
           content: m.content,
         }))
-      return aiApi.chat({ message: msg, include_context: true, history: prior, session_id: active?.id ?? activeId ?? undefined, language: detectPreferredLanguage(msg, locale) })
+      return aiApi.chat({
+        message: msg,
+        include_context: true,
+        history: prior,
+        session_id: active?.id ?? activeId ?? undefined,
+        language: detectPreferredLanguage(msg, locale),
+        ...currentAIReference(),
+      })
     },
     onSuccess: (data) => {
       updateActive((prev) => [
@@ -607,7 +646,7 @@ export function FreeTextPage() {
         {
           id: uid(),
           role: 'assistant',
-          content: `${aiCopy.errorPrefix} ${toErrorMessage(e)}`,
+          content: friendlyAIError(e, locale),
         },
       ])
     },
@@ -816,8 +855,39 @@ export function FreeTextPage() {
       window.setTimeout(showHelp, 0)
       return
     }
-    if (mode === 'nlp') categorizeMutation.mutate(trimmed)
-    else chatMutation.mutate(trimmed)
+    if (mode === 'nlp') {
+      const corrected = buildCorrectedReviews(trimmed, active?.messages ?? [], {
+        locale,
+        resolveWalletIdFromText,
+        findCategoryId,
+        defaultWalletId,
+      })
+      if (corrected.length > 0) {
+        const correctedBatchId = corrected.length > 1 ? corrected[0]?.batchId : undefined
+        updateActive((prev) => [
+          ...removeOpenReviewMessages(prev),
+          {
+            id: uid(),
+            role: 'assistant',
+            content: locale === 'id'
+              ? 'Siap, saya buat pratinjau baru dari koreksi kamu. Cek lagi sebelum disimpan.'
+              : 'Got it. I created a new preview from your correction. Please review before saving.',
+          },
+          ...corrected,
+          ...(correctedBatchId
+            ? [{
+                id: uid(),
+                role: 'assistant' as const,
+                content: '',
+                type: 'batch-actions' as const,
+                batchId: correctedBatchId,
+              }]
+            : []),
+        ])
+        return
+      }
+      categorizeMutation.mutate(trimmed)
+    } else chatMutation.mutate(trimmed)
   }
 
   /* ─── Voice ─── */
@@ -1306,8 +1376,163 @@ function formatCompactAmount(value: number): string {
 function detectPreferredLanguage(text: string, fallback: 'id' | 'en'): 'id' | 'en' {
   const normalized = text.toLowerCase()
   const englishHints = /\b(what|which|how|why|when|where|total|spending|income|expense|budget|wallet|category|compare|summarize|show|list|this month|last month)\b/
-  const indonesianHints = /\b(apa|berapa|mana|bagaimana|pengeluaran|pemasukan|dompet|kategori|bulan ini|bulan lalu|bandingkan|ringkas|tampilkan)\b/
+  const indonesianHints = /\b(apa|berapa|mana|bagaimana|pengeluaran|pemasukan|dompet|kategori|bulan ini|bulan lalu|bandingkan|ringkas|tampilkan|berikan|semua|transaksi|transaksinya|bukan|cuma|kemarin|hari ini|aja|pakai|pake|menggunakan|saldo|sisa|nominal|jumlah|rincian)\b/
   if (englishHints.test(normalized) && !indonesianHints.test(normalized)) return 'en'
   if (indonesianHints.test(normalized)) return 'id'
   return fallback
+}
+
+function friendlyAIError(err: unknown, locale: 'id' | 'en'): string {
+  const status = getErrorStatus(err)
+  if (status === 429) {
+    return locale === 'id'
+      ? 'Kuota AI kamu sudah mencapai batas saat ini. Coba lagi nanti atau cek paket langgananmu.'
+      : 'Your AI usage has reached the current limit. Try again later or check your subscription.'
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return locale === 'id'
+      ? 'Maaf, AI SAKU sedang sibuk dan belum bisa memproses pesan itu. Coba kirim ulang sebentar lagi.'
+      : 'Sorry, SAKU AI is busy and could not process that message. Please try again in a moment.'
+  }
+  const message = toErrorMessage(err)
+  if (/kuota|limit|prompt ai|paket free|free plan|upgrade/i.test(message)) {
+    return locale === 'id'
+      ? 'Kuota AI bulanan di paket Free sudah habis. Upgrade ke Pro untuk lanjut mencatat transaksi dan bertanya ke AI dengan kuota yang jauh lebih besar.'
+      : 'Your monthly AI quota on the Free plan has been used. Upgrade to Pro to keep recording transactions and asking SAKU AI with a much larger quota.'
+  }
+  if (/request failed with status code/i.test(message)) {
+    return locale === 'id'
+      ? 'Maaf, pesan itu belum bisa diproses. Coba ulangi sebentar lagi.'
+      : 'Sorry, that message could not be processed. Please try again in a moment.'
+  }
+  return locale === 'id'
+    ? `Maaf, pesan itu belum bisa diproses. ${message}`
+    : `Sorry, that message could not be processed. ${message}`
+}
+
+function buildCorrectedReviews(
+  text: string,
+  messages: Message[],
+  opts: {
+    locale: 'id' | 'en'
+    resolveWalletIdFromText: (inputText: string) => string | undefined
+    findCategoryId: (categoryName?: string, type?: TransactionType, context?: string) => string | undefined
+    defaultWalletId: string
+  },
+): Message[] {
+  const lower = text.toLowerCase()
+  const looksLikeCorrection = /\b(eh|maksudnya|harusnya|ganti|ubah|koreksi|ralat|correction|actually|change|instead)\b/.test(lower)
+  const hasNewTransactionIntent = /\b(beli|buy|bayar|paid|jajan|makan|minum|ngopi|kopi|lunch|dinner|sarapan|top ?up|transfer|kirim|ngirim|kasih|ngasih|memberi|beri|gaji|income|pemasukan|terima|dapat|alokasi|catat|record)\b/.test(lower)
+  const hasCorrectionField = /\b(kemarin|yesterday|hari ini|today|besok|tomorrow|pake|pakai|using|via|dompet|wallet|cash|tunai|bank|nominal|amount|jadi|sebesar|rb|ribu|k|jt|juta)\b/.test(lower)
+  if (!looksLikeCorrection && (!hasCorrectionField || hasNewTransactionIntent)) return []
+
+  const latestReview = [...messages]
+    .reverse()
+    .find((message) => message.type === 'transaction-review' && !message.saved && message.form)
+  const openReviews = latestReview ? [latestReview] : []
+  if (openReviews.length === 0) return []
+
+  const correctedDate = parseCorrectionDate(text) ?? inferTransactionDate(text)
+  const hasDateCorrection = /\b(kemarin|yesterday|hari ini|today|besok|tomorrow|tanggal|tgl|date|mei|may|jan|feb|mar|apr|jun|jul|agu|aug|sep|okt|oct|nov|des|dec)\b/.test(lower)
+  const walletId = opts.resolveWalletIdFromText(text)
+  const amount = parseCorrectionAmount(text)
+  const batchId = openReviews.length > 1 ? uid() : undefined
+
+  return openReviews.map((message) => {
+    const form = message.form!
+    const nextForm: TxForm = {
+      ...form,
+      wallet_id: walletId || form.wallet_id || opts.defaultWalletId,
+      amount: amount ?? form.amount,
+      transaction_date: hasDateCorrection ? correctedDate : form.transaction_date,
+    }
+    const categoryId = opts.findCategoryId(
+      message.extractedData?.category,
+      nextForm.type,
+      `${message.extractedData?.description ?? ''} ${message.extractedData?.merchant_name ?? ''} ${nextForm.description}`,
+    )
+    if (!nextForm.category_id && categoryId) nextForm.category_id = categoryId
+    return {
+      ...message,
+      id: uid(),
+      form: nextForm,
+      extractedData: {
+        ...message.extractedData,
+        amount: nextForm.amount,
+        wallet_hint: walletId ? text : message.extractedData?.wallet_hint,
+        date: nextForm.transaction_date,
+        transaction_date: nextForm.transaction_date,
+      },
+      batchId,
+      selected: batchId ? true : message.selected,
+      saved: false,
+    }
+  })
+}
+
+function parseCorrectionAmount(text: string): number | undefined {
+  const lower = text.toLowerCase()
+  const hasAmountIntent = /\b(nominal(?:nya)?|amount(?:nya)?|harganya|harga|sebesar|senilai|jadi)\b/.test(lower)
+  const match = text.match(/\b(?:nominal(?:nya)?|amount(?:nya)?|harganya|harga|sebesar|senilai|jadi)?\s*(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|k|m)?\b/i)
+  if (!match) return undefined
+  const unit = (match[2] || '').toLowerCase()
+  const after = lower.slice((match.index ?? 0) + match[0].length).trim()
+  if (/^(jan|januari|feb|februari|mar|maret|apr|april|mei|may|jun|juni|jul|juli|agu|agustus|aug|sep|september|okt|oct|nov|des|dec|desember)\b/.test(after)) {
+    return undefined
+  }
+  if (!hasAmountIntent && !unit) return undefined
+  let value = Number(match[1].replace(/\./g, '').replace(',', '.'))
+  if (!Number.isFinite(value) || value <= 0) return undefined
+  if (['juta', 'jt', 'm'].includes(unit)) value *= 1_000_000
+  else if (['ribu', 'rb', 'k'].includes(unit)) value *= 1_000
+  else if (value > 0 && value < 1000) return undefined
+  return Math.round(value)
+}
+
+function parseCorrectionDate(text: string): string | undefined {
+  const lower = text.toLowerCase()
+  const months: Record<string, number> = {
+    jan: 1, januari: 1, january: 1,
+    feb: 2, februari: 2, february: 2,
+    mar: 3, maret: 3, march: 3,
+    apr: 4, april: 4,
+    mei: 5, may: 5,
+    jun: 6, juni: 6, june: 6,
+    jul: 7, juli: 7, july: 7,
+    agu: 8, agustus: 8, aug: 8, august: 8,
+    sep: 9, september: 9,
+    okt: 10, oct: 10, oktober: 10, october: 10,
+    nov: 11, november: 11,
+    des: 12, dec: 12, desember: 12, december: 12,
+  }
+  const named = lower.match(/\b(?:tanggal|tgl|date|waktu)?\s*(\d{1,2})\s+(jan|januari|january|feb|februari|february|mar|maret|march|apr|april|mei|may|jun|juni|june|jul|juli|july|agu|agustus|aug|august|sep|september|okt|oct|oktober|october|nov|november|des|dec|desember|december)(?:\s+(\d{4}))?\b/)
+  if (named) {
+    const day = Number(named[1])
+    const month = months[named[2]]
+    const year = Number(named[3] || new Date().getFullYear())
+    if (day >= 1 && day <= 31 && month) return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  const numeric = lower.match(/\b(?:tanggal|tgl|date|waktu)?\s*(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/)
+  if (numeric) {
+    const day = Number(numeric[1])
+    const month = Number(numeric[2])
+    const rawYear = numeric[3]
+    const year = rawYear ? Number(rawYear.length === 2 ? `20${rawYear}` : rawYear) : new Date().getFullYear()
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+  return undefined
+}
+
+function removeOpenReviewMessages(messages: Message[]): Message[] {
+  const openBatchIds = new Set(
+    messages
+      .filter((message) => message.type === 'transaction-review' && !message.saved && message.batchId)
+      .map((message) => message.batchId)
+      .filter(Boolean) as string[],
+  )
+  return messages.filter((message) => {
+    if (message.type === 'transaction-review' && !message.saved) return false
+    if (message.type === 'batch-actions' && message.batchId && openBatchIds.has(message.batchId)) return false
+    return true
+  })
 }

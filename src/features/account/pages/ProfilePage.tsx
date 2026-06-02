@@ -51,7 +51,7 @@ export function ProfilePage() {
         paymentPending: 'Pembayaran belum selesai',
         paymentFailed: 'Pembayaran gagal',
         paymentExpired: 'Sesi pembayaran sudah kedaluwarsa. Silakan buat checkout baru.',
-        pendingPlanExists: 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.',
+        pendingPlanExists: 'Masih ada pembayaran pending. Lanjutkan dari kartu pembayaran pending atau batalkan dulu sebelum memilih paket.',
         subCanceled: 'Langganan berhasil dibatalkan.',
         accountInfo: 'Informasi Akun',
         accountInfoDesc: 'Foto, nama tampilan, dan email yang dipakai untuk login.',
@@ -80,7 +80,7 @@ export function ProfilePage() {
         paymentPending: 'Payment is still pending',
         paymentFailed: 'Payment failed',
         paymentExpired: 'The payment session has expired. Please start a new checkout.',
-        pendingPlanExists: 'You still have a pending payment. Cancel it first before choosing another plan.',
+        pendingPlanExists: 'You still have a pending payment. Continue from the pending payment card or cancel it before choosing a plan.',
         subCanceled: 'Subscription canceled.',
         accountInfo: 'Account Information',
         accountInfoDesc: 'Photo, display name, and email used for login.',
@@ -113,6 +113,7 @@ export function ProfilePage() {
   const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
+  const [busyResume, setBusyResume] = useState(false)
   const snapLoadedRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -159,7 +160,7 @@ export function ProfilePage() {
       setUser(u)
       qc.invalidateQueries({ queryKey: ['me'] })
       setPendingPhotoKey(null)
-      setPendingPhotoPreview(null)
+      setPendingPhotoPreview((preview) => u.photo_url ? null : preview)
       toast.success(copy.profileUpdated)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
@@ -215,13 +216,14 @@ export function ProfilePage() {
     [subscriptions.data],
   )
 
-  const handleSubscribe = async (planCode: string, referralCode?: string) => {
+  const handleSubscribe = async (planCode: string, referralCode?: string, resumePending = false) => {
     try {
-      if (pendingSubscription && pendingSubscription.plan_code !== planCode) {
+      if (pendingSubscription && !resumePending) {
         toast.info(copy.pendingPlanExists)
         return
       }
-      setBusyPlan(planCode)
+      if (resumePending) setBusyResume(true)
+      else setBusyPlan(planCode)
       const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
@@ -264,7 +266,8 @@ export function ProfilePage() {
       qc.invalidateQueries({ queryKey: ['subscriptions'] })
       qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
     } finally {
-      setBusyPlan(null)
+      if (resumePending) setBusyResume(false)
+      else setBusyPlan(null)
     }
   }
 
@@ -321,13 +324,18 @@ export function ProfilePage() {
                     src={photo}
                     alt={me.data?.name ?? ''}
                     referrerPolicy="no-referrer"
-                    className="h-20 w-20 rounded-full object-cover ring-2 ring-white/80 shadow-md"
+                    className={cnProfilePhoto(upload.isPending || save.isPending)}
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-2xl font-bold text-white shadow-md">
+                  <div className={cnProfileAvatar(upload.isPending || save.isPending)}>
                     {initials}
                   </div>
                 )}
+                {(upload.isPending || save.isPending) ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
+                    <Spinner className="h-5 w-5 text-blue-700" />
+                  </div>
+                ) : null}
                 {pendingPhotoKey ? (
                   <span
                     className="absolute -right-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white"
@@ -376,7 +384,7 @@ export function ProfilePage() {
                   size="sm"
                   leftIcon={<HiOutlineCamera className="h-4 w-4" />}
                   onClick={() => fileRef.current?.click()}
-                  loading={upload.isPending}
+                  disabled={upload.isPending}
                   className="transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   {copy.change}
@@ -488,6 +496,7 @@ export function ProfilePage() {
                 plans={paidPlans}
                 plansLoading={plans.isLoading}
                 busyPlan={busyPlan}
+                resumeLoading={busyResume}
                 onSubscribe={handleSubscribe}
                 onCancel={async (id) => {
                   const ok = await confirm({
@@ -517,3 +526,15 @@ export function ProfilePage() {
 }
 
 export default ProfilePage
+
+function cnProfilePhoto(isLoading: boolean) {
+  return `h-20 w-20 rounded-full object-cover ring-2 ring-white/80 shadow-md transition ${
+    isLoading ? 'scale-95 opacity-60' : ''
+  }`
+}
+
+function cnProfileAvatar(isLoading: boolean) {
+  return `flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-2xl font-bold text-white shadow-md transition ${
+    isLoading ? 'scale-95 opacity-60' : ''
+  }`
+}

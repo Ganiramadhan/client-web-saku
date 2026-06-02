@@ -13,6 +13,7 @@ export interface ExtractedTx {
   date?: string
   transaction_date?: string
   wallet_hint?: string
+  recurring_hint?: string
 }
 
 export interface TxForm {
@@ -51,6 +52,7 @@ export const NLP_EXAMPLES = [
   'beli nasi padang 35rb',
   'gaji freelance 3juta',
   'bayar listrik 450ribu',
+  'catat Netflix 65rb setiap bulan',
   'beli bensin 50k',
   'bonus kantor 5jt',
 ]
@@ -59,6 +61,7 @@ export const NLP_EXAMPLES_EN = [
   'lunch at Sederhana 35k',
   'freelance payment 3m',
   'electricity bill 450k',
+  'record Netflix 65k every month',
   'fuel expense 50k',
   'office bonus 5m',
 ]
@@ -89,8 +92,50 @@ export function cleanMerchant(value?: string | null): string {
 export function deriveTitle(messages: Message[]): string {
   const firstUser = messages.find((m) => m.role === 'user')
   if (!firstUser) return 'Chat baru'
-  const title = firstUser.content.trim().replace(/\s+/g, ' ')
+  const title = summarizeChatTitle(firstUser.content)
   return title.length > 40 ? `${title.slice(0, 40)}...` : title
+}
+
+function summarizeChatTitle(content: string): string {
+  const text = content.trim().replace(/\s+/g, ' ')
+  if (!text) return 'Chat baru'
+  const lowered = text.toLowerCase()
+  const amount = text.match(/\b\d+(?:[.,]\d+)?\s*(?:rb|ribu|k|jt|juta|m|million)?\b/i)?.[0]
+  const date = lowered.includes('kemarin') || lowered.includes('yesterday')
+    ? 'Yesterday'
+    : lowered.includes('hari ini') || lowered.includes('today')
+      ? 'Today'
+      : ''
+  if (/(list|daftar|tampilkan|show|semua|all).*(transaksi|transactions)|^(list|daftar|show)\b/.test(lowered)) {
+    if (/(dompet|wallet|bank|cash|tunai|mandiri|jago|bca|bri|bni)/.test(lowered)) return 'Daftar transaksi wallet'
+    return 'Daftar transaksi'
+  }
+  if (/(total|subtotal|nominal|jumlah).*(transaksi|pengeluaran|expense|spending)/.test(lowered)) {
+    return 'Total dan rincian transaksi'
+  }
+  if (/(pengeluaran|expense|spending|transaksi|transaction).*(tanggal|tgl|date)|tanggal|tgl/.test(lowered)) {
+    const match = text.match(/(?:tanggal|tgl|date|on)\s+\d{1,2}(?:[-/\s]+\w+)?(?:[-/\s]+\d{2,4})?/i)
+    return `Transactions ${match ? match[0].replace(/^(tanggal|tgl|date|on)\s+/i, '') : ''}`.trim()
+  }
+  if (/(beli|buy|bayar|paid|makan|kopi|coffee|sayur|sate)/.test(lowered)) {
+    const cleaned = text
+      .replace(/\b(aku|saya|i|hari ini|kemarin|today|yesterday|tolong|catat|record|buat|please|mau)\b/gi, '')
+      .replace(/\b(pake|pakai|menggunakan|using|via)\b.*$/i, '')
+      .trim()
+    const base = cleaned || text
+    return titleCase(`${date ? `${date} ` : ''}${base}${amount && !base.includes(amount) ? ` ${amount}` : ''}`.trim())
+  }
+  if (/(saldo|balance|wallet|dompet|bank|cash|tunai)/.test(lowered)) return 'Wallet balance question'
+  if (/(ringkas|summary|summarize|insight|budget|anggaran)/.test(lowered)) return 'Finance insight'
+  return text
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => (/^\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ')
 }
 
 export function chatSessionsFromLogs(
@@ -270,7 +315,14 @@ export function inferTransactionDate(text: string, explicit?: string): string {
   const lowered = text.toLowerCase()
   if (/\b(kemarin|yesterday)\b/.test(lowered)) date.setDate(date.getDate() - 1)
   else if (/\b(besok|tomorrow)\b/.test(lowered)) date.setDate(date.getDate() + 1)
-  return date.toISOString().slice(0, 10)
+  return localDateKey(date)
+}
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export interface SpeechRecognitionLike {

@@ -54,6 +54,7 @@ const SCAN_COPY = {
     editTitle: 'Edit Detail Transaksi',
     previewDesc: 'Readonly hasil ekstraksi struk sebelum disimpan',
     editDesc: 'Sesuaikan data hasil ekstraksi struk',
+    readonlyHint: 'Klik Edit Detail dulu untuk mengubah hasil scan.',
     type: 'Tipe Transaksi',
     amount: 'Nominal',
     merchant: 'Merchant',
@@ -104,6 +105,7 @@ const SCAN_COPY = {
     editTitle: 'Edit Transaction Details',
     previewDesc: 'Readonly receipt extraction before saving',
     editDesc: 'Adjust extracted receipt details',
+    readonlyHint: 'Click Edit Details first to change the scan result.',
     type: 'Transaction Type',
     amount: 'Amount',
     merchant: 'Merchant',
@@ -448,6 +450,7 @@ export function ReceiptTransactionPanel({
   onEdit,
   onCancelEdit,
   onSave,
+  onReadonlyClick,
 }: {
   form: ReceiptFormState
   isEditing: boolean
@@ -460,6 +463,7 @@ export function ReceiptTransactionPanel({
   onEdit: () => void
   onCancelEdit: () => void
   onSave: () => void
+  onReadonlyClick?: () => void
 }) {
   const copy = useScanCopy()
   return (
@@ -478,7 +482,15 @@ export function ReceiptTransactionPanel({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        onClickCapture={(event) => {
+          if (isEditing) return
+          const target = event.target as HTMLElement
+          if (target.closest('button')) return
+          onReadonlyClick?.()
+        }}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <RSelect
             label={copy.type}

@@ -38,62 +38,64 @@ function planFeatures(code: string, locale: string): string[] | null {
   const features = {
     free: {
       id: [
-        'Transaksi manual tanpa batas',
-        'Scan struk 3x per hari',
-        'Chat with AI 5x per hari',
-        '2 wallet',
-        'Budget target',
-        'Upcoming billing 3 item',
-        'AI insight basic',
+        'Transaksi tanpa batas',
+        '2 dompet',
+        'Target anggaran',
+        'AI Chat 20/bulan',
+        'OCR 10/bulan',
+        'Insight AI dasar',
+        '3 upcoming billing',
       ],
       en: [
-        'Unlimited manual transactions',
-        'Receipt scan 3x/day',
-        'Chat with AI 5x/day',
-        '2 wallets',
-        'Budget targets',
-        '3 upcoming billings',
-        'Basic AI insight',
+        'Unlimited Transactions',
+        '2 Wallets',
+        'Budget Targets',
+        'AI Chat 20/month',
+        'OCR 10/month',
+        'Basic AI Insights',
+        '3 Upcoming Billings',
       ],
     },
     pro: {
       id: [
-        'Semua fitur Basic',
-        'Chat with AI 300 prompt/bulan',
-        'Scan struk 90x/bulan',
-        '10 wallet',
-        'Upcoming billing 20 item',
+        'Semua fitur Free',
+        'Dompet tanpa batas',
+        'AI Chat 300/bulan',
+        'OCR 100/bulan',
+        'Upcoming billing tanpa batas',
         'Split bill',
-        'Insight dashboard lebih lengkap',
+        'Recurring transactions',
+        'Export CSV/Excel',
+        'Insight AI lengkap',
       ],
       en: [
-        'Everything in Basic',
-        'Chat with AI 300 prompts/month',
-        'Receipt scan 90x/month',
-        '10 wallets',
-        '20 upcoming billings',
-        'Split bill',
-        'Richer dashboard insights',
+        'Everything in Free',
+        'Unlimited Wallets',
+        'AI Chat 300/month',
+        'OCR 100/month',
+        'Unlimited Upcoming Billings',
+        'Split Bill',
+        'Recurring Transactions',
+        'Export CSV/Excel',
+        'Rich AI Insights',
       ],
     },
     premium: {
       id: [
         'Semua fitur Pro',
-        'Chat with AI 1.200 prompt/bulan',
-        'Scan struk 300x/bulan',
-        '50 wallet',
-        'Upcoming billing 100 item',
-        'Export dan laporan lanjutan',
-        'Prioritas support',
+        'AI Chat 1.200/bulan',
+        'OCR 300/bulan',
+        'Laporan lanjutan',
+        'Export PDF',
+        'Dukungan prioritas',
       ],
       en: [
         'Everything in Pro',
-        'Chat with AI 1,200 prompts/month',
-        'Receipt scan 300x/month',
-        '50 wallets',
-        '100 upcoming billings',
-        'Advanced export and reports',
-        'Priority support',
+        'AI Chat 1,200/month',
+        'OCR 300/month',
+        'Advanced Reports',
+        'PDF Export',
+        'Priority Support',
       ],
     },
   } as const
@@ -179,7 +181,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   })
   const fallbackPlans = [
     {
-      name: locale === 'id' ? 'Basic' : 'Basic',
+      name: 'Free',
       price: t.landing.planFreePrice,
       originalPrice: null,
       period: '',
@@ -202,8 +204,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     },
     {
       name: 'Premium',
-      price: period === 'yearly' ? formatCurrency(950400, 'IDR') : t.landing.planBizPrice,
-      originalPrice: period === 'yearly' ? formatCurrency(1188000, 'IDR') : null,
+      price: period === 'yearly' ? formatCurrency(566400, 'IDR') : t.landing.planBizPrice,
+      originalPrice: period === 'yearly' ? formatCurrency(708000, 'IDR') : null,
       period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: null,
       desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
@@ -349,7 +351,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                 <div
                   key={plan.name}
                   className={cn(
-                    'landing-mobile-hover rounded-2xl border bg-white/88 p-4 shadow-sm',
+                    'landing-mobile-hover rounded-2xl border bg-white/88 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/40',
                     isPro ? 'border-blue-200' : isPremium ? 'border-violet-200' : 'border-slate-200',
                   )}
                 >
@@ -391,7 +393,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                     disabled={checkoutM.isPending}
                     onClick={() => handlePlanClick(plan)}
                     className={cn(
-                      'mt-4 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold',
+                    'mt-4 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5',
                       isPro
                         ? 'bg-blue-600 text-white'
                         : isPremium
@@ -419,7 +421,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
               <div
                 key={plan.name}
                 className={cn(
-                  'relative flex flex-col overflow-hidden border bg-white/88 shadow-sm sm:transition-transform sm:duration-200 sm:hover:-translate-y-0.5',
+                  'landing-mobile-hover relative flex flex-col overflow-hidden border bg-white/88 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/40',
                   'rounded-3xl p-8',
                   isPro ? 'border-blue-200 md:scale-105' : 'border-slate-200'
                 )}

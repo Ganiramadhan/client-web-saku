@@ -56,6 +56,7 @@ export function TransactionsListPage() {
 
   // filters
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [walletFilter, setWalletFilter] = useState<string>('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [monthFilter, setMonthFilter] = useState<Date | null>(null)
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
@@ -69,7 +70,7 @@ export function TransactionsListPage() {
   })
   const q = useQuery({
     queryKey: ['transactions', 'all'],
-    queryFn: () => transactionApi.list({ page: 1, limit: 200 }),
+    queryFn: () => transactionApi.list({ page: 1, limit: 1000 }),
   })
 
   const walletMap = useMemo(() => {
@@ -95,10 +96,19 @@ export function TransactionsListPage() {
     ]
   }, [categories.data, typeFilter, txCopy.allCategories])
 
+  const walletFilterOptions: SelectOption[] = useMemo(
+    () => [
+      { value: '', label: txCopy.allWallets },
+      ...(wallets.data ?? []).map((wallet) => ({ value: wallet.id, label: wallet.name })),
+    ],
+    [txCopy.allWallets, wallets.data],
+  )
+
   const filteredTx = useMemo(() => {
     const all = q.data?.data ?? []
     return all.filter((tx) => {
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
+      if (walletFilter && tx.wallet_id !== walletFilter) return false
       if (categoryFilter && tx.category_id !== categoryFilter) return false
       if (monthFilter) {
         const txDate = new Date(tx.transaction_date)
@@ -123,7 +133,7 @@ export function TransactionsListPage() {
       }
       return true
     })
-  }, [q.data, typeFilter, categoryFilter, monthFilter, dateFrom, dateTo])
+  }, [q.data, typeFilter, walletFilter, categoryFilter, monthFilter, dateFrom, dateTo])
 
   useEffect(() => {
     if (dateFrom && dateTo && dateTo < dateFrom) {
@@ -241,6 +251,7 @@ export function TransactionsListPage() {
 
   const resetFilters = () => {
     setTypeFilter('all')
+    setWalletFilter('')
     setCategoryFilter('')
     setMonthFilter(null)
     setDateFrom(null)
@@ -248,7 +259,7 @@ export function TransactionsListPage() {
   }
 
   const hasActiveFilter =
-    typeFilter !== 'all' || categoryFilter !== '' || monthFilter !== null || dateFrom !== null || dateTo !== null
+    typeFilter !== 'all' || walletFilter !== '' || categoryFilter !== '' || monthFilter !== null || dateFrom !== null || dateTo !== null
 
   const columns = useMemo<ColumnDef<Transaction>[]>(
     () => [
@@ -313,6 +324,16 @@ export function TransactionsListPage() {
         accessorFn: (tx) => categoryMap.get(tx.category_id) ?? '—',
         cell: ({ row }) => (
           <CategoryCell name={categoryMap.get(row.original.category_id) ?? '—'} />
+        ),
+      },
+      {
+        id: 'wallet',
+        header: txCopy.wallet,
+        accessorFn: (tx) => walletMap.get(tx.wallet_id) ?? '—',
+        cell: ({ row }) => (
+          <span className="line-clamp-1 max-w-[180px] text-sm font-medium text-slate-700">
+            {walletMap.get(row.original.wallet_id) ?? '—'}
+          </span>
         ),
       },
       {
@@ -461,7 +482,7 @@ export function TransactionsListPage() {
             ) : null}
           </div>
 
-          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-5'}>
+          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-6'}>
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.type}</label>
               <RSelect
@@ -475,6 +496,14 @@ export function TransactionsListPage() {
                   setTypeFilter((v as TypeFilter) ?? 'all')
                   setCategoryFilter('')
                 }}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.wallet}</label>
+              <RSelect
+                value={walletFilter}
+                options={walletFilterOptions}
+                onChange={(v) => setWalletFilter(v ?? '')}
               />
             </div>
             <div>

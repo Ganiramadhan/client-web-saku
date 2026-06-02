@@ -5,6 +5,7 @@ import { aiApi, aiLogApi } from '@/features/ai/api'
 import { categoryApi } from '@/features/categories/api'
 import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
+import { subscriptionApi } from '@/features/subscription/api'
 
 import { PageHeader, type SelectOption } from '@/components/ui'
 
@@ -24,6 +25,7 @@ import {
   ScanHistoryPanel,
 } from '../components/ScanReceiptPanels'
 import { validateImageFile } from '@/lib/files'
+import { useAuthStore } from '@/stores/authStore'
 import {
   cleanMerchant,
   groupHistoryByDay,
@@ -37,21 +39,93 @@ import {
 } from '../utils/receipt'
 
 const SCAN_DRAFT_KEY = 'saku-scan-receipt-draft'
+const SCAN_DRAFT_DB = 'saku-scan-receipt-preview-db'
+const SCAN_DRAFT_STORE = 'previews'
+
+function openScanDraftDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open(SCAN_DRAFT_DB, 1)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(SCAN_DRAFT_STORE)) db.createObjectStore(SCAN_DRAFT_STORE)
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function readScanPreview(key: string): Promise<string> {
+  if (!('indexedDB' in window)) return ''
+  const db = await openScanDraftDB()
+  return new Promise((resolve) => {
+    const tx = db.transaction(SCAN_DRAFT_STORE, 'readonly')
+    const request = tx.objectStore(SCAN_DRAFT_STORE).get(key)
+    request.onsuccess = () => resolve(typeof request.result === 'string' ? request.result : '')
+    request.onerror = () => resolve('')
+    tx.oncomplete = () => db.close()
+  })
+}
+
+async function writeScanPreview(key: string, value: string): Promise<void> {
+  if (!('indexedDB' in window) || !value) return
+  const db = await openScanDraftDB()
+  return new Promise((resolve) => {
+    const tx = db.transaction(SCAN_DRAFT_STORE, 'readwrite')
+    tx.objectStore(SCAN_DRAFT_STORE).put(value, key)
+    tx.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    tx.onerror = () => {
+      db.close()
+      resolve()
+    }
+  })
+}
+
+async function deleteScanPreview(key: string): Promise<void> {
+  if (!('indexedDB' in window)) return
+  const db = await openScanDraftDB()
+  return new Promise((resolve) => {
+    const tx = db.transaction(SCAN_DRAFT_STORE, 'readwrite')
+    tx.objectStore(SCAN_DRAFT_STORE).delete(key)
+    tx.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    tx.onerror = () => {
+      db.close()
+      resolve()
+    }
+  })
+}
 
 export function ScanReceiptPage() {
   const t = useT()
   const qc = useQueryClient()
+  const token = useAuthStore((s) => s.token)
+  const user = useAuthStore((s) => s.user)
+  const draftKey = user?.id ? `${SCAN_DRAFT_KEY}:${user.id}` : token ? '' : `${SCAN_DRAFT_KEY}:anonymous`
 
   const [imagePreview, setImagePreview] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
   const [extractedData, setExtractedData] = useState<ExtractedReceipt | null>(null)
+  const [draftReady, setDraftReady] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const uploadInputRef = useRef<HTMLInputElement>(null)
+  const scanRequestRef = useRef(0)
 
   const [history, setHistory] = useState<ScanHistoryEntry[]>([])
   const [localSavedHistory, setLocalSavedHistory] = useState<ScanHistoryEntry[]>([])
   const [viewing, setViewing] = useState<ScanHistoryEntry | null>(null)
   const [selectedHistory, setSelectedHistory] = useState<Set<string>>(() => new Set())
+
+  useEffect(() => {
+    setHistory([])
+    setLocalSavedHistory([])
+    setSelectedHistory(new Set())
+    setViewing(null)
+  }, [user?.id])
 
   const [form, setForm] = useState({
     wallet_id: '',
@@ -64,44 +138,97 @@ export function ScanReceiptPage() {
   })
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(SCAN_DRAFT_KEY)
-      if (!raw) return
-      const draft = JSON.parse(raw) as {
-        imagePreview?: string
-        isEditing?: boolean
-        extractedData?: ExtractedReceipt | null
-        form?: typeof form
-      }
-      if (draft.imagePreview) setImagePreview(draft.imagePreview)
-      if (draft.extractedData) setExtractedData(draft.extractedData)
-      if (draft.form) setForm(draft.form)
-      if (typeof draft.isEditing === 'boolean') setIsEditing(draft.isEditing)
-    } catch {
-      window.localStorage.removeItem(SCAN_DRAFT_KEY)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!imagePreview && !extractedData) {
-      window.localStorage.removeItem(SCAN_DRAFT_KEY)
+    setDraftReady(false)
+    if (!draftKey) {
+      setDraftReady(true)
       return
     }
-    window.localStorage.setItem(
-      SCAN_DRAFT_KEY,
-      JSON.stringify({ imagePreview, isEditing, extractedData, form }),
-    )
-  }, [extractedData, form, imagePreview, isEditing])
+    let cancelled = false
+    void (async () => {
+      try {
+        if (user?.id) window.localStorage.removeItem(SCAN_DRAFT_KEY)
+        const raw = window.localStorage.getItem(draftKey)
+        if (!raw) {
+          if (!cancelled) {
+            setImagePreview('')
+            setExtractedData(null)
+            setIsEditing(false)
+          }
+          return
+        }
+        const draft = JSON.parse(raw) as {
+          imagePreview?: string
+          isEditing?: boolean
+          extractedData?: ExtractedReceipt | null
+          form?: typeof form
+        }
+        const restoredPreview = draft.imagePreview
+          ? draft.imagePreview.startsWith('data:')
+            ? draft.imagePreview
+            : `data:image/webp;base64,${draft.imagePreview}`
+          : await readScanPreview(draftKey)
+        if (cancelled) return
+        if (restoredPreview) setImagePreview(restoredPreview)
+        if (draft.extractedData) setExtractedData(draft.extractedData)
+        if (draft.form) setForm(draft.form)
+        if (typeof draft.isEditing === 'boolean') setIsEditing(draft.isEditing)
+      } catch {
+        window.localStorage.removeItem(draftKey)
+      } finally {
+        if (!cancelled) setDraftReady(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [draftKey, user?.id])
 
-  const wallets = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
+  useEffect(() => {
+    if (!draftKey || !draftReady) return
+    if (!imagePreview && !extractedData) {
+      window.localStorage.removeItem(draftKey)
+      void deleteScanPreview(draftKey)
+      return
+    }
+    try {
+      window.localStorage.setItem(
+        draftKey,
+        JSON.stringify({ isEditing, extractedData, form }),
+      )
+    } catch {
+      window.localStorage.setItem(
+        draftKey,
+        JSON.stringify({ isEditing, extractedData, form }),
+      )
+    }
+    if (imagePreview) void writeScanPreview(draftKey, imagePreview)
+  }, [draftKey, draftReady, extractedData, form, imagePreview, isEditing])
+
+  const wallets = useQuery({ queryKey: ['wallets', user?.id], queryFn: walletApi.list, enabled: Boolean(user?.id) })
   const categories = useQuery({
-    queryKey: ['categories', 'all'],
+    queryKey: ['categories', 'all', user?.id],
     queryFn: () => categoryApi.list(),
+    enabled: Boolean(user?.id),
   })
   const scanLogsQ = useQuery({
-    queryKey: ['ai-logs', 'scan-receipt-history'],
+    queryKey: ['ai-logs', 'scan-receipt-history', user?.id],
     queryFn: () => aiLogApi.scanReceiptHistory(1, 100),
+    enabled: Boolean(user?.id),
   })
+  const activeSubscriptionQ = useQuery({
+    queryKey: ['subscription', 'active', user?.id],
+    queryFn: subscriptionApi.active,
+    enabled: Boolean(user?.id),
+    staleTime: 60 * 1000,
+  })
+  const monthlyScanCount = (scanLogsQ.data?.data ?? []).filter((log) => {
+    const date = new Date(log.created_at)
+    const now = new Date()
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+  }).length
+  const planCode = activeSubscriptionQ.data?.plan_code ?? 'free'
+  const ocrLimit = planCode.includes('premium') ? 300 : planCode.includes('pro') ? 100 : 10
+  const shouldWarnQuota = monthlyScanCount >= Math.max(1, Math.floor(ocrLimit * 0.8))
 
   useEffect(() => {
     if (form.wallet_id) return
@@ -138,11 +265,10 @@ export function ScanReceiptPage() {
   }, [categories.data])
 
   const scanMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const base64 = await imageFileToOptimizedBase64(file)
-      return aiApi.scanReceipt({ image_base64: base64, media_type: 'image/webp' })
-    },
-    onSuccess: (data) => {
+    mutationFn: async ({ base64 }: { base64: string; requestId: number }) =>
+      aiApi.scanReceipt({ image_base64: base64, media_type: 'image/webp' }),
+    onSuccess: (data, vars) => {
+      if (vars.requestId !== scanRequestRef.current) return
       const d = { ...(data as ExtractedReceipt), merchant_name: cleanMerchant((data as ExtractedReceipt).merchant_name) }
       const nextType = (d.type as TransactionType) || 'expense'
       const description = resolveScanDescription(d)
@@ -159,7 +285,8 @@ export function ScanReceiptPage() {
       qc.invalidateQueries({ queryKey: ['ai-logs', 'scan-receipt-history'] })
       toast.success('Struk berhasil di-scan!')
     },
-    onError: (e) => {
+    onError: (e, vars) => {
+      if (vars.requestId !== scanRequestRef.current) return
       toast.error(toErrorMessage(e))
       resetForm()
     },
@@ -213,17 +340,22 @@ export function ScanReceiptPage() {
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
-  const handleFile = (file: File | undefined | null) => {
+  const handleFile = async (file: File | undefined | null) => {
     if (!file) return
     const validationError = validateImageFile(file, { maxSizeMb: 5 })
     if (validationError) {
       toast.error(validationError)
       return
     }
-    const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result as string)
-    reader.readAsDataURL(file)
-    scanMutation.mutate(file)
+      try {
+        const optimizedPreview = await imageFileToOptimizedBase64(file)
+        const requestId = scanRequestRef.current + 1
+        scanRequestRef.current = requestId
+        setImagePreview(`data:image/webp;base64,${optimizedPreview}`)
+        scanMutation.mutate({ base64: optimizedPreview, requestId })
+      } catch (error) {
+        toast.error(toErrorMessage(error))
+      }
   }
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +370,10 @@ export function ScanReceiptPage() {
   }
 
   const resetForm = () => {
-    window.localStorage.removeItem(SCAN_DRAFT_KEY)
+    if (draftKey) {
+      window.localStorage.removeItem(draftKey)
+      void deleteScanPreview(draftKey)
+    }
     setImagePreview('')
     setIsEditing(false)
     setExtractedData(null)
@@ -312,6 +447,14 @@ export function ScanReceiptPage() {
       </div>
 
       <PageHeader title={t.scanReceipt.title} subtitle={t.scanReceipt.subtitle} />
+      {shouldWarnQuota ? (
+        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-extrabold">OCR usage is close to your monthly limit.</p>
+          <p className="mt-1 text-xs leading-5 text-amber-800">
+            You have used {monthlyScanCount} of {ocrLimit} OCR scans this month. Upgrade or reduce scans to avoid interruption.
+          </p>
+        </div>
+      ) : null}
       {scanMutation.isPending ? <ReceiptMobileProcessingBanner /> : null}
 
       {!imagePreview ? (
@@ -335,17 +478,25 @@ export function ScanReceiptPage() {
       ) : (
         /* ─── Result + Form ─── */
         <div className="grid gap-5 lg:grid-cols-[400px_1fr] lg:gap-8">
-          <ReceiptImagePreviewCard
-            imagePreview={imagePreview}
-            isProcessing={scanMutation.isPending}
-            hasExtractedData={Boolean(extractedData)}
-            onReset={resetForm}
-          />
-
-          <div className="space-y-4">
-            {scanMutation.isPending ? (
+          {scanMutation.isPending ? (
+            <>
+              <ReceiptImagePreviewCard
+                imagePreview={imagePreview}
+                isProcessing
+                hasExtractedData={Boolean(extractedData)}
+                onReset={resetForm}
+              />
               <ReceiptProcessingCard />
-            ) : (
+            </>
+          ) : (
+            <>
+              <ReceiptImagePreviewCard
+                imagePreview={imagePreview}
+                isProcessing={false}
+                hasExtractedData={Boolean(extractedData)}
+                onReset={resetForm}
+              />
+              <div className="space-y-4">
               <ReceiptTransactionPanel
                 form={form}
                 isEditing={isEditing}
@@ -361,9 +512,11 @@ export function ScanReceiptPage() {
                 onEdit={() => setIsEditing(true)}
                 onCancelEdit={() => setIsEditing(false)}
                 onSave={() => saveMutation.mutate()}
+                onReadonlyClick={() => toast.info('Klik Edit Detail dulu untuk mengubah hasil scan.')}
               />
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

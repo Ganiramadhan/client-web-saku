@@ -30,7 +30,7 @@ import { useAuthStore } from '@/stores/authStore'
 type RoleFilter = 'all' | 'user' | 'admin' | 'super_admin'
 type StatusFilter = 'all' | 'active' | 'pending_verification' | 'suspended'
 
-const lastLoginLabel = (value?: string | null) => value ? formatDateTime(value) : 'Belum pernah login'
+const lastLoginLabel = (value?: string | null) => value ? formatDateTime(value) : 'Never logged in'
 
 export function AdminUsersPage() {
   const t = useT()
@@ -49,7 +49,7 @@ export function AdminUsersPage() {
   const remove = useMutation({
     mutationFn: adminUserApi.remove,
     onSuccess: () => {
-      toast.success('User dihapus')
+      toast.success('User deleted')
       qc.invalidateQueries({ queryKey: ['admin-users'] })
     },
     onError: (e) => toast.error(toErrorMessage(e)),
@@ -58,7 +58,7 @@ export function AdminUsersPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => adminUserApi.update(id, { status }),
     onSuccess: () => {
-      toast.success('Status user diperbarui')
+      toast.success('User status updated')
       qc.invalidateQueries({ queryKey: ['admin-users'] })
     },
     onError: (e) => toast.error(toErrorMessage(e)),
@@ -66,10 +66,10 @@ export function AdminUsersPage() {
 
   const onDelete = async (u: AdminUser) => {
     const ok = await confirm({
-      title: 'Hapus user?',
-      description: `User "${u.name}" (${u.email}) akan dinonaktifkan dari daftar aktif. Data historis tetap disimpan.`,
+      title: 'Delete user?',
+      description: `User "${u.name}" (${u.email}) will be removed from the active list. Historical data will be kept.`,
       tone: 'danger',
-      confirmLabel: t.common.delete,
+      confirmLabel: 'Delete',
     })
     if (ok) remove.mutate(u.id)
   }
@@ -79,7 +79,7 @@ export function AdminUsersPage() {
     if (!isSuspended) {
       const ok = await confirm({
         title: 'Suspend user?',
-        description: `${u.name} (${u.email}) tidak akan bisa login sampai statusnya diaktifkan kembali.`,
+        description: `${u.name} (${u.email}) will not be able to log in until the status is reactivated.`,
         tone: 'danger',
         confirmLabel: 'Suspend User',
       })
@@ -177,7 +177,7 @@ export function AdminUsersPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="block text-right">{t.common.action}</span>,
+        header: () => <span className="block text-right">Action</span>,
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
@@ -189,7 +189,7 @@ export function AdminUsersPage() {
                   ? 'hover:bg-emerald-50 hover:text-emerald-700'
                   : 'hover:bg-amber-50 hover:text-amber-700',
               )}
-              title={row.original.status === 'suspended' ? 'Aktifkan' : 'Suspend'}
+              title={row.original.status === 'suspended' ? 'Activate' : 'Suspend'}
             >
               {row.original.status === 'suspended' ? (
                 <HiOutlineCheckCircle className="h-4 w-4" />
@@ -200,14 +200,14 @@ export function AdminUsersPage() {
             <button
               onClick={() => { setEditing(row.original); setOpen(true) }}
               className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-700"
-              title={t.common.edit}
+              title="Edit"
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(row.original)}
               className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700"
-              title={t.common.delete}
+              title="Delete"
             >
               <HiOutlineTrash className="h-4 w-4" />
             </button>
@@ -239,15 +239,15 @@ export function AdminUsersPage() {
               onClick={() => { setEditing(null); setOpen(true) }}
               leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}
             >
-              {t.common.create}
+              Create
             </Button>
           </div>
         }
       />
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <UserStatCard label="Total User" value={stats.total} Icon={HiOutlineUsers} tone="blue" />
-        <UserStatCard label="Aktif" value={stats.active} Icon={HiOutlineCheckCircle} tone="emerald" />
+        <UserStatCard label="Total Users" value={stats.total} Icon={HiOutlineUsers} tone="blue" />
+        <UserStatCard label="Active" value={stats.active} Icon={HiOutlineCheckCircle} tone="emerald" />
         <UserStatCard label="Pending Verify" value={stats.pending} Icon={HiOutlineNoSymbol} tone="amber" />
         <UserStatCard label="Admin" value={stats.admin} Icon={HiOutlineShieldCheck} tone="violet" />
       </section>
@@ -256,11 +256,11 @@ export function AdminUsersPage() {
         data={filteredUsers}
         columns={columns}
         loading={q.isLoading}
-        searchPlaceholder="Cari nama, email, atau nomor telepon..."
-        emptyTitle={t.common.empty}
+        searchPlaceholder="Search name, email, or phone..."
+        emptyTitle="No users yet"
         emptyAction={
           <Button onClick={() => { setEditing(null); setOpen(true) }} leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}>
-            {t.common.create}
+            Create
           </Button>
         }
         getRowId={(r) => r.id}
@@ -270,7 +270,7 @@ export function AdminUsersPage() {
               <RSelect
                 value={roleFilter}
                 options={[
-                  { value: 'all', label: 'Semua role' },
+                  { value: 'all', label: 'All roles' },
                   { value: 'user', label: 'User' },
                   { value: 'admin', label: 'Admin' },
                   { value: 'super_admin', label: 'Super Admin' },
@@ -282,8 +282,8 @@ export function AdminUsersPage() {
               <RSelect
                 value={statusFilter}
                 options={[
-                  { value: 'all', label: 'Semua status' },
-                  { value: 'active', label: 'Aktif' },
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'active', label: 'Active' },
                   { value: 'pending_verification', label: 'Pending Verify' },
                   { value: 'suspended', label: 'Suspended' },
                 ]}
@@ -347,7 +347,6 @@ function UserStatCard({
 function UserModal({
   open, onClose, editing,
 }: { open: boolean; onClose: () => void; editing: AdminUser | null }) {
-  const t = useT()
   const qc = useQueryClient()
   const [form, setForm] = useState<AdminUserPayload>(() => ({
     name: editing?.name ?? '',
@@ -380,16 +379,16 @@ function UserModal({
       open={open}
       onClose={onClose}
       size="lg"
-      title={editing ? `Edit ${editing.name}` : 'Tambah Pengguna Baru'}
+      title={editing ? `Edit ${editing.name}` : 'Create New User'}
       description={
         editing
-          ? 'Perbarui informasi akun. Kosongkan password jika tidak diubah.'
-          : 'Buat akun internal untuk akses admin atau pengguna operasional.'
+          ? 'Update account information. Leave password empty if it is not changed.'
+          : 'Create an internal account for admin access or operational users.'
       }
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
-          <Button loading={m.isPending} onClick={() => m.mutate()}>{t.common.save}</Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={m.isPending} onClick={() => m.mutate()}>Save</Button>
         </>
       }
     >
@@ -400,10 +399,10 @@ function UserModal({
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-slate-900">
-              {form.name || 'Nama pengguna'}
+              {form.name || 'User name'}
             </div>
             <div className="truncate text-xs text-slate-500">
-              {form.email || 'email@perusahaan.com'}
+              {form.email || 'email@company.com'}
             </div>
             {editing ? (
               <div className="mt-1 text-[11px] text-blue-700">
@@ -418,15 +417,15 @@ function UserModal({
           <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Identity</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              label="Nama Lengkap"
-              placeholder="Contoh: Budi Santoso"
+              label="Full Name"
+              placeholder="Example: Budi Santoso"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
             <Input
               label="Email"
               type="email"
-              placeholder="nama@perusahaan.com"
+              placeholder="name@company.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
@@ -437,15 +436,15 @@ function UserModal({
           <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Security</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              label={editing ? 'Password (opsional)' : 'Password'}
+              label={editing ? 'Password (optional)' : 'Password'}
               type="password"
-              placeholder={editing ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter'}
+              placeholder={editing ? 'Leave empty if unchanged' : 'Minimum 8 characters'}
               value={form.password ?? ''}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
             <Input
-              label="Nomor Telepon"
-              placeholder="0812xxxxxxxx (opsional)"
+              label="Phone Number"
+              placeholder="0812xxxxxxxx (optional)"
               value={form.phone ?? ''}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
@@ -464,7 +463,7 @@ function UserModal({
           <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Access Control</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <RSelect
-              label="Peran"
+              label="Role"
               value={form.role ?? 'user'}
               options={[
                 { value: 'user', label: 'User' },
@@ -476,7 +475,7 @@ function UserModal({
               label="Status"
               value={form.status ?? 'active'}
               options={[
-                { value: 'active', label: 'Aktif' },
+                { value: 'active', label: 'Active' },
                 { value: 'pending_verification', label: 'Pending Verification' },
                 { value: 'suspended', label: 'Suspended' },
               ] as SelectOption[]}
@@ -489,8 +488,8 @@ function UserModal({
           <HiOutlineShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {editing
-              ? 'Perubahan peran berlaku pada sesi berikutnya setelah user login ulang.'
-              : 'Email akan menjadi identitas login. Pastikan benar sebelum disimpan.'}
+              ? 'Role changes apply on the next session after the user logs in again.'
+              : 'Email will be the login identity. Make sure it is correct before saving.'}
           </span>
         </div>
       </div>

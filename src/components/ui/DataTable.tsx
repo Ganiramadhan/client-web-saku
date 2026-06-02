@@ -15,8 +15,6 @@ import {
   HiOutlineChevronUpDown,
   HiOutlineChevronUp,
   HiOutlineChevronDown,
-  HiOutlineChevronLeft,
-  HiOutlineChevronRight,
 } from 'react-icons/hi2'
 import { Skeleton, EmptyState } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -271,19 +269,27 @@ function NumberedPagination({
 }) {
   const pages = buildPageList(page, totalPages)
   return (
-    <nav className="inline-flex items-center gap-1" aria-label="Pagination">
+    <nav className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/60 bg-white/35 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible" aria-label="Pagination">
+      <PageBtn
+        onClick={() => onChange(1)}
+        disabled={!canPrev}
+        aria="First page"
+      >
+        <span className="sm:hidden">First</span>
+        <span className="hidden sm:inline">First page</span>
+      </PageBtn>
       <PageBtn
         onClick={() => onChange(page - 1)}
         disabled={!canPrev}
         aria={labels?.previous ?? 'Sebelumnya'}
       >
-        <HiOutlineChevronLeft className="h-3.5 w-3.5" />
+        Prev
       </PageBtn>
       {pages.map((p, i) =>
         p === '…' ? (
           <span
             key={`gap-${i}`}
-            className="px-1.5 text-slate-400"
+            className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-slate-400"
             aria-hidden
           >
             …
@@ -294,6 +300,7 @@ function NumberedPagination({
             active={p === page}
             onClick={() => onChange(p)}
             aria={`${labels?.page ?? 'Halaman'} ${p}`}
+            className={p === page ? undefined : 'max-sm:hidden'}
           >
             {p}
           </PageBtn>
@@ -304,7 +311,15 @@ function NumberedPagination({
         disabled={!canNext}
         aria={labels?.next ?? 'Berikutnya'}
       >
-        <HiOutlineChevronRight className="h-3.5 w-3.5" />
+        Next
+      </PageBtn>
+      <PageBtn
+        onClick={() => onChange(totalPages)}
+        disabled={!canNext}
+        aria="Last page"
+      >
+        <span className="sm:hidden">Last</span>
+        <span className="hidden sm:inline">Last page</span>
       </PageBtn>
     </nav>
   )
@@ -312,12 +327,14 @@ function NumberedPagination({
 
 function PageBtn({
   children, active, disabled, onClick, aria,
+  className,
 }: {
   children: ReactNode
   active?: boolean
   disabled?: boolean
   onClick?: () => void
   aria?: string
+  className?: string
 }) {
   return (
     <button
@@ -327,11 +344,12 @@ function PageBtn({
       aria-label={aria}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-xs font-medium transition',
+        'inline-flex h-8 min-w-[2rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-all duration-200 ease-out',
         active
-          ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
-          : 'border-white/80 bg-white/70 text-slate-600 hover:bg-white',
-        disabled && 'cursor-not-allowed opacity-40 hover:bg-white',
+          ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
+          : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
+        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-slate-600 hover:shadow-none',
+        className,
       )}
     >
       {children}
@@ -340,15 +358,30 @@ function PageBtn({
 }
 
 function buildPageList(current: number, total: number): (number | '…')[] {
-  if (total <= 7) {
+  if (total <= 3) {
     return Array.from({ length: total }, (_, i) => i + 1)
   }
-  const pages: (number | '…')[] = [1]
-  const left = Math.max(2, current - 1)
-  const right = Math.min(total - 1, current + 1)
-  if (left > 2) pages.push('…')
-  for (let i = left; i <= right; i++) pages.push(i)
-  if (right < total - 1) pages.push('…')
-  pages.push(total)
-  return pages
+  const pages = new Set<number>([current - 1, current, current + 1])
+  if (current <= 2) {
+    pages.add(1)
+    pages.add(2)
+    pages.add(3)
+  }
+  if (current >= total - 1) {
+    pages.add(total - 2)
+    pages.add(total - 1)
+    pages.add(total)
+  }
+  const sorted = Array.from(pages)
+    .filter((item) => item >= 1 && item <= total)
+    .sort((a, b) => a - b)
+  const out: (number | '…')[] = []
+  if ((sorted[0] ?? 1) > 1) out.push('…')
+  for (const item of sorted) {
+    const prev = out[out.length - 1]
+    if (typeof prev === 'number' && item - prev > 1) out.push('…')
+    out.push(item)
+  }
+  if ((sorted[sorted.length - 1] ?? total) < total) out.push('…')
+  return out
 }

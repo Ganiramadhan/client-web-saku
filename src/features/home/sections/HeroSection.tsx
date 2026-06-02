@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HiOutlineArrowTrendingUp } from 'react-icons/hi2'
-import { RiArrowDownLine, RiArrowRightLine, RiArrowUpLine, RiChatSmile3Line, RiPieChart2Line, RiScanLine, RiShieldCheckLine, RiSparklingLine, RiTimeLine, RiWallet3Line } from 'react-icons/ri'
-import { useT } from '@/i18n'
+import { RiArrowRightLine, RiChatSmile3Line, RiScanLine, RiShieldCheckLine, RiSparklingLine, RiTimeLine } from 'react-icons/ri'
+import { useLocale, useT } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { smoothScrollTo } from '../components/landingUtils'
 
 export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
   const t = useT()
+  const { locale } = useLocale()
+  const isId = locale === 'id'
   const [isMobile, setIsMobile] = useState(() => (
     typeof window === 'undefined' ? false : window.matchMedia('(max-width: 767px)').matches
   ))
@@ -53,9 +55,9 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
           </div>
           <div className="mt-10 flex flex-wrap gap-3">
             {[
-              { Icon: RiChatSmile3Line, value: 'NLP', label: 'Chat to record', color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
-              { Icon: RiScanLine, value: 'AI OCR', label: 'Receipt scanner', color: 'text-violet-600', bg: 'rgba(245,243,255,0.80)' },
-              { Icon: RiTimeLine, value: '24/7', label: 'Always available', color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
+              { Icon: RiChatSmile3Line, value: 'AI Chat', label: isId ? 'Catat otomatis' : 'Auto recording', color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
+              { Icon: RiScanLine, value: 'AI OCR', label: isId ? 'Scan struk' : 'Receipt scanner', color: 'text-violet-600', bg: 'rgba(245,243,255,0.80)' },
+              { Icon: RiTimeLine, value: '24/7', label: isId ? 'Siap bantu' : 'Always available', color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
             ].map((s) => (
               <div key={s.label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 shadow-sm shadow-slate-200/50">
                 <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', s.color)} style={{ background: s.bg }}>
@@ -70,43 +72,44 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
           </div>
         </div>
         <div>
-          <HeroPreview isMobile={isMobile} />
+          <HeroPreview isMobile={isMobile} isId={isId} />
         </div>
       </div>
     </section>
   )
 }
 
-function HeroPreview({ isMobile }: { isMobile: boolean }) {
+function HeroPreview({ isMobile, isId }: { isMobile: boolean; isId: boolean }) {
   if (isMobile) {
-    return <MobileHeroPreview />
+    return <MobileHeroPreview isId={isId} />
   }
 
-  return <DesktopHeroPreview />
+  return <DesktopHeroPreview isId={isId} />
 }
 
-function MobileHeroPreview() {
+function MobileHeroPreview({ isId }: { isId: boolean }) {
   return (
     <div className="relative">
       <div className="rounded-3xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-200/70 md:hidden">
         <div className="rounded-[1.35rem] bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4 rounded-2xl bg-white p-3 shadow-sm">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Balance</p>
-              <h2 className="mt-1.5 text-2xl font-extrabold text-slate-900 tracking-tight">Rp 24.580.000</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{isId ? 'Uang yang bisa disimpan' : 'Money saved this month'}</p>
+              <h2 className="mt-1.5 text-2xl font-extrabold text-slate-900 tracking-tight">Rp 1.420.000</h2>
+              <p className="mt-1 text-[11px] font-semibold text-slate-500">{isId ? 'Terdeteksi dari 42 transaksi' : 'Detected from 42 transactions'}</p>
             </div>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-              <HiOutlineArrowTrendingUp className="h-3 w-3" />+12.4%
+              <HiOutlineArrowTrendingUp className="h-3 w-3" />+18%
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-              <p className="text-[11px] text-slate-500">Income</p>
-              <p className="mt-1 text-sm font-bold text-emerald-600">Rp 9.2jt</p>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+              <p className="text-[11px] text-slate-500">{isId ? 'Aman dipakai' : 'Safe to spend'}</p>
+              <p className="mt-1 text-sm font-bold text-blue-600">{isId ? 'Rp 185rb/hari' : 'Rp 185rb/day'}</p>
             </div>
             <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
-              <p className="text-[11px] text-slate-500">Expenses</p>
-              <p className="mt-1 text-sm font-bold text-rose-500">Rp 3.8jt</p>
+              <p className="text-[11px] text-slate-500">{isId ? 'Kategori rawan' : 'Risk category'}</p>
+              <p className="mt-1 text-sm font-bold text-rose-500">{isId ? 'Makan 42%' : 'Food 42%'}</p>
             </div>
           </div>
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3">
@@ -114,7 +117,7 @@ function MobileHeroPreview() {
               <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
               <p className="text-[11px] font-bold text-blue-700">AI Insight</p>
             </div>
-            <p className="text-[11px] leading-5 text-blue-700/80">Transport spending is 18% higher than last month.</p>
+            <p className="text-[11px] leading-5 text-blue-700/80">{isId ? 'Kurangi delivery kopi 3x/minggu untuk sisihkan Rp 312.000 bulan ini.' : 'Cut coffee delivery 3x/week to free up Rp 312.000 this month.'}</p>
           </div>
         </div>
       </div>
@@ -122,26 +125,26 @@ function MobileHeroPreview() {
   )
 }
 
-function DesktopHeroPreview() {
+function DesktopHeroPreview({ isId }: { isId: boolean }) {
   return (
     <div className="relative">
-      <div className="rounded-3xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-200/70">
-        <div className="rounded-[1.35rem] bg-slate-50 p-4 sm:p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4">
+      <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/86 p-2 shadow-2xl shadow-slate-200/70">
+        <div className="rounded-[1.55rem] border border-slate-100 bg-slate-50/90 p-5">
+          <div className="flex items-start justify-between gap-4 rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Balance</p>
-              <h2 className="mt-1.5 text-3xl font-extrabold text-slate-900 tracking-tight">Rp 24.580.000</h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{isId ? 'AI menemukan uang yang bisa disimpan' : 'AI found money you can save'}</p>
+              <h2 className="mt-1.5 text-3xl font-extrabold text-slate-900 tracking-tight">Rp 1.420.000</h2>
+              <p className="mt-1 text-xs font-medium text-slate-500">{isId ? 'Dari 42 transaksi di 4 dompet' : 'From 42 transactions across 4 wallets'}</p>
             </div>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold text-emerald-700" style={{ background: 'rgba(209,250,229,0.80)', border: '1px solid rgba(167,243,208,0.80)' }}>
-              <HiOutlineArrowTrendingUp className="h-3 w-3" />+12.4%
+              <HiOutlineArrowTrendingUp className="h-3 w-3" />{isId ? '+18% cashflow lebih sehat' : '+18% better cashflow'}
             </span>
           </div>
-          {/* Stats */}
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <div className="mt-3 grid grid-cols-3 gap-2.5">
             {[
-              { label: 'Income', value: 'Rp 9.200.000', color: 'text-emerald-600', bg: 'rgba(209,250,229,0.50)', border: 'rgba(167,243,208,0.60)', Icon: RiArrowUpLine },
-              { label: 'Expenses', value: 'Rp 3.800.000', color: 'text-rose-500', bg: 'rgba(255,228,230,0.50)', border: 'rgba(254,205,211,0.60)', Icon: RiArrowDownLine },
+              { label: isId ? 'Aman/hari' : 'Safe/day', value: 'Rp 185rb', color: 'text-blue-600', bg: 'rgba(219,234,254,0.55)', border: 'rgba(191,219,254,0.65)', Icon: RiShieldCheckLine },
+              { label: isId ? 'Struk discan' : 'OCR saved', value: isId ? '18 struk' : '18 receipts', color: 'text-violet-600', bg: 'rgba(245,243,255,0.65)', border: 'rgba(221,214,254,0.75)', Icon: RiScanLine },
+              { label: isId ? 'Tagihan auto' : 'Auto bills', value: 'Rp 920rb', color: 'text-emerald-600', bg: 'rgba(209,250,229,0.50)', border: 'rgba(167,243,208,0.60)', Icon: RiTimeLine },
             ].map((c) => (
               <div key={c.label} className="rounded-xl p-3.5" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -152,22 +155,25 @@ function DesktopHeroPreview() {
               </div>
             ))}
           </div>
-          {/* Budget bar */}
-          <div className="mt-4">
+          <div className="mt-4 rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
             <div className="mb-1.5 flex items-center justify-between">
-              <p className="text-[11px] text-slate-400">Budget used this month</p>
-              <p className="text-[11px] font-bold text-slate-600">64%</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{isId ? 'Tekanan budget makan' : 'Food budget pressure'}</p>
+              <p className="text-[11px] font-bold text-slate-600">72%</p>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
-              <div className="h-full rounded-full transition-all duration-1000" style={{ width: '64%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
+              <div className="h-full rounded-full transition-all duration-1000" style={{ width: '72%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">{isId ? 'Makan Rp 1.2jt' : 'Dining Rp 1.2jt'}</span>
+              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">Coffee Rp 312rb</span>
+              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">{isId ? 'Tagihan Rp 920rb' : 'Bills Rp 920rb'}</span>
             </div>
           </div>
-          {/* Wallet summary */}
-          <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
             {[
-              { Icon: RiWallet3Line, label: 'Wallets', value: '4 active', color: 'text-blue-600', bg: '#eff6ff' },
-              { Icon: RiPieChart2Line, label: 'Budget left', value: '36%', color: 'text-violet-600', bg: '#f5f3ff' },
-              { Icon: RiShieldCheckLine, label: 'Savings', value: 'Rp 7.2jt', color: 'text-emerald-600', bg: '#ecfdf5' },
+              { Icon: RiChatSmile3Line, label: 'NLP', value: isId ? 'Catat via chat' : 'Record by chat', color: 'text-blue-600', bg: '#eff6ff' },
+              { Icon: RiScanLine, label: 'OCR', value: isId ? 'Scan struk' : 'Scan receipt', color: 'text-violet-600', bg: '#f5f3ff' },
+              { Icon: RiTimeLine, label: 'Recurring', value: isId ? 'Reminder auto' : 'Auto reminders', color: 'text-emerald-600', bg: '#ecfdf5' },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-slate-100 bg-white/80 p-3">
                 <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: item.bg }}>
@@ -178,32 +184,30 @@ function DesktopHeroPreview() {
               </div>
             ))}
           </div>
-          {/* Recent */}
-          <div className="mt-4 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.80)', border: '1px solid rgba(241,245,249,1)' }}>
+          <div className="mt-3 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(241,245,249,1)' }}>
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-800">Recent Activity</p>
-              <p className="text-[11px] text-blue-500 font-medium cursor-pointer">See all</p>
+              <p className="text-sm font-bold text-slate-800">{isId ? 'AI mencatat untuk kamu' : 'AI records it for you'}</p>
+              <p className="text-[11px] text-blue-500 font-medium cursor-pointer">{isId ? 'Preview langsung' : 'Live preview'}</p>
             </div>
             <div className="space-y-2.5">
-              <TxRow icon="🍜" title="Lunch" cat="Food & Drink" amount="-Rp 38.000" />
-              <TxRow icon="🚌" title="Transport" cat="Travel" amount="-Rp 22.500" />
-              <TxRow icon="💻" title="Freelance" cat="Income" amount="+Rp 5.500.000" positive />
+              <TxRow icon="AI" title="beli nasi padang 35rb" cat={isId ? 'Makanan - Cash' : 'Food & Drink - Cash'} amount="-Rp 35.000" />
+              <TxRow icon="OCR" title={isId ? 'Struk berhasil discan' : 'Receipt scanned'} cat={isId ? 'Merchant, tanggal, nominal terbaca' : 'Merchant, date, amount detected'} amount="-Rp 128.500" />
+              <TxRow icon="IN" title={isId ? 'Pembayaran freelance' : 'Freelance payout'} cat={isId ? 'Pemasukan - Bank Jago' : 'Income - Bank Jago'} amount="+Rp 5.500.000" positive />
             </div>
           </div>
-          {/* AI insight */}
-          <div className="mt-3 rounded-xl p-3.5" style={{ background: 'rgba(239,246,255,0.85)', border: '1px solid rgba(191,219,254,0.60)' }}>
+          <div className="mt-3 rounded-2xl p-3.5" style={{ background: 'rgba(239,246,255,0.85)', border: '1px solid rgba(191,219,254,0.60)' }}>
             <div className="flex items-center gap-1.5 mb-1">
               <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
               <p className="text-[11px] font-bold text-blue-700">AI Insight</p>
             </div>
-            <p className="text-[11px] leading-5 text-blue-600/80">Transport spending is 18% higher than last month. Consider reviewing recurring trips.</p>
+            <p className="text-[11px] leading-5 text-blue-600/80">{isId ? 'Kurangi delivery kopi 3x/minggu untuk sisihkan Rp 312.000 dan tetap aman belanja Rp 185.000/hari.' : 'Cut coffee delivery 3x/week to free up Rp 312.000 and keep Rp 185.000/day safe to spend.'}</p>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             <button type="button" className="rounded-xl border border-blue-100 bg-blue-600 px-3 py-2.5 text-xs font-bold text-white">
-              Record with AI
+              {isId ? 'Catat dengan AI' : 'Record with AI'}
             </button>
             <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700">
-              Scan receipt
+              {isId ? 'Scan struk' : 'Scan receipt'}
             </button>
           </div>
         </div>

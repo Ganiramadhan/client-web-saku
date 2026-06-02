@@ -25,6 +25,19 @@ export interface Wallet {
   updated_at: string
 }
 
+export interface WalletTransfer {
+  id: string
+  user_id: string
+  from_wallet_id: string
+  from_wallet_name: string
+  to_wallet_id: string
+  to_wallet_name: string
+  amount: number
+  currency: string
+  note?: string
+  created_at: string
+}
+
 export interface Category {
   id: string
   user_id?: string
@@ -124,6 +137,7 @@ export interface AICategorizeItem {
   date?: string
   transaction_date?: string
   wallet_hint?: string
+  recurring_hint?: string
 }
 
 export interface AICategorizeResponse {
@@ -176,6 +190,36 @@ export interface AISuggestBudgetResponse {
 
 export interface AIChatResponse {
   reply: string
+}
+
+export type SupportTicketStatus = 'open' | 'waiting_user' | 'resolved'
+export type SupportPriority = 'normal' | 'high' | 'urgent'
+
+export interface SupportMessage {
+  id: string
+  ticket_id: string
+  user_id: string
+  role: 'user' | 'admin'
+  body: string
+  attachment_key?: string
+  attachment_name?: string
+  attachment_type?: string
+  attachment_url?: string
+  created_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  user_id: string
+  user_name: string
+  user_email: string
+  subject: string
+  category: string
+  priority: SupportPriority
+  status: SupportTicketStatus
+  created_at: string
+  updated_at: string
+  messages: SupportMessage[]
 }
 
 export interface AdminUser {

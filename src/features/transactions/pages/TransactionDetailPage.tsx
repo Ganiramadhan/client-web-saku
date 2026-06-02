@@ -6,6 +6,7 @@ import {
   HiOutlinePencilSquare,
   HiOutlineTrash,
   HiOutlineCalendarDays,
+  HiOutlineClock,
   HiOutlineWallet,
   HiOutlineSparkles,
   HiOutlineDocumentText,
@@ -16,7 +17,7 @@ import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import { Button, Card, Badge, Skeleton, EmptyState } from '@/components/ui'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { formatCurrency, formatDate, formatDateTime, cn } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
@@ -163,6 +164,7 @@ export function TransactionDetailPage() {
           <TransactionInfoRow Icon={HiOutlineHashtag} label="Kategori" value={categoryName} />
           <TransactionInfoRow Icon={HiOutlineWallet} label="Dompet" value={walletName} />
           <TransactionInfoRow Icon={HiOutlineCalendarDays} label="Tanggal" value={formatDate(tx.transaction_date)} />
+          <TransactionInfoRow Icon={HiOutlineClock} label="Dibuat" value={formatDateTime(tx.created_at)} />
           {tx.merchant_name ? (
             <TransactionInfoRow Icon={HiOutlineBuildingStorefront} label="Merchant" value={tx.merchant_name} />
           ) : null}

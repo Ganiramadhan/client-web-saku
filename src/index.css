@@ -123,6 +123,43 @@ body {
 .scan-spinner-motion { animation: scan-spinner 0.85s linear infinite; }
 .scan-pulse-motion { animation: scan-pulse 1.2s ease-out infinite; }
 
+.landing-page section {
+  animation: landing-section-in 0.55s ease both;
+}
+
+.landing-page section:nth-of-type(2) { animation-delay: 80ms; }
+.landing-page section:nth-of-type(3) { animation-delay: 140ms; }
+.landing-page section:nth-of-type(4) { animation-delay: 200ms; }
+.landing-page section:nth-of-type(5) { animation-delay: 260ms; }
+
+.landing-page .landing-mobile-hover,
+.landing-page a,
+.landing-page button {
+  transition-property: transform, box-shadow, border-color, background-color, color, opacity;
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1);
+}
+
+@media (hover: hover) {
+  .landing-page .landing-mobile-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.10);
+  }
+}
+
+@media (hover: none) {
+  .landing-page .landing-mobile-hover:active,
+  .landing-page button:active,
+  .landing-page a:active {
+    transform: scale(0.985);
+  }
+}
+
+@keyframes landing-section-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .landing-page .landing-fixed-bg,
 .auth-page .auth-fixed-bg {
   position: absolute;

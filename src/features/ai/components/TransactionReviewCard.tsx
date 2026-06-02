@@ -142,7 +142,8 @@ export function TransactionReviewCard({
             ) : null}
           </div>
 
-          <div className="mb-4 flex items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex w-full items-center gap-3 sm:min-w-0 sm:flex-1">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-base font-extrabold text-blue-700 shadow-sm shadow-blue-100/60">
               {letterMark}
             </div>
@@ -155,10 +156,11 @@ export function TransactionReviewCard({
                 {categoryName || extractedCategoryName || copy.noCategory}
               </p>
             </div>
+            </div>
 
             <span
               className={cn(
-                'ml-auto text-lg font-extrabold shrink-0',
+                'self-start text-lg font-extrabold shrink-0 sm:ml-auto sm:self-center',
                 form.type === 'income' ? 'text-emerald-600' : 'text-rose-500',
               )}
             >
@@ -166,7 +168,7 @@ export function TransactionReviewCard({
             </span>
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 px-3.5 py-2.5">
+          <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
               <RiWalletLine className="h-4 w-4 text-slate-400 shrink-0" />
               <span className="truncate text-xs font-medium text-slate-600">
