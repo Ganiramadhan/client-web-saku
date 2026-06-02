@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RiCheckLine, RiFlashlightLine, RiSparklingLine } from 'react-icons/ri'
 import { useLocale, useT } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
-import { subscriptionApi } from '@/features/subscription/api'
+import { subscriptionApi, type ValidateVoucherResponse } from '@/features/subscription/api'
 import { Button, Input, Modal } from '@/components/ui'
 import { sanitizeReferralCode } from '@/features/subscription/utils/referral'
 import { toast } from '@/lib/toast'
@@ -114,7 +114,9 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const snapLoadedRef = useRef(false)
-  const [referralCode, setReferralCode] = useState('')
+  const [voucherCode, setVoucherCode] = useState('')
+  const [voucherError, setVoucherError] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState<ValidateVoucherResponse | null>(null)
   const [checkoutPlanCode, setCheckoutPlanCode] = useState<string | null>(null)
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const [isMobile, setIsMobile] = useState(() =>
@@ -137,8 +139,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     staleTime: 60 * 1000,
   })
   const checkoutM = useMutation({
-    mutationFn: async ({ planCode, referralCode }: { planCode: string; referralCode?: string }) => {
-      const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
+    mutationFn: async ({ planCode, voucherCode }: { planCode: string; voucherCode?: string }) => {
+      const checkout = await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
         snapLoadedRef.current = true
@@ -179,6 +181,21 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       toast.error(toErrorMessage(error))
     },
   })
+  const validateVoucherM = useMutation({
+    mutationFn: async () => {
+      if (!checkoutPlanCode) throw new Error(locale === 'id' ? 'Kode voucher tidak ditemukan atau sudah kedaluwarsa.' : 'Voucher code was not found or has expired.')
+      return subscriptionApi.validateVoucher(checkoutPlanCode, sanitizeReferralCode(voucherCode))
+    },
+    onSuccess: (result) => {
+      setAppliedVoucher(result)
+      setVoucherCode(result.code)
+      setVoucherError('')
+    },
+    onError: () => {
+      setAppliedVoucher(null)
+      setVoucherError(locale === 'id' ? 'Kode voucher tidak ditemukan atau sudah kedaluwarsa.' : 'Voucher code was not found or has expired.')
+    },
+  })
   const fallbackPlans = [
     {
       name: 'Free',
@@ -196,7 +213,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       price: period === 'yearly' ? formatCurrency(278400, 'IDR') : t.landing.planProPrice,
       originalPrice: period === 'yearly' ? formatCurrency(348000, 'IDR') : null,
       period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
-      badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
+      badge: locale === 'id' ? 'Paling Populer' : 'Most Popular',
       desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
       features: planFeatures('pro', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
@@ -223,7 +240,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     pro: {
       desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
-      badge: locale === 'id' ? 'Terpopuler' : 'Most Popular',
+      badge: locale === 'id' ? 'Paling Populer' : 'Most Popular',
     },
     premium: {
       desc: locale === 'id' ? 'Paket lanjutan untuk kebutuhan kolaborasi dan laporan yang lebih dalam.' : 'Advanced plan for collaboration and deeper reporting needs.',
@@ -279,11 +296,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       return
     }
     const pendingPlan = (subscriptionsQ.data ?? []).find((item) => item.status === 'pending')
-    if (pendingPlan && pendingPlan.plan_code !== plan.tier) {
+    if (pendingPlan) {
       toast.info(
         locale === 'id'
-          ? 'Masih ada pembayaran pending. Batalkan pembayaran tersebut dulu sebelum memilih paket lain.'
-          : 'You still have a pending payment. Cancel it first before choosing another plan.',
+          ? 'Masih ada pembayaran pending. Lanjutkan atau batalkan dari Profile sebelum memilih paket lagi.'
+          : 'You still have a pending payment. Continue or cancel it from Profile before choosing another plan.',
       )
       navigate('/app/profile')
       return
@@ -292,17 +309,32 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       navigate('/app/profile')
       return
     }
+    setVoucherCode('')
+    setVoucherError('')
+    setAppliedVoucher(null)
     setCheckoutPlanCode(String(plan.tier))
   }
 
-  const confirmCheckout = () => {
+  const confirmCheckout = async () => {
     if (!checkoutPlanCode) return
+    const cleanCode = sanitizeReferralCode(voucherCode)
+    let finalVoucherCode = cleanCode
+    if (cleanCode && appliedVoucher?.code !== cleanCode) {
+      try {
+        const result = await validateVoucherM.mutateAsync()
+        finalVoucherCode = result.code
+      } catch {
+        return
+      }
+    }
     checkoutM.mutate(
-      { planCode: checkoutPlanCode, referralCode },
+      { planCode: checkoutPlanCode, voucherCode: finalVoucherCode },
       {
         onSuccess: () => {
           setCheckoutPlanCode(null)
-          setReferralCode('')
+          setVoucherCode('')
+          setVoucherError('')
+          setAppliedVoucher(null)
         },
       },
     )
@@ -521,37 +553,77 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
 
       <Modal
         open={Boolean(checkoutPlanCode)}
-        title={locale === 'id' ? 'Kode referal' : 'Referral code'}
+        title={locale === 'id' ? 'Kode voucher' : 'Voucher code'}
+        description={locale === 'id' ? 'Masukkan kode voucher jika memiliki promo. Kosongkan jika tidak memiliki voucher.' : 'Enter a voucher code if you have a promo. Leave it empty if you do not have a voucher.'}
         onClose={() => {
           if (checkoutM.isPending) return
           setCheckoutPlanCode(null)
-          setReferralCode('')
+          setVoucherCode('')
+          setVoucherError('')
+          setAppliedVoucher(null)
         }}
         footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setCheckoutPlanCode(null)
-                setReferralCode('')
-              }}
-              disabled={checkoutM.isPending}
-            >
-              {locale === 'id' ? 'Lewati' : 'Skip'}
-            </Button>
-            <Button onClick={confirmCheckout} loading={checkoutM.isPending}>
-              {locale === 'id' ? 'Lanjut pembayaran' : 'Continue payment'}
-            </Button>
-          </>
+          <Button className="w-full bg-[#2563EB] hover:bg-blue-700 sm:w-auto" onClick={() => void confirmCheckout()} loading={checkoutM.isPending || validateVoucherM.isPending}>
+            {locale === 'id' ? 'Lanjut Pembayaran' : 'Continue Payment'}
+          </Button>
         }
       >
-        <Input
-          label={locale === 'id' ? 'Kode referal' : 'Referral code'}
-          placeholder={locale === 'id' ? 'Opsional saat pembayaran' : 'Optional before payment'}
-          value={referralCode}
-          maxLength={32}
-          onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              {locale === 'id' ? 'Kode Voucher' : 'Voucher Code'}
+            </label>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  className="h-10"
+                  placeholder={locale === 'id' ? 'HEMAT20' : 'HEMAT20'}
+                  value={voucherCode}
+                  maxLength={32}
+                  onChange={(e) => {
+                    setVoucherCode(sanitizeReferralCode(e.target.value))
+                    setVoucherError('')
+                    setAppliedVoucher(null)
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 shrink-0 px-4"
+                loading={validateVoucherM.isPending}
+                disabled={!voucherCode.trim()}
+                onClick={() => validateVoucherM.mutate()}
+              >
+                {locale === 'id' ? 'Terapkan' : 'Apply'}
+              </Button>
+            </div>
+          </div>
+          {appliedVoucher ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-900">
+              <p className="font-extrabold text-emerald-700">✓ {locale === 'id' ? `Voucher ${appliedVoucher.code} berhasil digunakan` : `Voucher ${appliedVoucher.code} applied successfully`}</p>
+              <dl className="mt-3 grid gap-2 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-emerald-700/80">{locale === 'id' ? 'Diskon' : 'Discount'}</dt>
+                  <dd className="font-bold">{appliedVoucher.discount_type === 'percent' ? `${appliedVoucher.discount_value}%` : formatCurrency(appliedVoucher.discount_amount, appliedVoucher.currency)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-emerald-700/80">{locale === 'id' ? 'Harga Awal' : 'Original Price'}</dt>
+                  <dd className="font-bold">{formatCurrency(appliedVoucher.original_amount, appliedVoucher.currency)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-emerald-200/70 pt-2">
+                  <dt className="font-extrabold text-emerald-900">{locale === 'id' ? 'Total Bayar' : 'Total Pay'}</dt>
+                  <dd className="font-extrabold">{formatCurrency(appliedVoucher.pay_amount, appliedVoucher.currency)}</dd>
+                </div>
+              </dl>
+            </div>
+          ) : null}
+          {voucherError ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs font-semibold text-rose-700">
+              ✕ {voucherError}
+            </div>
+          ) : null}
+        </div>
       </Modal>
     </section>
   )

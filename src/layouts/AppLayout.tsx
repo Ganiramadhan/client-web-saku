@@ -21,6 +21,7 @@ import {
   HiOutlineBell,
   HiOutlineCalendarDays,
   HiOutlineChatBubbleLeftRight,
+  HiOutlineReceiptPercent,
 } from 'react-icons/hi2'
 import { LuPanelLeftClose, LuPanelLeftOpen } from 'react-icons/lu'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -134,6 +135,7 @@ export function AppLayout() {
     { to: '/admin/users', label: t.nav.adminUsers, icon: HiOutlineUsers },
     { to: '/admin/categories', label: t.nav.categories, icon: HiOutlineTag },
     { to: '/admin/subscriptions', label: t.nav.subscribers, icon: HiOutlineSparkles },
+    { to: '/admin/vouchers', label: 'Vouchers', icon: HiOutlineReceiptPercent },
     { to: '/admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
   ]
 
@@ -141,6 +143,7 @@ export function AppLayout() {
     { to: '/super-admin', label: t.nav.dashboard, end: true, icon: HiOutlineHome },
     { to: '/super-admin/users', label: t.nav.adminUsers, icon: HiOutlineUsers },
     { to: '/super-admin/subscriptions', label: t.nav.subscribers, icon: HiOutlineSparkles },
+    { to: '/super-admin/vouchers', label: 'Vouchers', icon: HiOutlineReceiptPercent },
     { to: '/super-admin/ai-logs', label: t.nav.aiLogs, icon: HiOutlineSparkles },
     { to: '/super-admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
   ]

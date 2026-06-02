@@ -74,12 +74,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? (
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-70" />
       ) : (
         leftIcon
       )}
 
-      {children}
+      {!loading && children}
 
       {!loading && rightIcon ? rightIcon : null}
     </button>

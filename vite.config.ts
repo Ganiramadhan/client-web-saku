@@ -15,8 +15,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:4001',
-        // target: 'https://api-finance.ganipedia.com',
+        // target: 'http://localhost:4001',
+        target: 'https://api-finance.ganipedia.com',
         changeOrigin: true,
       },
     },

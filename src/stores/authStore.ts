@@ -12,6 +12,7 @@ export interface AuthUser {
   photo_url?: string
   referral_code?: string
   referral_reward?: number
+  telegram_chat_id?: string
   last_login_at?: string | null
 }
 

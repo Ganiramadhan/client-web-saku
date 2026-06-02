@@ -52,7 +52,7 @@ export function PlansPage() {
 
   const [busyCode, setBusyCode] = useState<string | null>(null)
   const [period, setPeriod] = useState<BillingPeriod>('monthly')
-  const [referralCode, setReferralCode] = useState('')
+  const [voucherCode, setVoucherCode] = useState('')
   const snapLoadedRef = useRef(false)
 
 
@@ -86,7 +86,7 @@ export function PlansPage() {
     try {
       setBusyCode(plan.code)
 
-      const checkout = await subscriptionApi.checkout(plan.code, false, sanitizeReferralCode(referralCode))
+      const checkout = await subscriptionApi.checkout(plan.code, false, undefined, sanitizeReferralCode(voucherCode))
 
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
@@ -134,11 +134,11 @@ export function PlansPage() {
 
       <div className="mx-auto max-w-md">
         <Input
-          label="Kode referal"
-          placeholder="Opsional saat pembayaran"
-          value={referralCode}
+          label={locale === 'id' ? 'Kode voucher' : 'Voucher code'}
+          placeholder={locale === 'id' ? 'Opsional, contoh HEMAT20' : 'Optional, for example HEMAT20'}
+          value={voucherCode}
           maxLength={32}
-          onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
+          onChange={(e) => setVoucherCode(sanitizeReferralCode(e.target.value))}
         />
       </div>
 

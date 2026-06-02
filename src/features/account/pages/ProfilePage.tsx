@@ -9,6 +9,7 @@ import {
   HiOutlineUser,
   HiOutlineShieldCheck,
   HiOutlineIdentification,
+  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2'
 import {
   Card,
@@ -22,6 +23,8 @@ import { useLocale } from '@/i18n'
 import {
   getMe,
   updateProfile,
+  bindTelegram,
+  disconnectTelegram,
   uploadPhoto,
   deletePhoto,
 } from '@/features/auth/api'
@@ -33,7 +36,6 @@ import { confirm } from '@/lib/confirm'
 import { loadSnap } from '@/lib/snap'
 import { sanitizeReferralCode } from '../utils/billing'
 import {
-  ReferralCard,
   SubscriptionCard,
 } from '../components/ProfilePanels'
 
@@ -42,7 +44,7 @@ export function ProfilePage() {
   const copy = locale === 'id'
     ? {
         title: 'Pengaturan Akun',
-        subtitle: 'Kelola profil, kode referal, dan langganan SAKU.',
+        subtitle: 'Kelola profil, integrasi Telegram, dan langganan SAKU.',
         photoUploaded: 'Foto berhasil diunggah, klik Simpan untuk menerapkan.',
         photoDeleted: 'Foto profil dihapus.',
         profileUpdated: 'Profil berhasil diperbarui.',
@@ -68,10 +70,26 @@ export function ProfilePage() {
         cancelTitle: 'Batalkan langganan atau pembayaran?',
         cancelDesc: 'Langganan atau pembayaran pending akan dibatalkan. Kamu bisa memilih paket lain setelah proses selesai.',
         cancelConfirm: 'Batalkan',
+        telegramTitle: 'Telegram Bot',
+        telegramDesc: 'Hubungkan Telegram untuk mencatat transaksi lewat chat AI.',
+        telegramConnected: 'Terhubung',
+        telegramDisconnected: 'Belum terhubung',
+        telegramChatId: 'Chat ID Telegram',
+        telegramPlaceholder: 'Contoh: 123456789',
+        telegramHint: 'Kirim pesan ke bot SAKU. Jika belum terhubung, bot akan menampilkan Chat ID kamu.',
+        telegramInvalid: 'Chat ID harus berupa angka 5-20 digit dari bot SAKU.',
+        telegramGuide1: '1. Buka SAKU Finance Bot di Telegram: @sakufinance_bot.',
+        telegramGuide2: '2. Kirim /start, lalu salin Chat ID yang dikirim bot.',
+        telegramGuide3: '3. Tempel Chat ID di sini, klik Hubungkan, lalu coba chat: beli kopi 25rb pake cash.',
+        telegramSave: 'Hubungkan',
+        telegramSaved: 'Telegram berhasil dihubungkan.',
+        telegramDisconnect: 'Putuskan',
+        telegramDisconnectedDone: 'Telegram berhasil diputuskan.',
+        telegramConnectedHint: 'Bot sudah siap mencatat transaksi dan menjawab pertanyaan keuangan dari Telegram kamu.',
       }
     : {
         title: 'Account Settings',
-        subtitle: 'Manage your profile, referral code, and SAKU subscription.',
+        subtitle: 'Manage your profile, Telegram integration, and SAKU subscription.',
         photoUploaded: 'Photo uploaded. Click Save to apply it.',
         photoDeleted: 'Profile photo deleted.',
         profileUpdated: 'Profile updated.',
@@ -97,6 +115,22 @@ export function ProfilePage() {
         cancelTitle: 'Cancel subscription or payment?',
         cancelDesc: 'The subscription or pending payment will be canceled. You can choose another plan after the process is complete.',
         cancelConfirm: 'Cancel',
+        telegramTitle: 'Telegram Bot',
+        telegramDesc: 'Connect Telegram to record transactions through AI chat.',
+        telegramConnected: 'Connected',
+        telegramDisconnected: 'Not connected',
+        telegramChatId: 'Telegram Chat ID',
+        telegramPlaceholder: 'Example: 123456789',
+        telegramHint: 'Send a message to the SAKU bot. If it is not connected yet, the bot will show your Chat ID.',
+        telegramInvalid: 'Chat ID must be a 5-20 digit number from the SAKU bot.',
+        telegramGuide1: '1. Open SAKU Finance Bot on Telegram: @sakufinance_bot.',
+        telegramGuide2: '2. Send /start, then copy the Chat ID sent by the bot.',
+        telegramGuide3: '3. Paste the Chat ID here, click Connect, then try: beli kopi 25rb pake cash.',
+        telegramSave: 'Connect',
+        telegramSaved: 'Telegram connected.',
+        telegramDisconnect: 'Disconnect',
+        telegramDisconnectedDone: 'Telegram disconnected.',
+        telegramConnectedHint: 'The bot is ready to record transactions and answer finance questions from your Telegram.',
       }
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
@@ -114,6 +148,7 @@ export function ProfilePage() {
   const [isDragging, setIsDragging] = useState(false)
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const [busyResume, setBusyResume] = useState(false)
+  const [telegramChatId, setTelegramChatId] = useState('')
   const snapLoadedRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -122,6 +157,7 @@ export function ProfilePage() {
       const timer = window.setTimeout(() => {
         setName(me.data?.name ?? '')
         setEmail(me.data?.email ?? '')
+        setTelegramChatId(me.data?.telegram_chat_id ?? '')
       }, 0)
       return () => window.clearTimeout(timer)
     }
@@ -162,6 +198,28 @@ export function ProfilePage() {
       setPendingPhotoKey(null)
       setPendingPhotoPreview((preview) => u.photo_url ? null : preview)
       toast.success(copy.profileUpdated)
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const telegramBind = useMutation({
+    mutationFn: () => bindTelegram(telegramChatId.trim()),
+    onSuccess: (u) => {
+      setUser(u)
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setTelegramChatId(u.telegram_chat_id ?? '')
+      toast.success(copy.telegramSaved)
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const telegramDisconnect = useMutation({
+    mutationFn: disconnectTelegram,
+    onSuccess: (u) => {
+      setUser(u)
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setTelegramChatId('')
+      toast.success(copy.telegramDisconnectedDone)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -215,8 +273,10 @@ export function ProfilePage() {
     () => (subscriptions.data ?? []).find((item) => item.status === 'pending') ?? null,
     [subscriptions.data],
   )
+  const telegramChatIdValue = telegramChatId.trim()
+  const isTelegramChatIdValid = /^[1-9]\d{4,19}$/.test(telegramChatIdValue)
 
-  const handleSubscribe = async (planCode: string, referralCode?: string, resumePending = false) => {
+  const handleSubscribe = async (planCode: string, voucherCode?: string, resumePending = false) => {
     try {
       if (pendingSubscription && !resumePending) {
         toast.info(copy.pendingPlanExists)
@@ -224,7 +284,9 @@ export function ProfilePage() {
       }
       if (resumePending) setBusyResume(true)
       else setBusyPlan(planCode)
-      const checkout = await subscriptionApi.checkout(planCode, false, sanitizeReferralCode(referralCode ?? ''))
+      const checkout = resumePending && pendingSubscription?.id
+        ? await subscriptionApi.renewInvoice(pendingSubscription.id)
+        : await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
         snapLoadedRef.current = true
@@ -485,10 +547,74 @@ export function ProfilePage() {
           <div className="space-y-4">
           {!isBackofficeUser ? (
             <>
-              <ReferralCard
-                code={me.data?.referral_code}
-                reward={me.data?.referral_reward ?? 0}
-              />
+              <Card className="bg-white/72">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+                      <HiOutlineChatBubbleLeftRight className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">{copy.telegramTitle}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{copy.telegramDesc}</p>
+                    </div>
+                  </div>
+                  <Badge tone={me.data?.telegram_chat_id ? 'green' : 'amber'}>
+                    {me.data?.telegram_chat_id ? copy.telegramConnected : copy.telegramDisconnected}
+                  </Badge>
+                </div>
+
+                {me.data?.telegram_chat_id ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                      {copy.telegramConnected}
+                    </p>
+                    <p className="mt-1 text-sm font-extrabold text-emerald-950">
+                      {me.data.telegram_chat_id}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-emerald-800/80">{copy.telegramConnectedHint}</p>
+					<Button
+						type="button"
+						variant="danger"
+						className="mt-4 w-full"
+                      onClick={() => telegramDisconnect.mutate()}
+                      loading={telegramDisconnect.isPending}
+                    >
+                      {copy.telegramDisconnect}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-white/75 bg-white/55 p-4 shadow-sm">
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      {copy.telegramChatId}
+                    </label>
+                    <Input
+                      value={telegramChatId}
+                      onChange={(event) => setTelegramChatId(event.target.value.replace(/\D/g, '').slice(0, 20))}
+                      placeholder={copy.telegramPlaceholder}
+                      inputMode="numeric"
+                    />
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{copy.telegramHint}</p>
+                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-5 text-blue-800">
+                      <p>{copy.telegramGuide1}</p>
+                      <p>{copy.telegramGuide2}</p>
+                      <p>{copy.telegramGuide3}</p>
+                    </div>
+                    {telegramChatIdValue && !isTelegramChatIdValid ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-600">{copy.telegramInvalid}</p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      className="mt-4 w-full transition hover:-translate-y-0.5 hover:shadow-md"
+                      onClick={() => telegramBind.mutate()}
+                      loading={telegramBind.isPending}
+                      disabled={!isTelegramChatIdValid}
+                    >
+                      {copy.telegramSave}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
               <SubscriptionCard
                 sub={sub.data ?? null}
                 pendingSub={pendingSubscription}

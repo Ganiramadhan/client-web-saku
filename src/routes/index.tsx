@@ -28,7 +28,9 @@ const ProfilePage = lazyRoute(() => import('@/features/account/pages/ProfilePage
 const SettingsPage = lazyRoute(() => import('@/features/account/pages/SettingsPage'), 'SettingsPage')
 const UpcomingBillingPage = lazyRoute(() => import('@/features/billing/pages/UpcomingBillingPage'), 'UpcomingBillingPage')
 const ThanksPage = lazyRoute(() => import('@/features/subscription/pages/ThanksPage'), 'ThanksPage')
+const PaymentRedirectPage = lazyRoute(() => import('@/features/subscription/pages/PaymentRedirectPage'), 'PaymentRedirectPage')
 const SubscribersPage = lazyRoute(() => import('@/features/subscription/pages/SubscribersPage'), 'SubscribersPage')
+const VouchersPage = lazyRoute(() => import('@/features/subscription/pages/VouchersPage'), 'VouchersPage')
 const CustomerServicePage = lazyRoute(() => import('@/features/support/pages/CustomerServicePage'), 'CustomerServicePage')
 const SplitBillsListPage = lazyRoute(() => import('@/features/split/pages/SplitBillsListPage'), 'SplitBillsListPage')
 const SplitBillFormPage = lazyRoute(() => import('@/features/split/pages/SplitBillFormPage'), 'SplitBillFormPage')
@@ -46,6 +48,8 @@ export function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/payment/finish" element={<PaymentRedirectPage mode="finish" />} />
+      <Route path="/payment/error" element={<PaymentRedirectPage mode="error" />} />
 
       {/* Authenticated workspace */}
       <Route
@@ -90,6 +94,7 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
         <Route path="customer-service" element={<CustomerServicePage />} />
         <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
@@ -106,6 +111,7 @@ export function AppRoutes() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
         <Route path="ai-logs" element={<AILogsPage />} />
         <Route path="customer-service" element={<CustomerServicePage />} />
       </Route>

@@ -326,7 +326,7 @@ function TermsModal({
         <div className="flex items-start justify-between gap-4 border-b border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50/50 px-5 py-5 sm:px-6">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-blue-700 shadow-sm">
-              <img src="/logo.png" alt="SAKU" className="h-6 w-6 rounded-lg object-contain" />
+              <img src="/saku-logo.png" alt="SAKU" className="h-6 w-6 rounded-lg object-contain" />
               SAKU Finance
             </div>
             <h2 className="mt-4 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">

@@ -306,16 +306,16 @@ function SubscriptionDetailModal({
     <Modal
       open={Boolean(subscription)}
       onClose={onClose}
-      size="lg"
+      size="md"
       title="Subscription Detail"
       description={`${subscription.user_name || '-'} - ${subscription.plan_name || subscription.plan_code}`}
       footer={<Button variant="outline" onClick={onClose}>Close</Button>}
     >
       <div>
-        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Subscription</p>
-            <h3 className="mt-1 truncate text-xl font-extrabold text-slate-950">
+            <h3 className="mt-1 truncate text-lg font-extrabold text-slate-950">
               {subscription.plan_name || subscription.plan_code}
             </h3>
             <p className="mt-1 truncate text-sm text-slate-500">
@@ -328,7 +328,7 @@ function SubscriptionDetailModal({
           </div>
         </div>
 
-        <div className="mt-4 divide-y divide-slate-100">
+        <div className="mt-3 divide-y divide-slate-100">
           <DetailRow Icon={HiOutlineBanknotes} label="Amount" value={fmtIDR(subscription.amount, subscription.currency)} helper={subscription.currency} />
           <DetailRow Icon={HiOutlineSparkles} label="Plan code" value={subscription.plan_code} />
           <DetailRow Icon={HiOutlineHashtag} label="Order ID" value={subscription.order_id || '-'} helper={subscription.payment_type || 'Payment type not recorded'} />
@@ -353,8 +353,8 @@ function DetailRow({
   helper?: string
 }) {
   return (
-    <div className="flex items-start gap-3 py-3">
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
+    <div className="flex items-start gap-3 py-2.5">
+      <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">

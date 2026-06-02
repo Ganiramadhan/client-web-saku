@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RiArrowRightLine, RiBrainLine, RiChatSmile3Line, RiLockLine, RiRepeatLine, RiScanLine, RiScales3Line } from 'react-icons/ri'
+import { RiArrowRightLine, RiBrainLine, RiChatSmile3Line, RiPieChart2Line, RiRepeatLine, RiScanLine, RiWallet3Line } from 'react-icons/ri'
 import { useLocale, useT } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { SectionHeading } from '../components/SectionHeading'
@@ -22,27 +22,27 @@ export function FeaturesSection() {
     },
     {
       Icon: RiScanLine,
-      title: isId ? 'Scan Struk Pintar' : 'Smart Receipt Scanner',
+      title: isId ? 'OCR Receipt Scanner' : 'OCR Receipt Scanner',
       desc: isId ? 'Scan struk dan review data transaksi yang diekstrak AI.' : 'Scan receipts instantly and review extracted transaction data.',
       color: 'text-violet-600',
       bg: 'rgba(245,243,255,0.90)',
       border: 'rgba(221,214,254,0.70)',
     },
     {
-      Icon: RiBrainLine,
-      title: isId ? 'Insight Finansial AI' : 'AI Financial Insights',
-      desc: isId ? 'Dapatkan insight pengeluaran dan rekomendasi budget yang lebih personal.' : 'Get personalized spending insights and smarter budgeting.',
-      color: 'text-indigo-600',
-      bg: 'rgba(238,242,255,0.90)',
-      border: 'rgba(199,210,254,0.70)',
+      Icon: RiWallet3Line,
+      title: isId ? 'Multiple Wallet' : 'Multiple Wallet',
+      desc: isId ? 'Pantau cash, rekening, e-wallet, dan kantong tujuan dalam satu tempat.' : 'Track cash, bank accounts, e-wallets, and savings pockets in one workspace.',
+      color: 'text-sky-600',
+      bg: 'rgba(240,249,255,0.92)',
+      border: 'rgba(186,230,253,0.75)',
     },
     {
-      Icon: RiScales3Line,
-      title: isId ? 'Split Bill' : 'Split Bills',
-      desc: isId ? 'Bagi pengeluaran bersama dan pantau status pembayaran dengan jelas.' : 'Split expenses fairly and track shared payments easily.',
-      color: 'text-pink-600',
-      bg: 'rgba(255,241,246,0.90)',
-      border: 'rgba(251,207,232,0.70)',
+      Icon: RiPieChart2Line,
+      title: isId ? 'Budget Tracking' : 'Budget Tracking',
+      desc: isId ? 'Tetapkan target, lihat sisa ruang belanja, dan cegah budget bocor.' : 'Set targets, see safe spending room, and prevent budget leaks.',
+      color: 'text-emerald-600',
+      bg: 'rgba(236,253,245,0.90)',
+      border: 'rgba(167,243,208,0.70)',
     },
     {
       Icon: RiRepeatLine,
@@ -53,12 +53,12 @@ export function FeaturesSection() {
       border: 'rgba(253,230,138,0.70)',
     },
     {
-      Icon: RiLockLine,
-      title: isId ? 'Privasi Utama' : 'Privacy First',
-      desc: isId ? 'Infrastruktur aman dan perlindungan data finansial yang terkontrol.' : 'Secure infrastructure and encrypted financial data protection.',
-      color: 'text-rose-500',
-      bg: 'rgba(255,241,242,0.90)',
-      border: 'rgba(254,205,211,0.70)',
+      Icon: RiBrainLine,
+      title: isId ? 'Financial Insight' : 'Financial Insight',
+      desc: isId ? 'Dapatkan ringkasan cashflow, pola pengeluaran, dan rekomendasi yang bisa ditindaklanjuti.' : 'Get cashflow summaries, spending patterns, and actionable recommendations.',
+      color: 'text-indigo-600',
+      bg: 'rgba(238,242,255,0.90)',
+      border: 'rgba(199,210,254,0.70)',
     },
   ]
 

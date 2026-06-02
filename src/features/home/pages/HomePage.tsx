@@ -9,7 +9,9 @@ import { FeaturesSection } from '../sections/FeaturesSection'
 import { FooterSection } from '../sections/FooterSection'
 import { FAQSection } from '../sections/FAQSection'
 import { HowItWorksSection } from '../sections/HowItWorksSection'
+import { ProblemSection } from '../sections/ProblemSection'
 import { PricingSection } from '../sections/PricingSection'
+import { SecuritySection } from '../sections/SecuritySection'
 
 export function HomePage() {
   const t = useT()
@@ -154,9 +156,11 @@ export function HomePage() {
 
       <main className="relative z-10 pt-24">
         <HeroSection isAuthed={isAuthed} />
+        <ProblemSection />
         <FeaturesSection />
         <HowItWorksSection />
         <PricingSection isAuthed={isAuthed} />
+        <SecuritySection isAuthed={isAuthed} />
         <FAQSection />
       </main>
       <FooterSection onNavClick={smoothScrollTo} />

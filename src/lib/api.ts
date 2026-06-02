@@ -128,6 +128,10 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
       'Kuota AI bulanan paket Premium sudah habis.',
     'Premium plan monthly OCR limit reached':
       'Kuota scan struk bulanan paket Premium sudah habis.',
+    'Too many AI requests. Please wait a moment before trying again.':
+      'Permintaan AI sedang terlalu sering. Tunggu sebentar, lalu coba lagi.',
+    'Too many receipt scan requests. Please wait a moment before trying again.':
+      'Permintaan scan struk sedang terlalu sering. Tunggu sebentar, lalu coba lagi.',
     'Source wallet has an active target. Confirm target removal before transferring balance':
       'Wallet sumber memiliki target aktif. Konfirmasi penghapusan target sebelum memindahkan saldo.',
     'Source wallet balance is not enough': 'Saldo wallet sumber tidak cukup.',

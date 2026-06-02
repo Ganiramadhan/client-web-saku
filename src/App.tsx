@@ -5,7 +5,7 @@ import { useSEO } from '@/lib/seo'
 import { initSessionActivity } from '@/lib/sessionActivity'
 
 const PAGE_SEO: Array<{ pattern: RegExp; title: string; description: string; noIndex?: boolean }> = [
-  { pattern: /^\/$/, title: 'SAKU — Personal Finance with AI', description: 'Kelola transaksi, dompet, tagihan, budget, dan target finansial dengan bantuan AI.' },
+  { pattern: /^\/$/, title: 'SAKU — AI Financial Assistant', description: 'Kelola transaksi, scan struk, wallet, budget, tagihan, dan insight cashflow pribadi dengan bantuan AI.' },
   { pattern: /^\/login/, title: 'Masuk', description: 'Masuk ke dashboard SAKU untuk mengelola keuangan pribadi.', noIndex: true },
   { pattern: /^\/register/, title: 'Daftar', description: 'Buat akun SAKU dan mulai mencatat keuangan pribadi.', noIndex: true },
   { pattern: /^\/forgot-password/, title: 'Reset Password', description: 'Pulihkan akses akun SAKU dengan OTP email.', noIndex: true },
@@ -23,7 +23,7 @@ export default function App() {
     title: match.title,
     description: match.description,
     noIndex: match.noIndex,
-    canonical: `${window.location.origin}${location.pathname}`,
+    canonical: `https://saku.ganipedia.com${location.pathname}`,
   })
   return <AppRoutes />
 }

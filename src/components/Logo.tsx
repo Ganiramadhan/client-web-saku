@@ -23,7 +23,7 @@ export function Logo({
           dim,
         )}
       >
-        <img src="/icon-saku.ico" alt="SAKU" className="h-full w-full object-cover" />
+        <img src="/logo.png" alt="SAKU" className="h-full w-full object-cover" />
       </span>
       {withText ? (
         <span

@@ -60,6 +60,14 @@ export async function updateProfile(payload: UpdateProfilePayload): Promise<Auth
   return unwrap<AuthUser>(await api.put('/users/me', payload))
 }
 
+export async function bindTelegram(chatId: string): Promise<AuthUser> {
+  return unwrap<AuthUser>(await api.post('/users/me/telegram', { chat_id: chatId }))
+}
+
+export async function disconnectTelegram(): Promise<AuthUser> {
+  return unwrap<AuthUser>(await api.delete('/users/me/telegram'))
+}
+
 export async function changePassword(payload: {
   current_password: string
   new_password: string

@@ -11,7 +11,8 @@ export interface SEOOptions {
 }
 
 const DEFAULT_DESCRIPTION =
-  'SAKU membantu mencatat transaksi, scan struk, mengelola dompet, tagihan, budget, dan target finansial dengan bantuan AI.'
+  'SAKU adalah AI Financial Assistant untuk mencatat transaksi, scan struk, mengelola wallet, budget, tagihan, dan insight cashflow pribadi.'
+const SITE_URL = 'https://saku.ganipedia.com'
 
 function upsertMeta(selector: string, attrs: Record<string, string>) {
   let el = document.head.querySelector<HTMLMetaElement>(selector)
@@ -41,14 +42,14 @@ export function useSEO({
   title,
   description = DEFAULT_DESCRIPTION,
   canonical,
-  image = '/logo.png',
-  keywords = 'SAKU, personal finance app, AI finance tracker, receipt scanner, budget tracker, digital wallet, split bill',
+  image = `${SITE_URL}/saku-logo.png`,
+  keywords = 'SAKU, AI Financial Assistant, aplikasi keuangan pribadi, AI finance tracker, receipt scanner, budget tracker, digital wallet, split bill',
   locale = 'en_US',
   noIndex,
 }: SEOOptions) {
   useEffect(() => {
     const fullTitle = title.includes('SAKU') ? title : `${title} | SAKU`
-    const currentUrl = canonical ? absoluteUrl(canonical) : window.location.origin + window.location.pathname
+    const currentUrl = canonical ? absoluteUrl(canonical) : SITE_URL + window.location.pathname
     const imageUrl = absoluteUrl(image)
     document.documentElement.lang = locale.startsWith('id') ? 'id' : 'en'
     document.title = fullTitle

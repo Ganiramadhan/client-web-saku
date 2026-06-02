@@ -7,7 +7,10 @@ import {
   HiOutlineArrowTrendingUp,
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
+  HiOutlineCamera,
+  HiOutlineChatBubbleLeftRight,
   HiOutlineLightBulb,
+  HiOutlinePlusCircle,
   HiOutlineSparkles,
   HiOutlineWallet,
 } from 'react-icons/hi2'
@@ -88,14 +91,17 @@ const DASHBOARD_COPY = {
     subtitle: 'Dashboard ini fokus ke keputusan harian: sisa ruang belanja, proyeksi akhir bulan, tagihan dekat, dan prioritas AI.',
     savingRate: 'Saving rate',
     cashflowTitle: 'Briefing cashflow',
-    cashflowDesc: 'Angka praktis untuk menjaga bulan ini tetap terkendali.',
+    cashflowDesc: 'Ringkasan realtime dari transaksi, saldo wallet, dan tagihan terdekat.',
     projectedSpending: 'Proyeksi pengeluaran',
     safeDailySpend: 'Ruang belanja harian',
+    noSafeSpend: 'Tahan belanja dulu',
+    updatedAt: 'Diperbarui',
     aiPriority: 'Prioritas AI',
-    aiPriorityCategory: 'Kategori terbesar bulan ini perlu dicek sebelum belanja lagi.',
-    aiPriorityBills: 'Ada tagihan dekat. Siapkan dana lebih awal.',
-    aiPriorityPositive: 'Cashflow sehat. Pertahankan ritme dan alokasikan surplus ke target.',
-    aiPriorityDeficit: 'Pengeluaran melewati pemasukan. Review transaksi terbesar hari ini.',
+    aiPriorityCategory: 'kategori terbesar bulan ini. Cek detailnya sebelum menambah pengeluaran baru.',
+    aiPriorityBills: 'Siapkan dana untuk tagihan terdekat.',
+    aiPriorityPositive: 'Cashflow aman. Pertahankan ritme, lalu alokasikan surplus ke target atau dana darurat.',
+    aiPriorityDeficit: 'Pengeluaran sudah melewati pemasukan bulan ini. Review transaksi terbesar dan tahan belanja non-esensial.',
+    aiPriorityStart: 'Mulai dengan mencatat pemasukan, saldo wallet, atau transaksi pertama agar briefing lebih akurat.',
     trendDescription: 'Perbandingan pemasukan dan pengeluaran berdasarkan periode.',
     income: 'Pemasukan',
     expense: 'Pengeluaran',
@@ -158,19 +164,30 @@ const DASHBOARD_COPY = {
     noActiveGoalDesc: 'Buat target seperti DP rumah, dana darurat, atau liburan. SAKU akan ubah target menjadi rekomendasi harian.',
     createTarget: 'Buat target',
     dailyBudgetCreated: 'Budget harian berhasil dibuat.',
+    startTitle: 'Mulai dari 3 langkah cepat',
+    startDesc: 'Tambahkan data pertama agar SAKU bisa membaca cashflow dan memberi insight yang lebih relevan.',
+    startTransaction: 'Catat transaksi',
+    startTransactionDesc: 'Masukkan pemasukan atau pengeluaran pertama untuk membangun ringkasan cashflow.',
+    startScan: 'Scan struk',
+    startScanDesc: 'Coba OCR untuk mengubah foto struk menjadi transaksi siap review.',
+    startAi: 'Tanya AI',
+    startAiDesc: 'Gunakan chat untuk bertanya pola pengeluaran atau mencatat transaksi dengan bahasa natural.',
   },
   en: {
     subtitle: 'This dashboard focuses on daily decisions: spending room, month-end projection, upcoming bills, and AI priorities.',
     savingRate: 'Saving rate',
     cashflowTitle: 'Cashflow briefing',
-    cashflowDesc: 'Practical numbers to keep this month under control.',
+    cashflowDesc: 'Realtime summary from transactions, wallet balance, and upcoming bills.',
     projectedSpending: 'Projected spending',
     safeDailySpend: 'Daily spending room',
+    noSafeSpend: 'Pause spending',
+    updatedAt: 'Updated',
     aiPriority: 'AI priority',
-    aiPriorityCategory: 'Your largest category needs review before adding more spending.',
-    aiPriorityBills: 'Upcoming bills are close. Set aside cash early.',
-    aiPriorityPositive: 'Cashflow is healthy. Keep the rhythm and move surplus into goals.',
-    aiPriorityDeficit: 'Spending is above income. Review the largest transactions today.',
+    aiPriorityCategory: 'is the largest category this month. Review it before adding new spending.',
+    aiPriorityBills: 'Set aside money for the closest bill.',
+    aiPriorityPositive: 'Cashflow is safe. Keep the rhythm, then move surplus into goals or emergency funds.',
+    aiPriorityDeficit: 'Spending is already above income this month. Review the largest transactions and pause non-essential spending.',
+    aiPriorityStart: 'Start by recording income, wallet balance, or your first transaction so the briefing gets more accurate.',
     trendDescription: 'Income and spending comparison by selected period.',
     income: 'Income',
     expense: 'Spending',
@@ -233,6 +250,14 @@ const DASHBOARD_COPY = {
     noActiveGoalDesc: 'Create goals such as a home down payment, emergency fund, or vacation. SAKU will turn them into daily recommendations.',
     createTarget: 'Create target',
     dailyBudgetCreated: 'Daily budget created.',
+    startTitle: 'Start with 3 quick steps',
+    startDesc: 'Add your first data so SAKU can read cashflow and provide more relevant insights.',
+    startTransaction: 'Record transaction',
+    startTransactionDesc: 'Add your first income or expense to build a cashflow summary.',
+    startScan: 'Scan receipt',
+    startScanDesc: 'Try OCR to turn a receipt photo into a review-ready transaction.',
+    startAi: 'Ask AI',
+    startAiDesc: 'Use chat to ask about spending patterns or record transactions naturally.',
   },
 } as const
 
@@ -247,11 +272,11 @@ export function DashboardPage() {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
+  const [now, setNow] = useState(() => new Date())
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
   )
 
-  const now = useMemo(() => new Date(), [])
   const monthStart = useMemo(
     () => new Date(now.getFullYear(), now.getMonth(), 1),
     [now],
@@ -264,11 +289,15 @@ export function DashboardPage() {
   const wallets = useQuery({
     queryKey: ['wallets'],
     queryFn: walletApi.list,
+    staleTime: 45 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   const recentTxns = useQuery({
     queryKey: ['transactions', { limit: 6 }],
     queryFn: () => transactionApi.list({ limit: 6, page: 1 }),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   const monthTxns = useQuery({
@@ -279,6 +308,8 @@ export function DashboardPage() {
         to: now.toISOString(),
         limit: 1000,
       }),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   const longRangeTxns = useQuery({
@@ -289,31 +320,38 @@ export function DashboardPage() {
         to: now.toISOString(),
         limit: isMobile ? 360 : 1200,
       }),
+    staleTime: 60 * 1000,
   })
 
   const categories = useQuery({
     queryKey: ['categories', 'all'],
     queryFn: () => categoryApi.list(),
+    staleTime: 5 * 60 * 1000,
   })
 
   const activeSubscription = useQuery({
     queryKey: ['subscriptions', 'active'],
     queryFn: subscriptionApi.active,
+    staleTime: 60 * 1000,
   })
 
   const upcomingBillings = useQuery({
     queryKey: ['upcoming-billings'],
     queryFn: upcomingBillingApi.list,
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   const budgets = useQuery({
     queryKey: ['budgets'],
     queryFn: budgetApi.list,
+    staleTime: 60 * 1000,
   })
 
   const goals = useQuery({
     queryKey: ['savings-goals'],
     queryFn: savingsGoalApi.list,
+    staleTime: 60 * 1000,
   })
 
   const createBudget = useMutation({
@@ -329,6 +367,8 @@ export function DashboardPage() {
     () => (wallets.data ?? []).reduce((sum, wallet) => sum + Number(wallet.balance ?? 0), 0),
     [wallets.data],
   )
+  const dashboardHasData = totalBalance > 0 || (recentTxns.data?.data.length ?? 0) > 0 || (wallets.data?.length ?? 0) > 0
+  const dashboardLoading = wallets.isLoading || recentTxns.isLoading || monthTxns.isLoading
 
   const monthSummary = useMemo(() => {
     const data = monthTxns.data?.data ?? []
@@ -371,25 +411,35 @@ export function DashboardPage() {
     const activeBills = (upcomingBillings.data ?? []).filter((bill) => bill.status !== 'paused')
     const unpaidBills = activeBills
       .reduce((sum, bill) => sum + Number(bill.amount ?? 0), 0)
-    const dailyRoom = Math.max(0, (monthSummary.income - monthSummary.expense - unpaidBills) / remainingDays)
+    const availableCashflow = monthSummary.income > 0
+      ? monthSummary.income - monthSummary.expense
+      : totalBalance - monthSummary.expense
+    const rawDailyRoom = (availableCashflow - unpaidBills) / remainingDays
+    const dailyRoom = Math.max(0, rawDailyRoom)
     const topCategory = categoryInsights[0]
-    const nextBill = activeBills
+    const nextBill = [...activeBills]
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]
+    const hasAnySignal = totalBalance > 0 || monthSummary.income > 0 || monthSummary.expense > 0 || activeBills.length > 0
+    const deficit = Math.abs(monthSummary.saved)
     const priority =
-      monthSummary.saved < 0
-        ? copy.aiPriorityDeficit
-        : nextBill
-          ? copy.aiPriorityBills
-          : topCategory && topCategory.amount > 0
-            ? `${topCategory.name}: ${copy.aiPriorityCategory}`
-            : copy.aiPriorityPositive
+      !hasAnySignal
+        ? copy.aiPriorityStart
+        : monthSummary.income > 0 && monthSummary.saved < 0
+          ? `${copy.aiPriorityDeficit} ${locale === 'id' ? 'Gap bulan ini' : 'Current gap'}: ${formatCurrency(deficit)}${topCategory ? ` · ${topCategory.name} ${locale === 'id' ? 'paling besar' : 'is the largest'}.` : '.'}`
+          : nextBill
+            ? `${copy.aiPriorityBills} ${nextBill.name}: ${formatCurrency(Number(nextBill.amount ?? 0), nextBill.currency || 'IDR')} (${formatDate(nextBill.due_date)}).`
+            : topCategory && topCategory.amount > 0 && monthSummary.expense > 0
+              ? `${topCategory.name} ${copy.aiPriorityCategory} (${formatCurrency(topCategory.amount)}).`
+              : copy.aiPriorityPositive
 
     return {
       projectedExpense,
       dailyRoom,
+      dailyRoomLabel: rawDailyRoom <= 0 ? copy.noSafeSpend : formatCurrency(dailyRoom),
       priority,
+      updatedAtLabel: now.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
     }
-  }, [categoryInsights, copy, monthSummary.expense, monthSummary.income, monthSummary.saved, now, upcomingBillings.data])
+  }, [categoryInsights, copy, locale, monthSummary.expense, monthSummary.income, monthSummary.saved, now, totalBalance, upcomingBillings.data])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -399,12 +449,21 @@ export function DashboardPage() {
     return () => media.removeEventListener('change', onChange)
   }, [])
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60 * 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${t.common.welcome}${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
         subtitle={copy.subtitle}
       />
+
+      {!dashboardLoading && !dashboardHasData ? (
+        <DashboardStartGuide copy={copy} />
+      ) : null}
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
@@ -443,8 +502,9 @@ export function DashboardPage() {
       <CashflowBriefing
         loading={monthTxns.isLoading || upcomingBillings.isLoading}
         projectedExpense={cashflowBriefing.projectedExpense}
-        dailyRoom={cashflowBriefing.dailyRoom}
+        dailyRoomLabel={cashflowBriefing.dailyRoomLabel}
         priority={cashflowBriefing.priority}
+        updatedAtLabel={cashflowBriefing.updatedAtLabel}
         copy={copy}
       />
 
@@ -632,20 +692,22 @@ export function DashboardPage() {
 function CashflowBriefing({
   loading,
   projectedExpense,
-  dailyRoom,
+  dailyRoomLabel,
   priority,
+  updatedAtLabel,
   copy,
 }: {
   loading?: boolean
   projectedExpense: number
-  dailyRoom: number
+  dailyRoomLabel: string
   priority: string
+  updatedAtLabel: string
   copy: DashboardCopy
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
+    <section className="overflow-hidden rounded-[1.75rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/50 to-white shadow-sm shadow-blue-100/40">
+      <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-stretch lg:justify-between">
+        <div className="flex min-w-0 flex-col justify-between">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-700">
               <HiOutlineSparkles className="h-5 w-5" />
@@ -655,12 +717,72 @@ function CashflowBriefing({
               <p className="mt-0.5 text-xs text-slate-500">{copy.cashflowDesc}</p>
             </div>
           </div>
+          <p className="mt-4 inline-flex w-fit rounded-full border border-blue-100 bg-white/80 px-3 py-1 text-[11px] font-bold text-blue-700">
+            {copy.updatedAt} {updatedAtLabel}
+          </p>
         </div>
         <div className="grid gap-3 lg:w-[68%] lg:grid-cols-3">
           <BriefingItem label={copy.projectedSpending} value={formatCurrency(projectedExpense)} loading={loading} tone="rose" />
-          <BriefingItem label={copy.safeDailySpend} value={formatCurrency(dailyRoom)} loading={loading} tone="emerald" />
+          <BriefingItem label={copy.safeDailySpend} value={dailyRoomLabel} loading={loading} tone="emerald" />
           <BriefingItem label={copy.aiPriority} value={priority} loading={loading} tone="blue" compact />
         </div>
+      </div>
+    </section>
+  )
+}
+
+function DashboardStartGuide({ copy }: { copy: DashboardCopy }) {
+  const steps = [
+    {
+      Icon: HiOutlinePlusCircle,
+      title: copy.startTransaction,
+      desc: copy.startTransactionDesc,
+      to: '/app/transactions/add',
+      tone: 'border-blue-100 bg-blue-50 text-blue-700',
+    },
+    {
+      Icon: HiOutlineCamera,
+      title: copy.startScan,
+      desc: copy.startScanDesc,
+      to: '/app/scan-receipt',
+      tone: 'border-violet-100 bg-violet-50 text-violet-700',
+    },
+    {
+      Icon: HiOutlineChatBubbleLeftRight,
+      title: copy.startAi,
+      desc: copy.startAiDesc,
+      to: '/app/free-text',
+      tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+    },
+  ]
+
+  return (
+    <section className="overflow-hidden rounded-[1.75rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/60 to-white p-5 shadow-sm shadow-blue-100/50 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-blue-700">Quick start</p>
+          <h2 className="mt-2 text-xl font-extrabold text-slate-950">{copy.startTitle}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{copy.startDesc}</p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {steps.map(({ Icon, title, desc, to, tone }) => (
+          <Link
+            key={title}
+            to={to}
+            className="group rounded-2xl border border-white/80 bg-white/78 p-4 shadow-sm shadow-slate-200/40 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-lg hover:shadow-blue-100/50"
+          >
+            <div className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border ${tone}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <h3 className="mt-4 text-sm font-extrabold text-slate-950">{title}</h3>
+            <p className="mt-2 min-h-12 text-xs leading-5 text-slate-500">{desc}</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700">
+              {title}
+              <HiOutlineArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </Link>
+        ))}
       </div>
     </section>
   )

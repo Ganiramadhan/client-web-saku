@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   HiOutlineCheckCircle,
-  HiOutlineClipboardDocument,
   HiOutlineClock,
   HiOutlineStar,
 } from 'react-icons/hi2'
@@ -10,89 +10,13 @@ import {
   Button,
   Card,
   Input,
+  Modal,
 } from '@/components/ui'
-import type { Plan, Subscription } from '@/features/subscription/api'
+import { subscriptionApi, type Plan, type Subscription, type ValidateVoucherResponse } from '@/features/subscription/api'
 import { useLocale } from '@/i18n'
 import { formatCurrency } from '@/lib/utils'
+import { toErrorMessage } from '@/lib/api'
 import { sanitizeReferralCode } from '../utils/billing'
-
-export function ReferralCard({ code, reward }: { code?: string; reward: number }) {
-  const { locale } = useLocale()
-  const copy = locale === 'id'
-    ? {
-        referralCode: 'Kode referal',
-        loginAgain: 'Login ulang untuk membuat kode',
-        reward: 'Reward',
-        title: 'Kode Referal',
-        desc: 'Bagikan kode ini. Reward masuk saat pengguna lain membayar langganan dengan kode kamu.',
-        copy: 'Salin kode referal',
-      }
-    : {
-        referralCode: 'Referral code',
-        loginAgain: 'Log in again to generate a code',
-        reward: 'Reward',
-        title: 'Referral Code',
-        desc: 'Share this code. Rewards are added when another user pays a subscription with your code.',
-        copy: 'Copy referral code',
-      }
-  const [copied, setCopied] = useState(false)
-  const rows = [
-    { label: copy.referralCode, value: code || copy.loginAgain },
-    { label: copy.reward, value: formatCurrency(reward, 'IDR') },
-  ]
-  const copyCode = async () => {
-    if (!code) return
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
-  }
-
-  return (
-    <Card>
-      <div className="flex items-center gap-2">
-        <HiOutlineStar className="h-5 w-5 text-amber-500" />
-        <h3 className="text-sm font-bold text-slate-900">{copy.title}</h3>
-      </div>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        {copy.desc}
-      </p>
-      <div className="mt-4 overflow-hidden rounded-xl border border-white/80 bg-white/60 shadow-sm">
-        <table className="w-full text-left text-xs">
-          <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => (
-              <tr key={row.label}>
-                <th className="w-36 bg-slate-50/70 px-3 py-2 font-semibold text-slate-500">
-                  {row.label}
-                </th>
-                <td className="px-3 py-2 font-semibold text-slate-900">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className={row.label === copy.referralCode ? 'font-mono tracking-wide' : undefined}>
-                      {row.value}
-                    </span>
-                    {row.label === copy.referralCode && code ? (
-                      <button
-                        type="button"
-                        onClick={copyCode}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-brand-50 hover:text-brand-700"
-                        title={copy.copy}
-                      >
-                        {copied ? (
-                          <HiOutlineCheckCircle className="h-4 w-4 text-emerald-600" />
-                        ) : (
-                          <HiOutlineClipboardDocument className="h-4 w-4" />
-                        )}
-                      </button>
-                    ) : null}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  )
-}
 
 export function SubscriptionCard({
   sub,
@@ -115,7 +39,7 @@ export function SubscriptionCard({
   plansLoading: boolean
   busyPlan: string | null
   resumeLoading: boolean
-  onSubscribe: (planCode: string, referralCode?: string, resumePending?: boolean) => void
+  onSubscribe: (planCode: string, voucherCode?: string, resumePending?: boolean) => void
   onCancel: (id: string) => void
   cancelLoading: boolean
 }) {
@@ -126,14 +50,26 @@ export function SubscriptionCard({
         loading: 'Memuat...',
         pendingTitle: 'Pembayaran Belum Selesai',
         pendingDesc: 'Selesaikan pembayaran untuk mengaktifkan paket',
+        expiredTitle: 'Waktu pembayaran habis',
+        expiredDesc: 'Invoice pembayaran telah kedaluwarsa. Buat invoice baru untuk melanjutkan aktivasi langganan.',
         payBefore: 'Bayar sebelum',
         expiresIn: 'Sisa waktu',
         expired: 'Kedaluwarsa',
         continuePay: 'Lanjutkan Pembayaran',
+        createInvoice: 'Buat Invoice Baru',
         cancelPayment: 'Batalkan Pembayaran',
         freeDesc: 'Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.',
-        referral: 'Kode Referal',
-        referralPlaceholder: 'Opsional saat pembayaran',
+        referral: 'Kode Voucher',
+        referralPlaceholder: 'Contoh: HEMAT20',
+        voucherTitle: 'Gunakan voucher?',
+        voucherDesc: 'Masukkan kode voucher jika memiliki promo. Kosongkan jika tidak memiliki voucher.',
+        voucherApply: 'Terapkan',
+        voucherContinue: 'Lanjut Pembayaran',
+        voucherSuccess: (code: string) => `Voucher ${code} berhasil digunakan`,
+        voucherInvalid: 'Kode voucher tidak ditemukan atau sudah kedaluwarsa.',
+        discount: 'Diskon',
+        originalPrice: 'Harga Awal',
+        totalPay: 'Total Bayar',
         loadingPlans: 'Memuat paket...',
         noPlans: 'Paket berbayar belum tersedia.',
         month: 'bulan',
@@ -167,14 +103,26 @@ export function SubscriptionCard({
         loading: 'Loading...',
         pendingTitle: 'Payment Not Completed',
         pendingDesc: 'Complete payment to activate plan',
+        expiredTitle: 'Payment time has run out',
+        expiredDesc: 'The payment invoice has expired. Create a new invoice to continue activating your subscription.',
         payBefore: 'Pay before',
         expiresIn: 'Time left',
         expired: 'Expired',
         continuePay: 'Continue Payment',
+        createInvoice: 'Create New Invoice',
         cancelPayment: 'Cancel Payment',
         freeDesc: 'Your account is still on the Free plan. Choose a plan to unlock AI features, advanced reports, and richer financial workflows.',
-        referral: 'Referral Code',
-        referralPlaceholder: 'Optional during payment',
+        referral: 'Voucher Code',
+        referralPlaceholder: 'Example: HEMAT20',
+        voucherTitle: 'Use a voucher?',
+        voucherDesc: 'Enter a voucher code if you have a promo. Leave it empty if you do not have a voucher.',
+        voucherApply: 'Apply',
+        voucherContinue: 'Continue Payment',
+        voucherSuccess: (code: string) => `Voucher ${code} applied successfully`,
+        voucherInvalid: 'Voucher code was not found or has expired.',
+        discount: 'Discount',
+        originalPrice: 'Original Price',
+        totalPay: 'Total Pay',
         loadingPlans: 'Loading plans...',
         noPlans: 'No paid plans are available yet.',
         month: 'month',
@@ -203,14 +151,68 @@ export function SubscriptionCard({
         renewalWarning: 'Subscription renewal is coming up',
         autoCharge: 'Auto charge will be used once recurring payment method is available.',
       }
-  const [referralCode, setReferralCode] = useState('')
+  const [voucherCode, setVoucherCode] = useState('')
+  const [voucherError, setVoucherError] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState<ValidateVoucherResponse | null>(null)
+  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null)
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const [nowMs, setNowMs] = useState(() => Date.now())
-  const cleanReferralCode = sanitizeReferralCode(referralCode)
+  const cleanVoucherCode = sanitizeReferralCode(voucherCode)
   const monthlyPlans = new Map(plans.filter((plan) => plan.period === 'monthly').map((plan) => [basePlanCode(plan.code), plan]))
   const hasMonthly = plans.some((plan) => plan.period === 'monthly')
   const hasYearly = plans.some((plan) => plan.period === 'yearly')
   const visiblePlans = plans.filter((plan) => plan.period === period)
+
+  const openVoucherModal = (plan: Plan) => {
+    setVoucherCode('')
+    setVoucherError('')
+    setAppliedVoucher(null)
+    setCheckoutPlan(plan)
+  }
+
+  const submitVoucherCheckout = async (code?: string) => {
+    if (!checkoutPlan) return
+    const cleanCode = sanitizeReferralCode(code ?? '')
+    if (cleanCode && appliedVoucher?.code !== cleanCode) {
+      try {
+        const result = await validateVoucher.mutateAsync()
+        onSubscribe(checkoutPlan.code, result.code)
+      } catch {
+        return
+      }
+    } else {
+      onSubscribe(checkoutPlan.code, cleanCode)
+    }
+    setCheckoutPlan(null)
+    setVoucherCode('')
+    setVoucherError('')
+    setAppliedVoucher(null)
+  }
+
+  const validateVoucher = useMutation({
+    mutationFn: async () => {
+      if (!checkoutPlan) throw new Error(copy.voucherInvalid)
+      const code = sanitizeReferralCode(voucherCode)
+      if (!code) throw new Error(copy.voucherInvalid)
+      return subscriptionApi.validateVoucher(checkoutPlan.code, code)
+    },
+    onSuccess: (result) => {
+      setAppliedVoucher(result)
+      setVoucherError('')
+      setVoucherCode(result.code)
+    },
+    onError: (error) => {
+      setAppliedVoucher(null)
+      const message = toErrorMessage(error)
+      setVoucherError(message && /minimum payment/i.test(message) ? message : copy.voucherInvalid)
+    },
+  })
+
+  const handleVoucherChange = (value: string) => {
+    setVoucherCode(sanitizeReferralCode(value))
+    setVoucherError('')
+    setAppliedVoucher(null)
+  }
 
   useEffect(() => {
     if (!hasMonthly && hasYearly) setPeriod('yearly')
@@ -225,6 +227,7 @@ export function SubscriptionCard({
 
   if (loading) {
     return (
+      <>
       <Card>
         <div className="flex items-center gap-2">
           <HiOutlineStar className="h-5 w-5 text-brand-600" />
@@ -232,54 +235,97 @@ export function SubscriptionCard({
         </div>
         <p className="mt-3 text-xs text-slate-500">{copy.loading}</p>
       </Card>
+      <Modal
+        open={Boolean(checkoutPlan)}
+        title={copy.voucherTitle}
+        description={copy.voucherDesc}
+        onClose={() => {
+          setCheckoutPlan(null)
+          setVoucherCode('')
+          setVoucherError('')
+          setAppliedVoucher(null)
+        }}
+        footer={
+          <Button
+            className="w-full bg-[#2563EB] hover:bg-blue-700 sm:w-auto"
+            loading={Boolean(checkoutPlan && busyPlan === checkoutPlan.code) || validateVoucher.isPending}
+            onClick={() => void submitVoucherCheckout(voucherCode)}
+          >
+            {copy.voucherContinue}
+          </Button>
+        }
+      >
+        <VoucherModalContent
+          copy={copy}
+          voucherCode={voucherCode}
+          voucherError={voucherError}
+          appliedVoucher={appliedVoucher}
+          validateLoading={validateVoucher.isPending}
+          onChange={handleVoucherChange}
+          onApply={() => validateVoucher.mutate()}
+        />
+      </Modal>
+      </>
     )
   }
   if (!sub) {
     const pendingExpiresAt = pendingSub?.expires_at ? new Date(pendingSub.expires_at) : null
     const remainingMs = pendingExpiresAt ? pendingExpiresAt.getTime() - nowMs : null
-    const isPendingExpired = remainingMs !== null && remainingMs <= 0
+    const isPendingExpired = pendingSub?.payment_status === 'expired' || (remainingMs !== null && remainingMs <= 0)
     return (
+      <>
       <Card>
         {pendingSub ? (
-          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-5 rounded-2xl border border-white/75 bg-white/70 p-4 shadow-sm shadow-slate-200/50">
+            <div className="grid gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold text-slate-900">{copy.pendingTitle}</p>
+                  <p className="text-sm font-bold text-slate-900">{isPendingExpired ? copy.expiredTitle : copy.pendingTitle}</p>
                   <Badge tone={isPendingExpired ? 'red' : 'amber'}>{isPendingExpired ? copy.expired : 'Pending'}</Badge>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-slate-700">
                   {pendingSub.plan_name} · {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
                 </p>
-                {pendingExpiresAt ? (
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900">
-                    <HiOutlineClock className="h-4 w-4" />
-                    {copy.payBefore}{' '}
-                    {pendingExpiresAt.toLocaleString(locale === 'id' ? 'id-ID' : 'en-US', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                    {' · '}
-                    {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
+                <p className="mt-3 w-full text-xs leading-5 text-slate-500">
+                  {isPendingExpired ? copy.expiredDesc : copy.pendingDesc}
+                </p>
+                {Number(pendingSub.discount_amount ?? 0) > 0 ? (
+                  <p className="mt-2 text-xs font-semibold text-emerald-700">
+                    Voucher {pendingSub.voucher_code}: -{formatCurrency(Number(pendingSub.discount_amount), pendingSub.currency)}
                   </p>
                 ) : null}
+                {pendingExpiresAt ? (
+                  <div className="mt-3 flex w-full flex-col gap-1 rounded-xl border border-amber-100 bg-amber-50/75 px-3 py-2 text-xs font-semibold text-amber-900 sm:flex-row sm:items-center sm:gap-1.5">
+                    <span className="inline-flex items-center gap-1.5">
+                      <HiOutlineClock className="h-4 w-4" />
+                      {copy.payBefore}{' '}
+                      {pendingExpiresAt.toLocaleString(locale === 'id' ? 'id-ID' : 'en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    <span className="text-amber-800/80 sm:ml-1">
+                      {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
-              <div className="grid gap-2 sm:w-56">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <Button
                   size="sm"
-                  className="w-full"
+                  className="min-h-9 w-full whitespace-nowrap transition hover:-translate-y-0.5 hover:shadow-md"
                   loading={resumeLoading}
-                  onClick={() => onSubscribe(pendingSub.plan_code, cleanReferralCode, true)}
+                  onClick={() => onSubscribe(pendingSub.plan_code, cleanVoucherCode, true)}
                 >
-                  {copy.continuePay}
+                  {isPendingExpired ? copy.createInvoice : copy.continuePay}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="w-full border-amber-200 bg-white/80 text-amber-800 hover:border-amber-300 hover:bg-amber-50"
+                  className="w-full border-rose-200 bg-rose-50/80 text-rose-700 transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:shadow-md"
                   loading={cancelLoading}
                   onClick={() => onCancel(pendingSub.id)}
                 >
@@ -300,15 +346,6 @@ export function SubscriptionCard({
             </p>
           </div>
           <Badge tone="gray">Free</Badge>
-        </div>
-        <div className="mt-4">
-          <Input
-            label={copy.referral}
-            placeholder={copy.referralPlaceholder}
-            value={referralCode}
-            onChange={(e) => setReferralCode(sanitizeReferralCode(e.target.value))}
-            maxLength={32}
-          />
         </div>
         {hasMonthly && hasYearly ? (
           <div className="mt-4 grid grid-cols-2 rounded-2xl border border-white/80 bg-white/60 p-1 shadow-sm">
@@ -387,7 +424,7 @@ export function SubscriptionCard({
                   <Button
                     size="sm"
                     loading={busyPlan === plan.code}
-                    onClick={() => onSubscribe(plan.code, cleanReferralCode)}
+                    onClick={() => openVoucherModal(plan)}
                     className="shrink-0"
                   >
                     {copy.choose}
@@ -399,6 +436,37 @@ export function SubscriptionCard({
           )}
         </div>
       </Card>
+      <Modal
+        open={Boolean(checkoutPlan)}
+        title={copy.voucherTitle}
+        description={copy.voucherDesc}
+        onClose={() => {
+          setCheckoutPlan(null)
+          setVoucherCode('')
+          setVoucherError('')
+          setAppliedVoucher(null)
+        }}
+        footer={
+          <Button
+            className="w-full bg-[#2563EB] hover:bg-blue-700 sm:w-auto"
+            loading={Boolean(checkoutPlan && busyPlan === checkoutPlan.code) || validateVoucher.isPending}
+            onClick={() => void submitVoucherCheckout(voucherCode)}
+          >
+            {copy.voucherContinue}
+          </Button>
+        }
+      >
+        <VoucherModalContent
+          copy={copy}
+          voucherCode={voucherCode}
+          voucherError={voucherError}
+          appliedVoucher={appliedVoucher}
+          validateLoading={validateVoucher.isPending}
+          onChange={handleVoucherChange}
+          onApply={() => validateVoucher.mutate()}
+        />
+      </Modal>
+      </>
     )
   }
   const isTrial = sub.is_trial || sub.status === 'trialing'
@@ -498,6 +566,99 @@ export function SubscriptionCard({
 
 function basePlanCode(code: string) {
   return code.replace('_yearly', '')
+}
+
+type VoucherModalCopy = {
+  referral: string
+  referralPlaceholder: string
+  voucherApply: string
+  voucherSuccess: (code: string) => string
+  voucherInvalid: string
+  discount: string
+  originalPrice: string
+  totalPay: string
+}
+
+function VoucherModalContent({
+  copy,
+  voucherCode,
+  voucherError,
+  appliedVoucher,
+  validateLoading,
+  onChange,
+  onApply,
+}: {
+  copy: VoucherModalCopy
+  voucherCode: string
+  voucherError: string
+  appliedVoucher: ValidateVoucherResponse | null
+  validateLoading: boolean
+  onChange: (value: string) => void
+  onApply: () => void
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+          {copy.referral}
+        </label>
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+            <Input
+              className="h-10"
+              placeholder={copy.referralPlaceholder}
+              value={voucherCode}
+              onChange={(e) => onChange(e.target.value)}
+              maxLength={32}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 shrink-0 px-4"
+            loading={validateLoading}
+            disabled={!voucherCode.trim()}
+            onClick={onApply}
+          >
+            {copy.voucherApply}
+          </Button>
+        </div>
+      </div>
+
+      {appliedVoucher ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-900">
+          <p className="font-extrabold text-emerald-700">✓ {copy.voucherSuccess(appliedVoucher.code)}</p>
+          <dl className="mt-3 grid gap-2 text-xs">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-emerald-700/80">{copy.discount}</dt>
+              <dd className="font-bold">{formatVoucherDiscount(appliedVoucher)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-emerald-700/80">{copy.originalPrice}</dt>
+              <dd className="font-bold">{formatCurrency(appliedVoucher.original_amount, appliedVoucher.currency)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-emerald-200/70 pt-2">
+              <dt className="font-extrabold text-emerald-900">{copy.totalPay}</dt>
+              <dd className="font-extrabold">{formatCurrency(appliedVoucher.pay_amount, appliedVoucher.currency)}</dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
+
+      {voucherError ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs font-semibold text-rose-700">
+          ✕ {voucherError}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function formatVoucherDiscount(voucher: ValidateVoucherResponse) {
+  if (voucher.discount_type === 'percent') {
+    return `${voucher.discount_value}%`
+  }
+  return formatCurrency(voucher.discount_amount, voucher.currency)
 }
 
 function formatPaymentRemaining(ms: number, locale: 'id' | 'en') {
