@@ -391,6 +391,8 @@ export function SubscriptionCard({
                 : null
               const isYearly = plan.period === 'yearly'
               const isPro = baseCode === 'pro'
+              const hasLaunchPromo = plan.code === 'pro' && plan.period === 'monthly'
+              const displayPrice = hasLaunchPromo ? Math.round(Number(plan.price) * 0.7) : Number(plan.price)
               return (
               <div
                 key={plan.id}
@@ -410,15 +412,24 @@ export function SubscriptionCard({
                       ) : null}
                     </div>
                     <p className="mt-2 flex flex-wrap items-end gap-2 text-xs text-slate-500">
-                      {yearlyOriginal ? (
+                      {hasLaunchPromo ? (
+                        <span className="font-semibold text-slate-400 line-through">
+                          {formatCurrency(Number(plan.price), plan.currency)}
+                        </span>
+                      ) : yearlyOriginal ? (
                         <span className="font-semibold text-slate-400 line-through">
                           {formatCurrency(yearlyOriginal, plan.currency)}
                         </span>
                       ) : null}
                       <span className="text-base font-extrabold text-slate-950">
-                        {formatCurrency(Number(plan.price), plan.currency)}
+                        {formatCurrency(displayPrice, plan.currency)}
                       </span>
                       <span>/{plan.period === 'monthly' ? copy.month : copy.year}</span>
+                      {hasLaunchPromo ? (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                          Promo launching 30%
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   <Button

@@ -145,6 +145,7 @@ export function FreeTextPage() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const savingIdsRef = useRef<Set<string>>(new Set())
   const pickedInitialLatestRef = useRef(false)
+  const lastScrollStateRef = useRef<{ activeId: string | null; count: number }>({ activeId: null, count: 0 })
 
   useEffect(() => {
     saveFreeTextDraft(sessions, activeId, user?.id)
@@ -390,7 +391,13 @@ export function FreeTextPage() {
 
   /* scroll */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const prev = lastScrollStateRef.current
+    const sameSession = prev.activeId === activeId
+    const messageAdded = messages.length > prev.count
+    lastScrollStateRef.current = { activeId, count: messages.length }
+
+    if (!sameSession || !messageAdded || messages.length === 0) return
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages.length, activeId])
 
   /* textarea autosize */

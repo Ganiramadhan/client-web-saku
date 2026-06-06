@@ -1,11 +1,13 @@
 import {
   forwardRef,
+  useEffect,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { formatRupiah, parseRupiah } from '@/lib/utils'
 
@@ -343,6 +345,7 @@ export function Modal({
   footer,
   size = 'md',
   closeOnBackdrop = true,
+  mobilePlacement = 'bottom',
 }: {
   open: boolean
   onClose: () => void
@@ -352,16 +355,32 @@ export function Modal({
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   closeOnBackdrop?: boolean
+  mobilePlacement?: 'bottom' | 'center'
 }) {
-  if (!open) return null
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return
+    document.body.classList.add('saku-modal-open')
+    return () => {
+      document.body.classList.remove('saku-modal-open')
+    }
+  }, [open])
+
+  if (!open || typeof document === 'undefined') return null
   const widths = {
     sm: 'max-w-sm',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-3xl',
   }
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+  return createPortal(
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4',
+        mobilePlacement === 'center'
+          ? 'items-center p-4'
+          : 'items-end p-0',
+      )}
+    >
       <div
         className="animate-overlay-in absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
         onClick={closeOnBackdrop ? onClose : undefined}
@@ -371,7 +390,7 @@ export function Modal({
         aria-modal="true"
         className={cn(
           'animate-panel-in relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-slate-200',
-          'rounded-t-2xl sm:rounded-2xl',
+          mobilePlacement === 'center' ? 'rounded-2xl' : 'rounded-t-2xl sm:rounded-2xl',
           widths[size],
         )}
       >
@@ -399,7 +418,8 @@ export function Modal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

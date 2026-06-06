@@ -96,6 +96,13 @@ body {
 .animate-overlay-in { animation: overlay-in 140ms ease-out both; }
 .animate-panel-in  { animation: panel-in  180ms cubic-bezier(.2,.8,.2,1) both; }
 
+body.saku-modal-open .saku-mobile-bottom-nav,
+body.saku-payment-open .saku-mobile-bottom-nav {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+
 @keyframes scan-progress {
   0% { transform: translateX(-110%); }
   50% { transform: translateX(45%); }

@@ -3,7 +3,7 @@ import { HiOutlineBars3, HiOutlineXMark } from 'react-icons/hi2'
 import { RiArrowRightLine } from 'react-icons/ri'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/utils'
-import { useT } from '@/i18n'
+import { useLocale, useT } from '@/i18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { PrimaryBtn } from './PrimaryBtn'
 import { smoothScrollTo } from './landingUtils'
@@ -28,6 +28,9 @@ export function LandingNavbar({
   setNavOpen: (value: boolean | ((value: boolean) => boolean)) => void
 }) {
   const t = useT()
+  const { locale } = useLocale()
+  const registerCta = t.landing.ctaPrimary
+  const registerHint = locale === 'id' ? 'Tanpa kartu kredit' : 'No credit card'
   const shellStyle = isMobile
     ? {
         background: 'rgba(255,255,255,0.95)',
@@ -118,14 +121,15 @@ export function LandingNavbar({
                 <>
                   <Link
                     to="/login"
-                    className="cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700"
+                    className="cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 hover:bg-blue-50/70 hover:text-blue-700 hover:underline hover:underline-offset-4"
                   >
                     {t.nav.login}
                   </Link>
 
                   <Link to="/register" className="cursor-pointer">
-                    <PrimaryBtn>
-                      {t.auth.submitRegister}
+                    <PrimaryBtn className="relative overflow-hidden px-5 shadow-lg shadow-blue-200/70 hover:-translate-y-0.5 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-blue-300/70">
+                      <span className="pointer-events-none absolute inset-y-0 -left-8 w-7 rotate-12 bg-white/30 transition-transform duration-700 group-hover:translate-x-36" />
+                      {registerCta}
                       <RiArrowRightLine className="h-3.5 w-3.5" />
                     </PrimaryBtn>
                   </Link>
@@ -201,20 +205,17 @@ export function LandingNavbar({
                       <button
                         type="button"
                         className="w-full cursor-pointer rounded-xl py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
-                        style={{
-                          border: '1px solid rgba(226,232,240,0.80)',
-                          background: 'rgba(255,255,255,0.80)',
-                        }}
                       >
                         {t.nav.login}
                       </button>
                     </Link>
 
                     <Link to="/register" className="cursor-pointer">
-                      <PrimaryBtn className="w-full justify-center">
-                        {t.auth.submitRegister}
+                      <PrimaryBtn className="w-full justify-center shadow-lg shadow-blue-200/70 hover:bg-[#1D4ED8]">
+                        {registerCta}
                       </PrimaryBtn>
                     </Link>
+                    <p className="-mt-1 text-center text-[11px] font-semibold text-slate-400">{registerHint}</p>
                   </>
                 )}
               </div>

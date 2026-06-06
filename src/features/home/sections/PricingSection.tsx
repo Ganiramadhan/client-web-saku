@@ -113,6 +113,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const { locale } = useLocale()
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const proLaunchPromoLabel = locale === 'id' ? 'Promo launching 30%' : 'Launch promo 30%'
+  const proLaunchPromoHint = locale === 'id' ? 'Harga promo launching' : 'Launch promo price'
   const snapLoadedRef = useRef(false)
   const [voucherCode, setVoucherCode] = useState('')
   const [voucherError, setVoucherError] = useState('')
@@ -153,8 +155,10 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         return
       }
 
+      document.body.classList.add('saku-payment-open')
       window.snap.pay(checkout.snap_token, {
         onSuccess: async (result) => {
+          document.body.classList.remove('saku-payment-open')
           const orderId =
             result && typeof result === 'object' && 'order_id' in result
               ? String((result as { order_id?: unknown }).order_id ?? '')
@@ -166,12 +170,17 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
         },
         onPending: () => {
+          document.body.classList.remove('saku-payment-open')
           toast.info(locale === 'id' ? 'Pembayaran masih pending.' : 'Payment is still pending.')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
-        onError: () => toast.error(locale === 'id' ? 'Pembayaran gagal.' : 'Payment failed.'),
+        onError: () => {
+          document.body.classList.remove('saku-payment-open')
+          toast.error(locale === 'id' ? 'Pembayaran gagal.' : 'Payment failed.')
+        },
         onClose: () => {
+          document.body.classList.remove('saku-payment-open')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
@@ -210,10 +219,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     },
     {
       name: 'Pro',
-      price: period === 'yearly' ? formatCurrency(278400, 'IDR') : t.landing.planProPrice,
-      originalPrice: period === 'yearly' ? formatCurrency(348000, 'IDR') : null,
+      price: period === 'yearly' ? formatCurrency(278400, 'IDR') : formatCurrency(20300, 'IDR'),
+      originalPrice: period === 'yearly' ? formatCurrency(348000, 'IDR') : formatCurrency(29000, 'IDR'),
       period: period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
       badge: locale === 'id' ? 'Paling Populer' : 'Most Popular',
+      promoLabel: period === 'monthly' ? proLaunchPromoLabel : null,
       desc: locale === 'id' ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.' : 'AI features and higher capacity for more active finance routines.',
       features: planFeatures('pro', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
@@ -259,16 +269,19 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         .map((plan) => {
           const baseCode = basePlanCode(plan.code)
           const monthlyPlan = monthlyPlansByCode.get(baseCode)
+          const isProMonthly = baseCode === 'pro' && plan.period === 'monthly'
+          const launchPromoPrice = isProMonthly ? Math.round(plan.price * 0.7) : plan.price
           const yearlyOriginalPrice = plan.period === 'yearly' && plan.price > 0 && monthlyPlan?.price
             ? formatCurrency(monthlyPlan.price * 12, plan.currency)
             : null
 
           return {
             name: plan.name,
-            price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(plan.price, plan.currency),
-            originalPrice: yearlyOriginalPrice,
+            price: plan.price <= 0 ? t.landing.planFreePrice : formatCurrency(launchPromoPrice, plan.currency),
+            originalPrice: isProMonthly ? formatCurrency(plan.price, plan.currency) : yearlyOriginalPrice,
             period: plan.price <= 0 ? '' : plan.period === 'yearly' ? (locale === 'id' ? '/tahun' : '/year') : t.landing.perMonth,
             badge: planCopy[baseCode]?.badge ?? null,
+            promoLabel: isProMonthly ? proLaunchPromoLabel : null,
             desc: planCopy[baseCode]?.desc ?? (locale === 'id' ? 'Paket fleksibel untuk pengguna SAKU.' : 'Flexible plan for SAKU users.'),
             features: planFeatures(plan.code, locale) ?? plan.features.map((feature) => translatePlanFeature(feature, locale)),
             cta: planCopy[baseCode]?.cta ?? (locale === 'id' ? 'Mulai' : 'Start'),
@@ -277,6 +290,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         })
     : fallbackPlans
   const hasYearly = Boolean(plansQ.data?.some((plan) => plan.period === 'yearly' && plan.is_active))
+  const checkoutBaseCode = checkoutPlanCode ? basePlanCode(checkoutPlanCode) : ''
+  const isCheckoutPro = checkoutBaseCode === 'pro'
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -398,7 +413,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                       </span>
                     ) : null}
                   </div>
-
                   <div className="mt-4 flex flex-wrap items-end gap-x-1 gap-y-1">
                     {plan.originalPrice ? (
                       <span className="mr-2 text-xs font-semibold text-slate-400 line-through">
@@ -410,6 +424,9 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                     </span>
                     {plan.period ? <span className="pb-1 text-xs font-medium text-slate-400">{plan.period}</span> : null}
                   </div>
+                  {'promoLabel' in plan && plan.promoLabel ? (
+                    <p className="mt-1 text-[11px] font-bold text-blue-600">{proLaunchPromoHint}</p>
+                  ) : null}
 
                   <ul className="mt-4 grid gap-1.5">
                     {plan.features.map((feature) => (
@@ -475,7 +492,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                         {plan.originalPrice}
                       </span>
                       <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700">
-                        {locale === 'id' ? 'Diskon tahunan' : 'Yearly discount'}
+                        {'promoLabel' in plan && plan.promoLabel ? plan.promoLabel : (locale === 'id' ? 'Diskon tahunan' : 'Yearly discount')}
                       </span>
                     </div>
                   ) : null}
@@ -554,7 +571,15 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       <Modal
         open={Boolean(checkoutPlanCode)}
         title={locale === 'id' ? 'Kode voucher' : 'Voucher code'}
-        description={locale === 'id' ? 'Masukkan kode voucher jika memiliki promo. Kosongkan jika tidak memiliki voucher.' : 'Enter a voucher code if you have a promo. Leave it empty if you do not have a voucher.'}
+        description={
+          isCheckoutPro
+            ? locale === 'id'
+              ? 'Harga Pro sudah memakai promo launching 30%. Masukkan voucher tambahan jika punya, atau lanjutkan tanpa voucher.'
+              : 'Pro already uses the 30% launch promo price. Enter an extra voucher if you have one, or continue without it.'
+            : locale === 'id'
+              ? 'Masukkan kode voucher jika memiliki promo. Kosongkan jika tidak memiliki voucher.'
+              : 'Enter a voucher code if you have a promo. Leave it empty if you do not have a voucher.'
+        }
         onClose={() => {
           if (checkoutM.isPending) return
           setCheckoutPlanCode(null)
@@ -567,6 +592,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
             {locale === 'id' ? 'Lanjut Pembayaran' : 'Continue Payment'}
           </Button>
         }
+        mobilePlacement="center"
       >
         <div className="space-y-4">
           <div>
@@ -577,7 +603,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
               <div className="min-w-0 flex-1">
                 <Input
                   className="h-10"
-                  placeholder={locale === 'id' ? 'HEMAT20' : 'HEMAT20'}
+                  placeholder="HEMAT20"
                   value={voucherCode}
                   maxLength={32}
                   onChange={(e) => {

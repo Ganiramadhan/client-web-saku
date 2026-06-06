@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/stores/authStore'
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000
+const NON_REMEMBER_IDLE_TIMEOUT_MS = 60 * 60 * 1000
 const ACTIVITY_THROTTLE_MS = 30 * 1000
 const ACTIVITY_EVENTS = ['click', 'keydown', 'pointerdown', 'scroll', 'touchstart', 'visibilitychange']
 
@@ -15,9 +15,13 @@ export function initSessionActivity() {
   }
 
   const checkIdle = () => {
-    const { token, remember, lastActivityAt, clear } = useAuthStore.getState()
-    if (!token || remember || !lastActivityAt) return
-    if (Date.now() - lastActivityAt >= IDLE_TIMEOUT_MS) {
+    const { token, remember, lastActivityAt, clear, touch: markActive } = useAuthStore.getState()
+    if (!token || remember) return
+    if (!lastActivityAt) {
+      markActive()
+      return
+    }
+    if (Date.now() - lastActivityAt >= NON_REMEMBER_IDLE_TIMEOUT_MS) {
       clear()
       if (window.location.pathname.startsWith('/app') || window.location.pathname.startsWith('/admin')) {
         window.location.assign('/login')

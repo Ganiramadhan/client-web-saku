@@ -151,6 +151,8 @@ export function PlanCard({
   const isPro = plan.code === 'pro' || plan.code === 'pro_yearly'
   const isPremium = plan.code.includes('premium')
   const isYearly = plan.period === 'yearly'
+  const hasLaunchPromo = plan.code === 'pro' && plan.period === 'monthly'
+  const displayPrice = hasLaunchPromo ? Math.round(plan.price * 0.7) : plan.price
 
   return (
     <article
@@ -211,9 +213,19 @@ export function PlanCard({
       </div>
 
       <div className="mt-7">
+        {hasLaunchPromo ? (
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-400 line-through">
+              {formatCurrency(plan.price, plan.currency)}
+            </span>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+              Promo launching 30%
+            </span>
+          </div>
+        ) : null}
         <div className="flex items-end gap-1">
           <span className="text-3xl font-extrabold tracking-tight text-slate-950">
-            {isFree ? 'Gratis' : formatCurrency(plan.price, plan.currency)}
+            {isFree ? 'Gratis' : formatCurrency(displayPrice, plan.currency)}
           </span>
 
           {!isFree && (

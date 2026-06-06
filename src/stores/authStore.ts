@@ -32,13 +32,25 @@ const AUTH_STORAGE_KEY = 'saku-admin-auth'
 const authStorage: StateStorage = {
   getItem: (name) => localStorage.getItem(name) ?? sessionStorage.getItem(name),
   setItem: (name, value) => {
-    localStorage.setItem(name, value)
-    sessionStorage.removeItem(name)
+    const remember = shouldPersistSession(value)
+    const target = remember ? localStorage : sessionStorage
+    const stale = remember ? sessionStorage : localStorage
+    target.setItem(name, value)
+    stale.removeItem(name)
   },
   removeItem: (name) => {
     localStorage.removeItem(name)
     sessionStorage.removeItem(name)
   },
+}
+
+function shouldPersistSession(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value) as { state?: { remember?: boolean } }
+    return parsed.state?.remember === true
+  } catch {
+    return false
+  }
 }
 
 export const useAuthStore = create<AuthState>()(

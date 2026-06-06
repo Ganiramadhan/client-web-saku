@@ -335,7 +335,7 @@ export function CustomerServicePage() {
                 ) : null}
                 {active.messages.map((item) => (
                   <div key={item.id} className={`flex items-end gap-3 ${item.role === 'admin' ? 'justify-start' : 'justify-end'}`}>
-                    {item.role === 'admin' ? <ChatAvatar role="admin" /> : null}
+                    {item.role === 'admin' ? <ChatAvatar role="admin" name="SAKU Support" /> : null}
                     <div className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${item.role === 'admin' ? 'rounded-bl-md border border-slate-100 bg-white text-slate-800' : 'rounded-br-md bg-brand-600 text-white'}`}>
                       <div className={`mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ${item.role === 'admin' ? 'text-brand-600' : 'text-white/70'}`}>
                         <span>{item.role === 'admin' ? 'SAKU Support' : active.user_name || 'User'}</span>
@@ -354,7 +354,7 @@ export function CustomerServicePage() {
                         {new Date(item.created_at).toLocaleString('id-ID')}
                       </p>
                     </div>
-                    {item.role !== 'admin' ? <ChatAvatar role="user" /> : null}
+                    {item.role !== 'admin' ? <ChatAvatar role="user" name={active.user_name} photoUrl={active.user_photo_url} /> : null}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -483,11 +483,24 @@ function AttachmentPicker({
   )
 }
 
-function ChatAvatar({ role }: { role: 'admin' | 'user' }) {
+function ChatAvatar({ role, name, photoUrl }: { role: 'admin' | 'user'; name?: string; photoUrl?: string }) {
   const isAdmin = role === 'admin'
+  const initial = (name?.trim().charAt(0) || 'U').toUpperCase()
+
+  if (!isAdmin && photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        referrerPolicy="no-referrer"
+        className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-slate-200"
+      />
+    )
+  }
+
   return (
     <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full shadow-sm ${isAdmin ? 'bg-white text-brand-700' : 'bg-slate-900 text-white'}`}>
-      {isAdmin ? <HiOutlineUserCircle className="h-5 w-5" /> : <span className="text-xs font-black">U</span>}
+      {isAdmin ? <HiOutlineUserCircle className="h-5 w-5" /> : <span className="text-xs font-black">{initial}</span>}
     </span>
   )
 }

@@ -8,8 +8,6 @@ import {
   HiOutlineTrophy,
   HiOutlineSparkles,
   HiOutlineUsers,
-  HiOutlineBars3,
-  HiOutlineXMark,
   HiOutlineArrowRightOnRectangle,
   HiOutlineUser,
   HiOutlineCog6Tooth,
@@ -22,6 +20,7 @@ import {
   HiOutlineCalendarDays,
   HiOutlineChatBubbleLeftRight,
   HiOutlineReceiptPercent,
+  HiOutlineEllipsisHorizontal,
 } from 'react-icons/hi2'
 import { LuPanelLeftClose, LuPanelLeftOpen } from 'react-icons/lu'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -90,7 +89,6 @@ export function AppLayout() {
   useEffect(() => {
     if (meQuery.data) setUser(meQuery.data)
   }, [meQuery.data, setUser])
-  const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -233,34 +231,6 @@ export function AppLayout() {
         <NavSections sections={sections} collapsed={collapsed} hasPro={hasPro} />
       </aside>
 
-      {/* Mobile drawer */}
-      {open ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-md" onClick={() => setOpen(false)} />
-          <aside
-            className="absolute left-0 top-0 flex h-dvh w-72 flex-col p-4 shadow-2xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.80)',
-              backdropFilter: 'blur(36px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-              borderRight: '1px solid rgba(255, 255, 255, 0.80)',
-            }}
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <Logo />
-              <button
-                onClick={() => setOpen(false)}
-                className="rounded-xl p-1.5 text-slate-500 transition hover:bg-slate-100 active:scale-95"
-                aria-label="Close menu"
-              >
-                <HiOutlineXMark className="h-5 w-5" />
-              </button>
-            </div>
-            <NavSections sections={sections} collapsed={false} hasPro={hasPro} onItemClick={() => setOpen(false)} />
-          </aside>
-        </div>
-      ) : null}
-
       {/* Main */}
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <header
@@ -273,19 +243,11 @@ export function AppLayout() {
             boxShadow: '0 8px 28px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.72)',
           }}
         >
-          <div className="flex items-center gap-1.5">
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setOpen(true)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/60 active:scale-95 lg:hidden"
-              style={{
-                border: '1px solid rgba(255, 255, 255, 0.50)',
-              }}
-              aria-label="Open menu"
-            >
-              <HiOutlineBars3 className="h-5 w-5" />
-            </button>
-
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+              <Logo size="sm" withText={false} />
+              <span className="truncate text-sm font-black tracking-tight text-slate-950">SAKU</span>
+            </div>
           </div>
 
           <GlobalNavSearch sections={sections} onNavigate={navigate} />
@@ -299,14 +261,211 @@ export function AppLayout() {
             <UserDropdown user={user} onLogout={onLogout} t={t} />
           </div>
         </header>
-        <main className="min-h-[calc(100vh-64px)] flex-1 px-3 py-5 pb-28 sm:px-4 sm:pb-8 lg:px-8 lg:py-8">
+        <main className="min-h-[calc(100vh-64px)] flex-1 overflow-x-hidden px-3 py-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-[calc(7rem+env(safe-area-inset-bottom))] lg:px-8 lg:py-8 lg:pb-8">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />
           </div>
         </main>
       </div>
+      <BottomNavigation
+        isSuperAdmin={isSuperAdmin}
+        isAdmin={isAdmin}
+        pathname={location.pathname}
+        t={t}
+      />
     </div>
   )
+}
+
+function BottomNavigation({
+  isSuperAdmin,
+  isAdmin,
+  pathname,
+  t,
+}: {
+  isSuperAdmin: boolean
+  isAdmin: boolean
+  pathname: string
+  t: ReturnType<typeof useT>
+}) {
+  const [moreOpen, setMoreOpen] = useState(false)
+  const inAdminArea = isAdmin && pathname.startsWith('/admin')
+  const primaryItems: NavItem[] = isSuperAdmin
+    ? [
+        { to: '/super-admin', label: t.nav.dashboard, end: true, icon: HiOutlineHome },
+        { to: '/super-admin/users', label: 'Users', icon: HiOutlineUsers },
+        { to: '/super-admin/subscriptions', label: 'Subs', icon: HiOutlineSparkles },
+        { to: '/super-admin/ai-logs', label: 'AI Logs', icon: HiOutlineSparkles },
+      ]
+    : inAdminArea
+      ? [
+          { to: '/admin/users', label: 'Users', icon: HiOutlineUsers },
+          { to: '/admin/subscriptions', label: 'Subs', icon: HiOutlineSparkles },
+          { to: '/admin/vouchers', label: 'Voucher', icon: HiOutlineReceiptPercent },
+          { to: '/admin/customer-service', label: 'Support', icon: HiOutlineChatBubbleLeftRight },
+        ]
+      : [
+          { to: '/app', label: t.nav.dashboard, end: true, icon: HiOutlineHome },
+          { to: '/app/transactions', label: t.nav.transactions, icon: HiOutlineQueueList },
+          { to: '/app/free-text', label: 'Chat AI', icon: HiOutlineSparkles },
+          { to: '/app/wallets', label: t.nav.wallets, icon: HiOutlineCreditCard },
+        ]
+  const moreItems: NavItem[] = isSuperAdmin
+    ? [
+        { to: '/super-admin/vouchers', label: 'Vouchers', icon: HiOutlineReceiptPercent },
+        { to: '/super-admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
+        { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
+        { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
+      ]
+    : inAdminArea
+      ? [
+          { to: '/admin/categories', label: t.nav.categories, icon: HiOutlineTag },
+          { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
+          { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
+        ]
+      : [
+          { to: '/app/scan-receipt', label: t.nav.scanReceipt, icon: HiOutlineCamera },
+          { to: '/app/targets', label: t.nav.targets, icon: HiOutlineTrophy },
+          { to: '/app/upcoming-billings', label: t.nav.upcomingBillings, icon: HiOutlineCalendarDays },
+          { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup },
+          { to: '/app/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
+          { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
+          { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
+        ]
+  const moreActive = moreItems.some((item) => isNavItemActive(item, pathname))
+
+  useEffect(() => {
+    setMoreOpen(false)
+  }, [pathname])
+
+  return (
+    <>
+      {moreOpen ? (
+        <div className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[2px] lg:hidden" onClick={() => setMoreOpen(false)} />
+      ) : null}
+      {moreOpen ? <MobileMoreSheet items={moreItems} pathname={pathname} onClose={() => setMoreOpen(false)} /> : null}
+
+      <nav className="saku-mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 rounded-t-[1.65rem] border border-b-0 border-slate-200/80 bg-white/95 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden" aria-label="Primary mobile navigation">
+        <div className="mx-auto max-w-md px-2 pb-[calc(0.4rem+env(safe-area-inset-bottom))] pt-1.5">
+          <div className="grid grid-cols-5 gap-1">
+            {primaryItems.map((item) => (
+              <BottomNavItem key={item.to} item={item} pathname={pathname} />
+            ))}
+            <button
+              type="button"
+              onClick={() => setMoreOpen((value) => !value)}
+              aria-expanded={moreOpen}
+              className={cn(
+                'group relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl px-1.5 py-2 text-[10px] font-extrabold leading-none transition-all duration-300 ease-out active:scale-95',
+                moreOpen || moreActive
+                  ? 'text-brand-700'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute inset-0 rounded-2xl bg-brand-50 shadow-sm ring-1 ring-brand-100 transition-all duration-300 ease-out',
+                  moreOpen || moreActive ? 'scale-100 opacity-100' : 'scale-90 opacity-0',
+                )}
+              />
+              <HiOutlineEllipsisHorizontal
+                className={cn(
+                  'relative z-10 h-5 w-5 transition-all duration-300 ease-out group-hover:-translate-y-0.5',
+                  moreOpen || moreActive ? 'text-brand-600' : 'text-slate-400',
+                )}
+              />
+              <span className="relative z-10 block max-w-full truncate transition-colors duration-300">More</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+    </>
+  )
+}
+
+function BottomNavItem({ item, pathname }: { item: NavItem; pathname: string }) {
+  const Icon = item.icon
+  const isActive = isNavItemActive(item, pathname)
+
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'group relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl px-1.5 py-2 text-[10px] font-extrabold leading-none transition-all duration-300 ease-out active:scale-95',
+        isActive
+          ? 'text-brand-700'
+          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+      )}
+    >
+      <span
+        className={cn(
+          'absolute inset-0 rounded-2xl bg-brand-50 shadow-sm ring-1 ring-brand-100 transition-all duration-300 ease-out',
+          isActive ? 'scale-100 opacity-100' : 'scale-90 opacity-0',
+        )}
+      />
+      <Icon
+        className={cn(
+          'relative z-10 h-5 w-5 transition-all duration-300 ease-out group-hover:-translate-y-0.5',
+          isActive ? 'text-brand-600' : 'text-slate-400',
+        )}
+      />
+      <span className="relative z-10 block max-w-full truncate transition-colors duration-300">{item.label}</span>
+    </NavLink>
+  )
+}
+
+function MobileMoreSheet({
+  items,
+  pathname,
+  onClose,
+}: {
+  items: NavItem[]
+  pathname: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-[calc(4.9rem+env(safe-area-inset-bottom))] z-40 px-3 lg:hidden">
+      <div className="mx-auto max-w-md overflow-hidden rounded-[1.5rem] border border-white/80 bg-white p-2 shadow-2xl shadow-slate-900/16 backdrop-blur-2xl">
+        <div className="px-3 pb-2 pt-2">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-400">More menu</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {items.map((item) => {
+            const Icon = item.icon
+            const isActive = isNavItemActive(item, pathname)
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={onClose}
+                className={cn(
+                  'flex min-w-0 items-center gap-3 rounded-2xl border px-3 py-3 text-left text-xs font-bold transition active:scale-[0.98]',
+                  isActive
+                    ? 'border-brand-100 bg-brand-50 text-brand-700'
+                    : 'border-slate-100 bg-slate-50/70 text-slate-700 hover:border-slate-200 hover:bg-white',
+                )}
+              >
+                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl', isActive ? 'bg-white text-brand-600' : 'bg-white text-slate-500')}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 truncate">{item.label}</span>
+              </NavLink>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function isNavItemActive(item: NavItem, pathname: string) {
+  if (item.to === '/app/free-text') {
+    return pathname.startsWith('/app/free-text')
+  }
+  return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 
 function NotificationsBell({

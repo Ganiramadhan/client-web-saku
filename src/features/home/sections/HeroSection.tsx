@@ -17,6 +17,7 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
         desc: 'SAKU membantu mencatat transaksi, membaca struk, mengatur banyak wallet, memantau budget, dan memberi insight keuangan tanpa spreadsheet rumit.',
         primary: 'Mulai Gratis',
         secondary: 'Lihat Cara Kerja',
+        promo: 'Coba gratis dulu. Upgrade ke Pro saat kamu siap membuka kuota AI lebih besar, OCR, split bill, dan insight lengkap.',
         trust: ['Gratis digunakan', 'Tanpa kartu kredit', 'Data aman'],
       }
     : {
@@ -26,6 +27,7 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
         desc: 'SAKU helps record transactions, scan receipts, manage multiple wallets, track budgets, and surface financial insights without complex spreadsheets.',
         primary: 'Start Free',
         secondary: 'See How It Works',
+        promo: 'Start free first. Upgrade to Pro when you are ready for larger AI quota, OCR, split bill, and richer insights.',
         trust: ['Free to start', 'No credit card', 'Secure data'],
       }
   const [isMobile, setIsMobile] = useState(() => (
@@ -49,6 +51,9 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
             <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
             {copy.eyebrow}
           </div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-black text-amber-800 shadow-sm shadow-amber-100/70">
+            🎉 Launch Promo 30% OFF
+          </div>
           <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-[3.55rem] leading-[1.06]">
             {copy.titleTop}<br />
             <span className="relative inline-block">
@@ -60,6 +65,9 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
           </h1>
           <p className="mt-7 max-w-md text-base leading-7 text-slate-500 sm:text-[17px]">
             {copy.desc}
+          </p>
+          <p className="mt-3 max-w-md text-sm font-semibold leading-6 text-blue-700">
+            {copy.promo}
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link to={isAuthed ? '/app' : '/register'}>

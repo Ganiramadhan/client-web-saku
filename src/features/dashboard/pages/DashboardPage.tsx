@@ -7,10 +7,7 @@ import {
   HiOutlineArrowTrendingUp,
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
-  HiOutlineCamera,
-  HiOutlineChatBubbleLeftRight,
   HiOutlineLightBulb,
-  HiOutlinePlusCircle,
   HiOutlineSparkles,
   HiOutlineWallet,
 } from 'react-icons/hi2'
@@ -367,8 +364,6 @@ export function DashboardPage() {
     () => (wallets.data ?? []).reduce((sum, wallet) => sum + Number(wallet.balance ?? 0), 0),
     [wallets.data],
   )
-  const dashboardHasData = totalBalance > 0 || (recentTxns.data?.data.length ?? 0) > 0 || (wallets.data?.length ?? 0) > 0
-  const dashboardLoading = wallets.isLoading || recentTxns.isLoading || monthTxns.isLoading
 
   const monthSummary = useMemo(() => {
     const data = monthTxns.data?.data ?? []
@@ -460,10 +455,6 @@ export function DashboardPage() {
         title={`${t.common.welcome}${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
         subtitle={copy.subtitle}
       />
-
-      {!dashboardLoading && !dashboardHasData ? (
-        <DashboardStartGuide copy={copy} />
-      ) : null}
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
@@ -726,63 +717,6 @@ function CashflowBriefing({
           <BriefingItem label={copy.safeDailySpend} value={dailyRoomLabel} loading={loading} tone="emerald" />
           <BriefingItem label={copy.aiPriority} value={priority} loading={loading} tone="blue" compact />
         </div>
-      </div>
-    </section>
-  )
-}
-
-function DashboardStartGuide({ copy }: { copy: DashboardCopy }) {
-  const steps = [
-    {
-      Icon: HiOutlinePlusCircle,
-      title: copy.startTransaction,
-      desc: copy.startTransactionDesc,
-      to: '/app/transactions/add',
-      tone: 'border-blue-100 bg-blue-50 text-blue-700',
-    },
-    {
-      Icon: HiOutlineCamera,
-      title: copy.startScan,
-      desc: copy.startScanDesc,
-      to: '/app/scan-receipt',
-      tone: 'border-violet-100 bg-violet-50 text-violet-700',
-    },
-    {
-      Icon: HiOutlineChatBubbleLeftRight,
-      title: copy.startAi,
-      desc: copy.startAiDesc,
-      to: '/app/free-text',
-      tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-    },
-  ]
-
-  return (
-    <section className="overflow-hidden rounded-[1.75rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/60 to-white p-5 shadow-sm shadow-blue-100/50 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-widest text-blue-700">Quick start</p>
-          <h2 className="mt-2 text-xl font-extrabold text-slate-950">{copy.startTitle}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{copy.startDesc}</p>
-        </div>
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        {steps.map(({ Icon, title, desc, to, tone }) => (
-          <Link
-            key={title}
-            to={to}
-            className="group rounded-2xl border border-white/80 bg-white/78 p-4 shadow-sm shadow-slate-200/40 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-lg hover:shadow-blue-100/50"
-          >
-            <div className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border ${tone}`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <h3 className="mt-4 text-sm font-extrabold text-slate-950">{title}</h3>
-            <p className="mt-2 min-h-12 text-xs leading-5 text-slate-500">{desc}</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700">
-              {title}
-              <HiOutlineArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </Link>
-        ))}
       </div>
     </section>
   )

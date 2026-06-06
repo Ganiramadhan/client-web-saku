@@ -295,8 +295,10 @@ export function ProfilePage() {
         window.location.href = checkout.redirect_url
         return
       }
+      document.body.classList.add('saku-payment-open')
       window.snap.pay(checkout.snap_token, {
         onSuccess: async (result) => {
+          document.body.classList.remove('saku-payment-open')
           const orderId =
             result && typeof result === 'object' && 'order_id' in result
               ? String((result as { order_id?: unknown }).order_id ?? '')
@@ -308,16 +310,19 @@ export function ProfilePage() {
           navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
         },
         onPending: () => {
+          document.body.classList.remove('saku-payment-open')
           toast.info(copy.paymentPending)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
         onError: () => {
+          document.body.classList.remove('saku-payment-open')
           toast.error(copy.paymentFailed)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },
         onClose: () => {
+          document.body.classList.remove('saku-payment-open')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
         },

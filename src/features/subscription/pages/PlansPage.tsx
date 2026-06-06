@@ -98,8 +98,10 @@ export function PlansPage() {
         return
       }
 
+      document.body.classList.add('saku-payment-open')
       window.snap.pay(checkout.snap_token, {
         onSuccess: async (result) => {
+          document.body.classList.remove('saku-payment-open')
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           const orderId =
             result && typeof result === 'object' && 'order_id' in result
@@ -110,11 +112,18 @@ export function PlansPage() {
           navigate(`/app/subscription/thanks${qs}`)
         },
         onPending: () => {
+          document.body.classList.remove('saku-payment-open')
           toast.info(copy.pendingPayment)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
         },
-        onError: () => toast.error(copy.paymentFailed),
-        onClose: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
+        onError: () => {
+          document.body.classList.remove('saku-payment-open')
+          toast.error(copy.paymentFailed)
+        },
+        onClose: () => {
+          document.body.classList.remove('saku-payment-open')
+          qc.invalidateQueries({ queryKey: ['subscriptions'] })
+        },
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : copy.checkoutFailed
