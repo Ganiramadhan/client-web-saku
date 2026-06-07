@@ -10,6 +10,7 @@ import { sanitizeReferralCode } from '@/features/subscription/utils/referral'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
 import { loadSnap } from '@/lib/snap'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import { isActiveSub } from '../components/landingUtils'
 import { SectionHeading } from '../components/SectionHeading'
 
@@ -143,6 +144,10 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const checkoutM = useMutation({
     mutationFn: async ({ planCode, voucherCode }: { planCode: string; voucherCode?: string }) => {
       const checkout = await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
+      trackEvent(analyticsEvents.checkoutStarted, {
+        subscription_plan: planCode,
+        amount: checkout.amount,
+      })
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
         snapLoadedRef.current = true
@@ -164,6 +169,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
               ? String((result as { order_id?: unknown }).order_id ?? '')
               : checkout.order_id
           if (orderId) await subscriptionApi.confirm(orderId)
+          trackEvent(analyticsEvents.paymentSuccess, {
+            subscription_plan: checkoutPlanCode ?? undefined,
+            payment_method: result && typeof result === 'object' && 'payment_type' in result ? String((result as { payment_type?: unknown }).payment_type ?? '') : undefined,
+            amount: checkout.amount,
+          })
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
           qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
@@ -177,6 +187,10 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         },
         onError: () => {
           document.body.classList.remove('saku-payment-open')
+          trackEvent(analyticsEvents.paymentFailed, {
+            subscription_plan: checkoutPlanCode ?? undefined,
+            amount: checkout.amount,
+          })
           toast.error(locale === 'id' ? 'Pembayaran gagal.' : 'Payment failed.')
         },
         onClose: () => {
@@ -196,6 +210,10 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       return subscriptionApi.validateVoucher(checkoutPlanCode, sanitizeReferralCode(voucherCode))
     },
     onSuccess: (result) => {
+      trackEvent(analyticsEvents.voucherApplied, {
+        subscription_plan: checkoutPlanCode ?? undefined,
+        amount: result.pay_amount,
+      })
       setAppliedVoucher(result)
       setVoucherCode(result.code)
       setVoucherError('')
@@ -324,6 +342,9 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       navigate('/app/profile')
       return
     }
+    trackEvent(analyticsEvents.productSelected, {
+      subscription_plan: String(plan.tier),
+    })
     setVoucherCode('')
     setVoucherError('')
     setAppliedVoucher(null)

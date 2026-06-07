@@ -14,17 +14,16 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
   ]
 
   const supportLinks = [
-    { label: 'Help Center', href: '#' },
-    { label: 'Contact Us', href: 'mailto:hello@saku.app' },
-    { label: 'System Status', href: '#' },
-    { label: 'Changelog', href: '#' },
+    { label: 'Contact Us', href: '/contact' },
+    { label: 'About SAKU', href: '/about' },
+    { label: 'Email Support', href: 'mailto:hello@ganipedia.com' },
   ]
 
   const legalLinks = [
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Security', href: '#' },
-    { label: 'Cookie Policy', href: '#' },
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'About', href: '/about' },
   ]
 
   return (
@@ -93,8 +92,8 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-4 border-t border-slate-200/70 pt-6 text-xs text-slate-400 md:flex-row">
-          <p>{t.landing.footerRights}</p>
-          <p>{t.landing.footerTagline}</p>
+          <p>© {new Date().getFullYear()} SAKU Finance. All rights reserved.</p>
+          <p>{locale === 'id' ? 'Website resmi SAKU untuk pengelolaan keuangan pribadi.' : 'Official SAKU website for personal finance management.'}</p>
         </div>
       </div>
     </footer>

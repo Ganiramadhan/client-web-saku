@@ -9,6 +9,7 @@ import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { nextBillingDate } from '@/features/account/utils/billing'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 
 function useBillingCopy() {
   const { locale } = useLocale()
@@ -370,6 +371,12 @@ export function BillingModal({
         : upcomingBillingApi.create(payload)
     },
     onSuccess: () => {
+      if (!editing) {
+        trackEvent(analyticsEvents.recurringTransactionCreated, {
+          feature_name: 'recurring_billing',
+          amount: form.amount,
+        })
+      }
       toast.success(editing ? copy.savedUpdate : copy.savedCreate)
       qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
       onClose()

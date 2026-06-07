@@ -2,7 +2,6 @@ import { Suspense, lazy, type ComponentType, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProRoute } from '@/components/ProRoute'
-import { AppLayout } from '@/layouts/AppLayout'
 import { useAuthStore } from '@/stores/authStore'
 
 const lazyRoute = (loader: () => Promise<Record<string, unknown>>, exportName: string): ComponentType<any> =>
@@ -12,6 +11,8 @@ const HomePage = lazyRoute(() => import('@/features/home/pages/HomePage'), 'Home
 const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage')
 const LoginPage = lazyRoute(() => import('@/features/auth/pages/LoginPage'), 'LoginPage')
 const RegisterPage = lazyRoute(() => import('@/features/auth/pages/RegisterPage'), 'RegisterPage')
+const LegalPage = lazyRoute(() => import('@/features/legal/pages/LegalPage'), 'LegalPage')
+const AppLayout = lazyRoute(() => import('@/layouts/AppLayout'), 'AppLayout')
 const DashboardPage = lazyRoute(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage')
 const AdminDashboardPage = lazyRoute(() => import('@/features/adminDashboard/pages/AdminDashboardPage'), 'AdminDashboardPage')
 const WalletsPage = lazyRoute(() => import('@/features/wallets/pages/WalletsPage'), 'WalletsPage')
@@ -48,6 +49,10 @@ export function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/privacy" element={<LegalPage mode="privacy" />} />
+      <Route path="/terms" element={<LegalPage mode="terms" />} />
+      <Route path="/contact" element={<LegalPage mode="contact" />} />
+      <Route path="/about" element={<LegalPage mode="about" />} />
       <Route path="/payment/finish" element={<PaymentRedirectPage mode="finish" />} />
       <Route path="/payment/error" element={<PaymentRedirectPage mode="error" />} />
 

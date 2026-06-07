@@ -15,6 +15,7 @@ import { Button } from '@/components/ui'
 import { subscriptionApi } from '@/features/subscription/api'
 import { useLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 
 export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   const { locale } = useLocale()
@@ -76,6 +77,8 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   })
 
   useEffect(() => {
+    if (success) trackEvent(analyticsEvents.paymentSuccess, { order_id: orderId })
+    if (failed || expired || cancelled) trackEvent(analyticsEvents.paymentFailed, { order_id: orderId, payment_status: status || mode })
     if (token && orderId && success) confirm.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, orderId, success])

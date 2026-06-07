@@ -13,6 +13,7 @@ import { useT } from '@/i18n'
 import type { TransactionType } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import { confirm } from '@/lib/confirm'
 import {
   ReceiptImagePreviewCard,
@@ -269,6 +270,9 @@ export function ScanReceiptPage() {
       aiApi.scanReceipt({ image_base64: base64, media_type: 'image/webp' }),
     onSuccess: (data, vars) => {
       if (vars.requestId !== scanRequestRef.current) return
+      trackEvent(analyticsEvents.receiptScanUsed, {
+        feature_name: 'receipt_scan',
+      })
       const d = { ...(data as ExtractedReceipt), merchant_name: cleanMerchant((data as ExtractedReceipt).merchant_name) }
       const nextType = (d.type as TransactionType) || 'expense'
       const description = resolveScanDescription(d)

@@ -1,4 +1,3 @@
-
 FROM node:22-alpine AS deps
 
 ENV PNPM_HOME=/pnpm \
@@ -34,6 +33,15 @@ ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 ARG VITE_TURNSTILE_SITE_KEY
 ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
 
+ARG VITE_GA_MEASUREMENT_ID
+ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
+
+ARG VITE_CLARITY_PROJECT_ID
+ENV VITE_CLARITY_PROJECT_ID=${VITE_CLARITY_PROJECT_ID}
+
+ARG VITE_ANALYTICS_ENABLED
+ENV VITE_ANALYTICS_ENABLED=${VITE_ANALYTICS_ENABLED}
+
 RUN pnpm run build && \
     rm -rf node_modules src .vite
 
@@ -46,6 +54,7 @@ RUN addgroup -S saku && adduser -S -G saku saku && \
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
+
 RUN chown -R saku:saku /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && chown saku:saku /var/run/nginx.pid
 

@@ -6,6 +6,7 @@ import { useLocale, useT } from '@/i18n'
 import { formatCurrency } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import type { Wallet } from '@/types/api'
 import { WALLET_TYPE_OPTIONS } from './FilterTabs'
 import { normalizeWalletType } from '../utils/helpers'
@@ -128,6 +129,12 @@ export function WalletFormModal({
       return editing ? walletApi.update(editing.id, payload) : walletApi.create(payload)
     },
     onSuccess: () => {
+      if (!editing) {
+        trackEvent(analyticsEvents.walletCreated, {
+          feature_name: 'wallet',
+          wallet_type: form.type,
+        })
+      }
       toast.success(editing ? copy.updated : copy.created)
       qc.invalidateQueries({ queryKey: ['wallets'] })
       setForm(initialWalletForm(null))

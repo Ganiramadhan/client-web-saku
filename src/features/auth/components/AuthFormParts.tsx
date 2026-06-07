@@ -13,6 +13,7 @@ import { useT } from '@/i18n'
 import type { Dict } from '@/i18n/dictionaries'
 import { preloadTurnstileScript } from '@/features/auth/components/TurnstileWidget'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/components/Logo'
 
 export function getPasswordValidationError(t: Dict, password: string, confirmPassword: string): string | null {
   if (password.length < 8) return t.auth.passwordNewTooShort
@@ -136,13 +137,13 @@ export function AuthShell({
         <div className="absolute bottom-0 left-1/4 h-[480px] w-[480px] rounded-full animate-[pulse_9s_ease-in-out_infinite_1s]" style={{ background: 'radial-gradient(circle, rgba(167,243,208,0.22) 0%, transparent 65%)' }} />
       </div>
 
-      <Link
-        to="/"
-        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 px-1 py-1 text-xs font-bold text-slate-600 hover:text-blue-700 sm:left-6 sm:top-6"
-      >
-        <HiOutlineArrowLeft className="h-4 w-4" />
-        Back
-      </Link>
+      <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between gap-3 sm:inset-x-6 sm:top-6">
+        <Link to="/" className="inline-flex items-center gap-2 px-1 py-1 text-xs font-bold text-slate-600 hover:text-blue-700">
+          <HiOutlineArrowLeft className="h-4 w-4" />
+          Back
+        </Link>
+        <Logo size="sm" />
+      </div>
 
       <main className="relative z-10 flex flex-1 items-center px-4 pb-8 pt-16 sm:px-6 sm:py-10">
         <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[minmax(0,600px)_440px] lg:items-stretch xl:gap-14">
@@ -184,13 +185,19 @@ export function AuthShell({
                 <p className="mt-2 text-sm leading-6 text-slate-500">{subtitle}</p>
               </div>
               {children}
+              <div className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 border-t border-slate-100 pt-4 text-[11px] font-semibold text-slate-400">
+                <Link to="/privacy" className="hover:text-blue-700 hover:underline">Privacy Policy</Link>
+                <Link to="/terms" className="hover:text-blue-700 hover:underline">Terms</Link>
+                <Link to="/contact" className="hover:text-blue-700 hover:underline">Contact</Link>
+                <Link to="/about" className="hover:text-blue-700 hover:underline">About SAKU</Link>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
       <footer className="relative z-10 px-6 py-4 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} SAKU Finance · v1.0
+        © {new Date().getFullYear()} SAKU Finance · Website resmi SAKU · hello@ganipedia.com
       </footer>
     </div>
   )

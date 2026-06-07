@@ -18,6 +18,7 @@ import { useLocale, useT } from '@/i18n'
 import { getErrorStatus, getRetryAfterSeconds, toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/authStore'
+import { analyticsEvents, identifyAnalyticsUser, trackEvent } from '@/lib/analytics'
 
 const LOGIN_RETRY_KEY = 'saku-login-retry-until'
 
@@ -62,6 +63,9 @@ export function LoginPage() {
     setRetryUntil(null)
     window.localStorage.removeItem(LOGIN_RETRY_KEY)
     setSession(data.token, data.user as never, remember)
+    const user = data.user as { id?: string; role?: string }
+    identifyAnalyticsUser(user.id, user.role)
+    trackEvent(analyticsEvents.loginSuccess, { auth_provider: 'password' })
     toast.success(locale === 'id' ? 'Selamat datang kembali.' : 'Welcome back.')
     navigate(from === '/login' ? '/app' : from, { replace: true })
   }

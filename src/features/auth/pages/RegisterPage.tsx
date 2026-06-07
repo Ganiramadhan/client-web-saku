@@ -21,6 +21,7 @@ import { useLocale, useT } from '@/i18n'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/authStore'
+import { analyticsEvents, identifyAnalyticsUser, trackEvent } from '@/lib/analytics'
 
 export function RegisterPage() {
   const t = useT()
@@ -50,6 +51,9 @@ export function RegisterPage() {
 
   const redirect = (data: { token: string; user: { role: string } }) => {
     setSession(data.token, data.user as never)
+    const user = data.user as { id?: string; role?: string }
+    identifyAnalyticsUser(user.id, user.role)
+    trackEvent(analyticsEvents.emailVerificationSuccess)
     toast.success(locale === 'id' ? 'Akun siap digunakan.' : 'Your account is ready.')
     navigate('/app', { replace: true })
   }
@@ -64,6 +68,7 @@ export function RegisterPage() {
         turnstile_token: turnstileToken,
       }),
     onSuccess: (data) => {
+      trackEvent(analyticsEvents.registerSuccess)
       setPendingEmail(data.email)
       setOtp('')
       setOtpExpiresAt(Date.now() + (data.expires_in || 300) * 1000)
@@ -141,6 +146,7 @@ export function RegisterPage() {
       toast.error(locale === 'id' ? 'Selesaikan verifikasi keamanan dulu.' : 'Please complete the security verification.')
       return
     }
+    trackEvent(analyticsEvents.registerStarted)
     m.mutate()
   }
 

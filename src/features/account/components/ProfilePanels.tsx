@@ -17,6 +17,7 @@ import { useLocale } from '@/i18n'
 import { formatCurrency } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { sanitizeReferralCode } from '../utils/billing'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 
 export function SubscriptionCard({
   sub,
@@ -197,6 +198,10 @@ export function SubscriptionCard({
       return subscriptionApi.validateVoucher(checkoutPlan.code, code)
     },
     onSuccess: (result) => {
+      trackEvent(analyticsEvents.voucherApplied, {
+        subscription_plan: checkoutPlan?.code,
+        amount: result.pay_amount,
+      })
       setAppliedVoucher(result)
       setVoucherError('')
       setVoucherCode(result.code)

@@ -64,10 +64,10 @@ export function LandingNavbar({
       }
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-4 py-4">
+    <header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-3 py-3 sm:px-4 sm:py-4">
         <div className="mx-auto w-full max-w-5xl">
           <div
-            className="flex items-center justify-between rounded-2xl px-4 py-2.5"
+            className="flex items-center justify-between rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5"
             style={shellStyle}
           >
             {/* Logo */}
@@ -141,7 +141,7 @@ export function LandingNavbar({
             <button
               type="button"
               onClick={() => setNavOpen((v) => !v)}
-              className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 lg:hidden"
+              className="grid h-9 w-9 cursor-pointer place-items-center rounded-xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 sm:h-10 sm:w-10 lg:hidden"
               style={{
                 border: '1px solid rgba(226,232,240,0.80)',
               }}

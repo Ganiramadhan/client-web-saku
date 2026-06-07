@@ -12,6 +12,7 @@ import { toast } from '@/lib/toast'
 import { getErrorStatus, toErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { confirm } from '@/lib/confirm'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import {
   CHAT_EXAMPLES,
   CHAT_EXAMPLES_EN,
@@ -501,6 +502,10 @@ export function FreeTextPage() {
       ...currentAIReference(),
     }),
     onSuccess: (data, inputText) => {
+      trackEvent(analyticsEvents.aiChatUsed, {
+        feature_name: 'ai_transaction_assistant',
+        transaction_type: 'nlp',
+      })
       // Prefer the multi-transaction array when the model returned one.
       // Fallback to the single top-level fields for older responses.
       const items =
@@ -639,6 +644,9 @@ export function FreeTextPage() {
       })
     },
     onSuccess: (data) => {
+      trackEvent(analyticsEvents.aiChatUsed, {
+        feature_name: 'ai_chat',
+      })
       updateActive((prev) => [
         ...prev,
         { id: uid(), role: 'assistant', content: cleanReply(data.reply) },

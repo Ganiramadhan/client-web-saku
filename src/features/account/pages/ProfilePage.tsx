@@ -35,6 +35,7 @@ import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { loadSnap } from '@/lib/snap'
 import { sanitizeReferralCode } from '../utils/billing'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import {
   SubscriptionCard,
 } from '../components/ProfilePanels'
@@ -284,9 +285,16 @@ export function ProfilePage() {
       }
       if (resumePending) setBusyResume(true)
       else setBusyPlan(planCode)
+      trackEvent(analyticsEvents.productSelected, {
+        subscription_plan: planCode,
+      })
       const checkout = resumePending && pendingSubscription?.id
         ? await subscriptionApi.renewInvoice(pendingSubscription.id)
         : await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
+      trackEvent(analyticsEvents.checkoutStarted, {
+        subscription_plan: planCode,
+        amount: checkout.amount,
+      })
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
         snapLoadedRef.current = true
@@ -304,6 +312,11 @@ export function ProfilePage() {
               ? String((result as { order_id?: unknown }).order_id ?? '')
               : ''
           if (orderId) await subscriptionApi.confirm(orderId)
+          trackEvent(analyticsEvents.paymentSuccess, {
+            subscription_plan: planCode,
+            payment_method: result && typeof result === 'object' && 'payment_type' in result ? String((result as { payment_type?: unknown }).payment_type ?? '') : undefined,
+            amount: checkout.amount,
+          })
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
           qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
@@ -317,6 +330,10 @@ export function ProfilePage() {
         },
         onError: () => {
           document.body.classList.remove('saku-payment-open')
+          trackEvent(analyticsEvents.paymentFailed, {
+            subscription_plan: planCode,
+            amount: checkout.amount,
+          })
           toast.error(copy.paymentFailed)
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })

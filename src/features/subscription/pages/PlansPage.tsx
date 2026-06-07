@@ -8,6 +8,7 @@ import { loadSnap } from '@/lib/snap'
 import { useLocale } from '@/i18n'
 import { sanitizeReferralCode } from '../utils/referral'
 import type { BillingPeriod } from '../types'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import {
   ActiveSubscriptionBanner,
   BillingPeriodToggle,
@@ -79,6 +80,9 @@ export function PlansPage() {
       toast.info(copy.pendingPlanExists)
       return
     }
+    trackEvent(analyticsEvents.productSelected, {
+      subscription_plan: plan.code,
+    })
     void startCheckout(plan)
   }
 
@@ -87,6 +91,10 @@ export function PlansPage() {
       setBusyCode(plan.code)
 
       const checkout = await subscriptionApi.checkout(plan.code, false, undefined, sanitizeReferralCode(voucherCode))
+      trackEvent(analyticsEvents.checkoutStarted, {
+        subscription_plan: plan.code,
+        amount: checkout.amount,
+      })
 
       if (!snapLoadedRef.current) {
         await loadSnap(checkout.client_key, checkout.is_production)
@@ -109,6 +117,11 @@ export function PlansPage() {
               : ''
           const qs = orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''
           if (orderId) await subscriptionApi.confirm(orderId)
+          trackEvent(analyticsEvents.paymentSuccess, {
+            subscription_plan: plan.code,
+            payment_method: result && typeof result === 'object' && 'payment_type' in result ? String((result as { payment_type?: unknown }).payment_type ?? '') : undefined,
+            amount: checkout.amount,
+          })
           navigate(`/app/subscription/thanks${qs}`)
         },
         onPending: () => {
@@ -118,6 +131,10 @@ export function PlansPage() {
         },
         onError: () => {
           document.body.classList.remove('saku-payment-open')
+          trackEvent(analyticsEvents.paymentFailed, {
+            subscription_plan: plan.code,
+            amount: checkout.amount,
+          })
           toast.error(copy.paymentFailed)
         },
         onClose: () => {

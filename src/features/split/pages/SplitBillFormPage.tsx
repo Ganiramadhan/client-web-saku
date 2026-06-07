@@ -10,6 +10,7 @@ import type { AIScanReceiptResponse } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
 import { validateImageFile } from '@/lib/files'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import {
   ParticipantsEditor,
   ReceiptDetailModal,
@@ -123,6 +124,10 @@ export function SplitBillFormPage() {
         })),
       }),
     onSuccess: (b) => {
+      trackEvent(analyticsEvents.splitBillCreated, {
+        feature_name: 'split_bill',
+        amount: total,
+      })
       toast.success(copy.created)
       qc.invalidateQueries({ queryKey: ['split-bills'] })
       nav(`/app/split-bills/${b.id}`)

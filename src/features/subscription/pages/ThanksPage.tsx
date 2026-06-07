@@ -20,6 +20,7 @@ import { subscriptionApi, type Subscription } from '../api'
 import { formatCurrency } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
 import { useLocale } from '@/i18n'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 
 export function ThanksPage() {
   const qc = useQueryClient()
@@ -88,6 +89,16 @@ export function ThanksPage() {
         .confirm(orderId)
         .then((sub) => {
           setConfirmedSub(sub)
+          trackEvent(analyticsEvents.paymentSuccess, {
+            subscription_plan: sub.plan_code,
+            amount: sub.amount,
+          })
+          if (sub.status === 'active') {
+            trackEvent(analyticsEvents.subscriptionActivated, {
+              subscription_plan: sub.plan_code,
+              amount: sub.amount,
+            })
+          }
           qc.invalidateQueries({ queryKey: ['subscriptions'] })
           qc.invalidateQueries({ queryKey: ['subscriptions', 'active'] })
         })
@@ -107,6 +118,13 @@ export function ThanksPage() {
   })
 
   const active = activeQ.data ?? (confirmedSub?.status === 'active' ? confirmedSub : null)
+  useEffect(() => {
+    if (!active) return
+    trackEvent(analyticsEvents.subscriptionActivated, {
+      subscription_plan: active.plan_code,
+      amount: active.amount,
+    })
+  }, [active?.id])
   const planIsLoading = !active && (activeQ.isLoading || activeQ.isFetching || confirmLoading)
   const planIsSyncing = !active && confirmFinished
   const endsAtLabel = useMemo(() => {

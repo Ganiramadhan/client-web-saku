@@ -24,6 +24,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
 import type { Budget, Category, SavingsGoal, Transaction, Wallet } from '@/types/api'
 
 type TrendRange = 'today' | '7d' | '30d' | '6mo'
@@ -353,7 +354,11 @@ export function DashboardPage() {
 
   const createBudget = useMutation({
     mutationFn: budgetApi.create,
-    onSuccess: () => {
+    onSuccess: (_budget, payload) => {
+      trackEvent(analyticsEvents.budgetCreated, {
+        feature_name: 'budget',
+        amount: payload.limit_amount,
+      })
       toast.success(copy.dailyBudgetCreated)
       qc.invalidateQueries({ queryKey: ['budgets'] })
     },

@@ -44,17 +44,14 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
   }, [])
 
   return (
-    <section id="home" className="relative overflow-hidden py-16 sm:py-24">
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.9fr_1fr] lg:items-center lg:gap-12 lg:px-8">
+    <section id="home" className="relative overflow-hidden pb-12 pt-7 sm:pb-16 sm:pt-9 lg:pb-[4.5rem] lg:pt-7">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10 lg:px-8">
         <div className="max-w-xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-4 py-1.5 text-xs font-bold text-blue-700 shadow-sm shadow-blue-100/60">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm shadow-blue-100/60 sm:mb-5">
             <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
             {copy.eyebrow}
           </div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-black text-amber-800 shadow-sm shadow-amber-100/70">
-            🎉 Launch Promo 30% OFF
-          </div>
-          <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-[3.55rem] leading-[1.06]">
+          <h1 className="text-4xl font-extrabold leading-[1.06] tracking-tight text-slate-900 sm:text-6xl lg:text-[3.55rem]">
             {copy.titleTop}<br />
             <span className="relative inline-block">
               <span className="text-[#2563EB]">{copy.titleAccent}</span>
@@ -63,13 +60,13 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
               </svg>
             </span>
           </h1>
-          <p className="mt-7 max-w-md text-base leading-7 text-slate-500 sm:text-[17px]">
+          <p className="mt-5 max-w-md text-base leading-7 text-slate-500 sm:mt-6 sm:text-[17px]">
             {copy.desc}
           </p>
-          <p className="mt-3 max-w-md text-sm font-semibold leading-6 text-blue-700">
+          <p className="mt-2 max-w-md text-sm font-semibold leading-6 text-blue-700 sm:mt-3">
             {copy.promo}
           </p>
-          <div className="mt-10 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
             <Link to={isAuthed ? '/app' : '/register'}>
               <button className="group inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-200/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#1D4ED8]">
                 {copy.primary} <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -79,14 +76,14 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
               {copy.secondary}
             </button>
           </div>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
             {copy.trust.map((item) => (
               <span key={item} className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-xs font-bold text-slate-500">
                 {item}
               </span>
             ))}
           </div>
-          <div className="mt-10 flex flex-wrap gap-3">
+          <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
             {[
               { Icon: RiChatSmile3Line, value: 'AI Chat', label: isId ? 'Catat otomatis' : 'Auto recording', color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
               { Icon: RiScanLine, value: 'AI OCR', label: isId ? 'Scan struk' : 'Receipt scanner', color: 'text-violet-600', bg: 'rgba(245,243,255,0.80)' },

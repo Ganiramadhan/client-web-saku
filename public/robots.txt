@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://saku.ganipedia.com/sitemap.xml

@@ -4,6 +4,13 @@ import { RiArrowRightLine, RiArrowUpLine, RiCloseLine, RiCoupon3Line, RiWhatsapp
 import { useAuthStore } from '@/stores/authStore'
 import { useLocale, useT } from '@/i18n'
 import { cn } from '@/lib/utils'
+import {
+  analyticsEvents,
+  getAnalyticsConsentChoice,
+  setAnalyticsConsentChoice,
+  trackEvent,
+  type AnalyticsConsentChoice,
+} from '@/lib/analytics'
 import { smoothScrollTo } from '../components/landingUtils'
 import { LandingNavbar } from '../components/LandingNavbar'
 import { HeroSection } from '../sections/HeroSection'
@@ -29,12 +36,20 @@ export function HomePage() {
     typeof window === 'undefined' ? false : window.matchMedia('(max-width: 767px)').matches
   ))
   const [marketingPopupOpen, setMarketingPopupOpen] = useState(false)
+  const [cookieConsentChoice, setCookieConsentChoice] = useState<AnalyticsConsentChoice | null>(() => (
+    typeof window === 'undefined' ? null : getAnalyticsConsentChoice()
+  ))
   const marketingPopupShownRef = useRef(false)
+  const pricingTrackedRef = useRef(false)
   const activeSectionRef = useRef(activeSection)
   const scrolledRef = useRef(scrolled)
 
   useEffect(() => {
     activeSectionRef.current = activeSection
+    if (activeSection === 'pricing' && !pricingTrackedRef.current) {
+      pricingTrackedRef.current = true
+      trackEvent(analyticsEvents.pricingViewed)
+    }
   }, [activeSection])
 
   useEffect(() => {
@@ -51,7 +66,7 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthed) return
+    if (isAuthed || !cookieConsentChoice) return
 
     const dismissedAt = Number(window.localStorage.getItem(MARKETING_POPUP_KEY) || 0)
     if (dismissedAt && Date.now() - dismissedAt < MARKETING_POPUP_COOLDOWN_MS) return
@@ -66,29 +81,30 @@ export function HomePage() {
       const doc = document.documentElement
       const scrollable = doc.scrollHeight - window.innerHeight
       if (scrollable <= 0) return
-      if (window.scrollY / scrollable >= 0.6) showPopup()
+      if (window.scrollY / scrollable >= 0.4) showPopup()
     }
 
-    const onMouseLeave = (event: MouseEvent) => {
-      if (isMobile) return
-      if (event.clientY <= 0) showPopup()
-    }
-
-    const timer = window.setTimeout(showPopup, 20 * 1000)
+    const timer = window.setTimeout(showPopup, 8 * 1000)
     window.addEventListener('scroll', onScroll, { passive: true })
-    document.addEventListener('mouseleave', onMouseLeave)
-    onScroll()
 
     return () => {
       window.clearTimeout(timer)
       window.removeEventListener('scroll', onScroll)
-      document.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [isAuthed, isMobile])
+  }, [isAuthed, cookieConsentChoice])
+
+  useEffect(() => {
+    if (isAuthed) setMarketingPopupOpen(false)
+  }, [isAuthed])
 
   const closeMarketingPopup = () => {
     window.localStorage.setItem(MARKETING_POPUP_KEY, String(Date.now()))
     setMarketingPopupOpen(false)
+  }
+
+  const handleCookieConsent = (choice: AnalyticsConsentChoice) => {
+    setAnalyticsConsentChoice(choice)
+    setCookieConsentChoice(choice)
   }
 
   useEffect(() => {
@@ -202,7 +218,8 @@ export function HomePage() {
         setNavOpen={setNavOpen}
       />
 
-      <main className="relative z-10 pt-24">
+      <main className="relative z-10 pt-[4.75rem] sm:pt-24">
+        <LaunchAnnouncementBar locale={locale} />
         <HeroSection isAuthed={isAuthed} />
         <ProblemSection />
         <FeaturesSection />
@@ -213,40 +230,123 @@ export function HomePage() {
       </main>
       <FooterSection onNavClick={smoothScrollTo} />
 
+      <CookieConsentBanner
+        open={!cookieConsentChoice}
+        onAccept={() => handleCookieConsent('accepted')}
+        onReject={() => handleCookieConsent('analytics_rejected')}
+      />
+
       <LaunchPromoPopup
-        open={marketingPopupOpen}
+        open={marketingPopupOpen && Boolean(cookieConsentChoice) && !isAuthed}
         locale={locale}
         isMobile={isMobile}
         onClose={closeMarketingPopup}
       />
 
-      <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
-        {scrolled && !isMobile ? (
-          <button
-            type="button"
-            onClick={() => smoothScrollTo('home')}
-            aria-label={locale === 'id' ? 'Kembali ke atas' : 'Back to top'}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-slate-600 shadow-md shadow-slate-200/60 transition-colors duration-200 hover:border-blue-200 hover:bg-white hover:text-blue-700 active:translate-y-0"
-          >
-            <RiArrowUpLine className="h-5 w-5" />
-          </button>
-        ) : null}
+      {cookieConsentChoice ? (
+        <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+          {scrolled && !isMobile ? (
+            <button
+              type="button"
+              onClick={() => smoothScrollTo('home')}
+              aria-label={locale === 'id' ? 'Kembali ke atas' : 'Back to top'}
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 bg-white/85 text-slate-600 shadow-md shadow-slate-200/60 transition-colors duration-200 hover:border-blue-200 hover:bg-white hover:text-blue-700 active:translate-y-0"
+            >
+              <RiArrowUpLine className="h-5 w-5" />
+            </button>
+          ) : null}
 
-        <a
-          href={`https://wa.me/628211248685?text=${whatsappText}`}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={locale === 'id' ? 'Chat SAKU di WhatsApp' : 'Chat SAKU on WhatsApp'}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/70 bg-emerald-500 text-white shadow-md shadow-emerald-200/70 transition-colors duration-200 hover:bg-emerald-400 active:translate-y-0 sm:shadow-xl"
+          <a
+            href={`https://wa.me/628211248685?text=${whatsappText}`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={locale === 'id' ? 'Chat SAKU di WhatsApp' : 'Chat SAKU on WhatsApp'}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/70 bg-emerald-500 text-white shadow-md shadow-emerald-200/70 transition-colors duration-200 hover:bg-emerald-400 active:translate-y-0 sm:shadow-xl"
+          >
+            <span className="absolute -right-1 -top-1 flex h-4 w-4">
+              <span className="relative inline-flex h-4 w-4 rounded-full border-2 border-white bg-emerald-300" />
+            </span>
+            <span className="pointer-events-none absolute right-14 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-2xl border border-white/80 bg-white/95 px-3 py-2 text-xs font-bold text-slate-700 shadow-md shadow-slate-200/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:block">
+              {locale === 'id' ? 'Chat WhatsApp' : 'WhatsApp chat'}
+            </span>
+            <RiWhatsappLine className="h-6 w-6" />
+          </a>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function LaunchAnnouncementBar({ locale }: { locale: 'id' | 'en' }) {
+  const isId = locale === 'id'
+  return (
+    <div className="mx-auto mb-1 max-w-7xl px-4 sm:mb-2 sm:px-6 lg:px-8">
+      <div className="landing-mobile-hover flex items-center justify-between gap-2 rounded-2xl border border-blue-100 bg-white/90 px-3 py-2 shadow-sm shadow-blue-100/50 sm:px-4">
+        <p className="min-w-0 text-xs font-bold leading-5 text-slate-700 sm:text-sm">
+          <span className="mr-1">🎉</span>
+          {isId
+            ? 'Promo Launch SAKU — Diskon 30% untuk pelanggan pertama.'
+            : 'SAKU Launch Promo — 30% off for early customers. Limited time only.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => smoothScrollTo('pricing')}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-[11px] font-black text-white shadow-sm shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 sm:gap-2 sm:px-4"
         >
-          <span className="absolute -right-1 -top-1 flex h-4 w-4">
-            <span className="relative inline-flex h-4 w-4 rounded-full border-2 border-white bg-emerald-300" />
-          </span>
-          <span className="pointer-events-none absolute right-14 top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-2xl border border-white/80 bg-white/95 px-3 py-2 text-xs font-bold text-slate-700 shadow-md shadow-slate-200/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:block">
-            {locale === 'id' ? 'Chat WhatsApp' : 'WhatsApp chat'}
-          </span>
-          <RiWhatsappLine className="h-6 w-6" />
-        </a>
+          {isId ? 'Lihat Paket' : 'View Plans'}
+          <RiArrowRightLine className="hidden h-4 w-4 sm:block" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CookieConsentBanner({
+  open,
+  onAccept,
+  onReject,
+}: {
+  open: boolean
+  onAccept: () => void
+  onReject: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[60] sm:left-auto sm:right-5 sm:w-[360px]">
+      <div className="rounded-2xl border border-slate-200 bg-white/95 p-3.5 shadow-2xl shadow-slate-900/12 backdrop-blur sm:p-4">
+        <div className="grid gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-slate-950">
+              Privacy preferences
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              We use cookies to improve performance and understand website usage. You can accept analytics or reject them.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Link
+              to="/privacy"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              Learn More
+            </Link>
+            <button
+              type="button"
+              onClick={onReject}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-black text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={onAccept}
+              className="rounded-xl bg-blue-600 px-3 py-2.5 text-[11px] font-black text-white shadow-sm shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700"
+            >
+              Accept All
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -267,31 +367,26 @@ function LaunchPromoPopup({
   const isId = locale === 'id'
 
   return (
-    <div
-      className={cn(
-        'fixed z-50',
-        isMobile
-          ? 'inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))]'
-          : 'bottom-6 right-6 w-[360px]',
-      )}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 py-6 backdrop-blur-sm">
       <div
         className={cn(
-          'overflow-hidden border border-blue-100 bg-white shadow-2xl shadow-slate-900/14',
-          isMobile ? 'rounded-[1.5rem]' : 'rounded-3xl',
+          'w-full overflow-hidden border border-blue-100 bg-white shadow-2xl shadow-slate-900/20',
+          isMobile ? 'max-w-[22rem] rounded-[1.5rem]' : 'max-w-[390px] rounded-3xl',
         )}
       >
-        <div className={cn('flex items-start gap-3 bg-blue-50/80', isMobile ? 'p-3.5' : 'p-4')}>
+        <div className={cn('flex items-start gap-3 bg-blue-50/80', isMobile ? 'p-4' : 'p-5')}>
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
             <RiCoupon3Line className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Launch Promo</p>
-            <h3 className={cn('mt-1 font-black text-slate-950', isMobile ? 'text-sm' : 'text-base')}>30% OFF SAKU Pro</h3>
-            <p className={cn('mt-1 text-xs text-slate-600', isMobile ? 'line-clamp-2 leading-5' : 'leading-5')}>
+            <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">
+              {isId ? 'Promo Launch' : 'Launch Promo'}
+            </p>
+            <h3 className={cn('mt-1 font-black text-slate-950', isMobile ? 'text-lg' : 'text-xl')}>30% OFF SAKU Pro</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
               {isId
-                ? 'Mulai gratis dulu, lalu gunakan promo launching saat kamu siap upgrade ke fitur AI yang lebih lengkap.'
-                : 'Start free first, then use the launch promo when you are ready to unlock richer AI features.'}
+                ? 'Diskon 30% untuk pelanggan awal. Gunakan kode voucher saat checkout Pro.'
+                : '30% off for early customers. Use the voucher code during Pro checkout.'}
             </p>
           </div>
           <button
@@ -303,27 +398,30 @@ function LaunchPromoPopup({
             <RiCloseLine className="h-5 w-5" />
           </button>
         </div>
-        <div className={cn('grid gap-2', isMobile ? 'p-3.5 pt-3' : 'p-4')}>
-          <Link
-            to="/register"
-            onClick={onClose}
-            className={cn(
-              'inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700',
-              isMobile ? 'px-4 py-3' : 'px-4 py-3',
-            )}
-          >
-            {isId ? 'Daftar Gratis' : 'Start Free'}
-            <RiArrowRightLine className="h-4 w-4" />
-          </Link>
+        <div className={cn('grid gap-3', isMobile ? 'p-4 pt-3' : 'p-5 pt-4')}>
+          <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">
+              {isId ? 'Kode voucher promo' : 'Promo voucher code'}
+            </p>
+            <p className="mt-1 font-mono text-lg font-black tracking-wide text-slate-950">LAUNCH30</p>
+          </div>
           <button
             type="button"
             onClick={() => {
               onClose()
               smoothScrollTo('pricing')
             }}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700"
           >
             {isId ? 'Lihat Paket' : 'View Plans'}
+            <RiArrowRightLine className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+          >
+            {isId ? 'Nanti Saja' : 'Maybe Later'}
           </button>
         </div>
       </div>
