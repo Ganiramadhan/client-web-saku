@@ -74,6 +74,11 @@ export function unwrapList<T>(
 export function toErrorMessage(err: unknown): string {
   const locale = currentLocale()
   if (axios.isAxiosError(err)) {
+    if (err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '')) {
+      return locale === 'id'
+        ? 'Scan struk membutuhkan waktu lebih lama dari biasanya. Coba gunakan foto yang lebih jelas atau ulangi sebentar lagi.'
+        : 'Receipt scan is taking longer than usual. Try a clearer photo or try again in a moment.'
+    }
     const status = err.response?.status
     if (status === 502 || status === 503 || status === 504) {
       return locale === 'id'
@@ -99,8 +104,13 @@ function currentLocale(): 'id' | 'en' {
 }
 
 function translateApiMessage(message: string, locale: 'id' | 'en'): string {
-  if (locale === 'en') return message
   const normalized = message.trim()
+  if (/context deadline exceeded|deadline exceeded|timeout/i.test(normalized)) {
+    return locale === 'id'
+      ? 'Scan struk membutuhkan waktu lebih lama dari biasanya. Coba gunakan foto yang lebih jelas atau ulangi sebentar lagi.'
+      : 'Receipt scan is taking longer than usual. Try a clearer photo or try again in a moment.'
+  }
+  if (locale === 'en') return message
   const map: Record<string, string> = {
     'Free plan can create up to 2 wallets. Upgrade to Pro for unlimited wallets':
       'Paket Free bisa membuat maksimal 2 wallet. Upgrade ke Pro untuk kapasitas wallet lebih besar.',

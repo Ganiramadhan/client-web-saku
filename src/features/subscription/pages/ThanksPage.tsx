@@ -45,8 +45,8 @@ export function ThanksPage() {
         order: 'Order ID',
         amount: 'Total pembayaran',
         validity: 'Masa berlaku',
-        primary: 'Mulai pakai SAKU',
-        profile: 'Lihat Profile',
+        primary: 'Buka Dashboard',
+        profile: 'Mulai Catat Transaksi',
         trust: 'Pembayaran terverifikasi dan akses fitur akan mengikuti status paket aktif.',
         nextTitle: 'Yang bisa kamu lakukan sekarang',
         steps: [
@@ -68,8 +68,8 @@ export function ThanksPage() {
         order: 'Order ID',
         amount: 'Payment total',
         validity: 'Validity',
-        primary: 'Start using SAKU',
-        profile: 'View Profile',
+        primary: 'Open Dashboard',
+        profile: 'Record a Transaction',
         trust: 'Payment is verified and feature access follows your active plan status.',
         nextTitle: 'What you can do next',
         steps: [
@@ -137,12 +137,14 @@ export function ThanksPage() {
   }, [active])
 
   return (
-    <div className="app-surface fixed inset-0 z-50 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-4 sm:py-8">
+    <div className="app-surface fixed inset-0 z-50 overflow-y-auto bg-[#f6eee8] px-3 py-4 text-[#17120f] sm:px-4 sm:py-8">
+      <div className="pointer-events-none fixed -left-20 top-24 h-72 w-72 rounded-[45%_55%_35%_65%] border border-[#17120f]/12 bg-brand-100/50" />
+      <div className="pointer-events-none fixed -right-16 bottom-20 h-60 w-60 rounded-[62%_38%_55%_45%] border border-[#17120f]/12 bg-[#fddf82]/50" />
       <button
         type="button"
         aria-label="Tutup"
         onClick={() => navigate('/app')}
-        className="fixed right-4 top-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/90 text-slate-500 shadow-lg shadow-slate-200/60 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 sm:right-5 sm:top-5 sm:h-10 sm:w-10"
+        className="fixed right-4 top-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#17120f]/15 bg-[#fffaf6]/90 text-[#4f4540] shadow-lg shadow-[#17120f]/8 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white hover:text-[#17120f] sm:right-5 sm:top-5 sm:h-10 sm:w-10"
       >
         <HiOutlineXMark className="h-5 w-5" />
       </button>
@@ -152,8 +154,9 @@ export function ThanksPage() {
           <Logo />
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
+        <section className="overflow-hidden rounded-[2rem] border border-[#17120f]/18 bg-[#fffaf6]/92 shadow-[0_24px_70px_rgba(23,18,15,0.12)] backdrop-blur">
           <div className="px-4 py-5 sm:px-5 sm:py-6 lg:px-6">
+            <SuccessDoodle />
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700 sm:hidden">
               <HiOutlineCheckCircle className="h-7 w-7" />
             </div>
@@ -170,7 +173,7 @@ export function ThanksPage() {
               {copy.subtitle}
             </p>
 
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 shadow-sm shadow-slate-100/70 sm:mt-5 sm:border-emerald-100 sm:bg-emerald-50 sm:p-4 sm:shadow-emerald-100/40">
+            <div className="mt-5 rounded-2xl border border-[#17120f]/10 bg-[#ecfdf5]/85 p-3.5 shadow-sm shadow-emerald-100/50 sm:mt-5 sm:p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 sm:text-emerald-700">{copy.activePlan}</p>
@@ -200,12 +203,12 @@ export function ThanksPage() {
             </div>
 
             <div className="mt-3 hidden gap-3 sm:grid sm:grid-cols-2">
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3.5 sm:p-4">
-                <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-blue-700">
+              <div className="rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5 sm:p-4">
+                <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-brand-700">
                   <HiOutlineShieldCheck className="h-4 w-4" />
                   {locale === 'id' ? 'Status akses' : 'Access status'}
                 </p>
-                <p className="mt-2 text-sm font-semibold leading-6 text-blue-900">
+                <p className="mt-2 text-sm font-semibold leading-6 text-brand-900">
                   {locale === 'id' ? 'Fitur Pro dapat digunakan dari Dashboard setelah status paket aktif.' : 'Pro features are available from Dashboard once the plan is active.'}
                 </p>
               </div>
@@ -231,7 +234,7 @@ export function ThanksPage() {
                 variant="outline"
                 className="h-11 w-full transition hover:-translate-y-0.5 sm:h-auto sm:w-auto"
                 leftIcon={<HiOutlineUser className="h-4 w-4" />}
-                onClick={() => navigate('/app/profile')}
+                onClick={() => navigate('/app/transactions/add')}
               >
                 {copy.profile}
               </Button>
@@ -250,7 +253,7 @@ export function ThanksPage() {
                   return (
                     <div key={title} className="rounded-xl border border-white/80 bg-white/82 p-2.5 shadow-sm shadow-slate-200/40 sm:rounded-2xl sm:p-3">
                       <div className="flex items-start gap-2.5 md:block">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 md:h-10 md:w-10">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700 md:h-10 md:w-10">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="md:mt-3">
@@ -267,6 +270,20 @@ export function ThanksPage() {
         </section>
       </main>
     </div>
+  )
+}
+
+function SuccessDoodle() {
+  return (
+    <svg viewBox="0 0 520 130" className="mx-auto mb-2 hidden h-auto w-full max-w-xl sm:block" role="img" aria-label="Ilustrasi pembayaran berhasil">
+      <path d="M51 94c57-40 110-48 160-25 53 24 100 27 159-10 37-23 70-29 100-17" fill="none" stroke="#ffe4dc" strokeWidth="25" strokeLinecap="round" />
+      <path d="M51 94c57-40 110-48 160-25 53 24 100 27 159-10 37-23 70-29 100-17" fill="none" stroke="#17120f" strokeOpacity=".28" strokeWidth="2.5" strokeLinecap="round" />
+      <rect x="196" y="24" width="128" height="76" rx="24" fill="#fffaf6" stroke="#17120f" strokeOpacity=".45" strokeWidth="2.5" />
+      <path d="M233 62l18 17 38-42" stroke="#059669" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M94 30l6 12 13 5-13 5-6 13-6-13-13-5 13-5 6-12ZM420 69l5 10 11 4-11 5-5 10-5-10-11-5 11-4 5-10Z" fill="#fddf82" stroke="#17120f" strokeOpacity=".45" strokeWidth="2" />
+      <path d="M146 89c16-19 34-22 55-9-14 21-32 24-55 9Z" fill="#ff9d8d" stroke="#17120f" strokeOpacity=".45" strokeWidth="2" />
+      <path d="M369 103c19-14 36-12 50 6-20 14-37 12-50-6Z" fill="#ecfdf5" stroke="#17120f" strokeOpacity=".45" strokeWidth="2" />
+    </svg>
   )
 }
 

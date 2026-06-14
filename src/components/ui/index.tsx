@@ -43,7 +43,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref,
 ) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold cursor-pointer transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 hover:-translate-y-[1px] hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:active:scale-100'
+    'inline-flex items-center justify-center gap-2 rounded-2xl border font-black cursor-pointer transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100'
 
   const sizes: Record<ButtonSize, string> = {
     sm: 'px-3 py-1.5 text-xs',
@@ -53,19 +53,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
   const variants: Record<ButtonVariant, string> = {
     primary:
-      'bg-brand-600 text-white shadow-lg shadow-brand-200/50 hover:bg-brand-700 hover:shadow-xl focus:ring-brand-500/40',
+      'border-[#17120f]/20 bg-brand-300 text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:bg-brand-200 hover:shadow-md focus:ring-brand-500/30',
 
     secondary:
-      'bg-slate-900 text-white shadow-lg shadow-slate-200/50 hover:bg-slate-800 hover:shadow-xl focus:ring-slate-500/40',
+      'border-[#17120f]/15 bg-[#17120f] text-white shadow-sm shadow-[#17120f]/10 hover:bg-[#2a211d] hover:shadow-md focus:ring-slate-500/30',
 
     outline:
-      'border border-white/80 bg-white/70 text-slate-700 shadow-sm backdrop-blur-xl hover:border-slate-300 hover:bg-white hover:shadow-md focus:ring-slate-300/40',
+      'border-[#17120f]/16 bg-[#fffaf6] text-[#17120f] shadow-sm shadow-[#17120f]/5 hover:bg-[#fddf82]/70 hover:shadow-md focus:ring-slate-300/30',
 
     ghost:
-      'bg-transparent text-slate-700 hover:bg-white/70 hover:shadow-sm focus:ring-slate-300/40',
+      'border-transparent bg-transparent text-[#17120f] shadow-none hover:border-[#17120f]/12 hover:bg-[#fffaf6]/80 hover:shadow-sm focus:ring-slate-300/30',
 
     danger:
-      'bg-rose-600 text-white shadow-lg shadow-rose-200/50 hover:bg-rose-700 hover:shadow-xl focus:ring-rose-500/40',
+      'border-[#b4533f]/18 bg-[#ffe4dc] text-[#7f2d23] shadow-sm shadow-[#b4533f]/8 hover:bg-[#ffd3c7] hover:text-[#6f241b] hover:shadow-md focus:ring-[#ff9d8d]/35',
   }
 
   return (
@@ -110,10 +110,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         className={cn(
           'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 shadow-sm backdrop-blur-xl transition-all duration-150 placeholder:text-slate-400',
-          'bg-white/80 hover:border-slate-300 hover:bg-white/90 focus:outline-none focus:ring-2',
+          'bg-[#fffaf6] hover:bg-white focus:outline-none',
           error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-200 focus:border-brand-400 focus:ring-brand-500/20',
+            ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+            : 'border-[#17120f]/18 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/18',
           className,
         )}
         {...rest}
@@ -146,11 +146,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       <select
         ref={ref}
         className={cn(
-          'w-full rounded-xl border bg-white/72 px-3 py-2.5 text-sm shadow-sm backdrop-blur-xl transition',
-          'focus:outline-none focus:ring-2',
+          'w-full rounded-xl border bg-[#fffaf6] px-3 py-2.5 text-sm shadow-sm transition',
+          'focus:outline-none',
           error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-white/80 focus:border-brand-400 focus:ring-brand-500/20',
+            ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+            : 'border-[#17120f]/18 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/18',
           className,
         )}
         {...rest}
@@ -195,14 +195,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             text-sm
             text-slate-900
             shadow-sm
-            backdrop-blur-xl
             transition-all
             duration-150
 
             placeholder:text-slate-400
 
-            hover:border-slate-300
-            hover:bg-white/90
+            hover:bg-white
 
             focus:outline-none
             focus:ring-2
@@ -217,10 +215,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 focus:ring-rose-500/30
               `
               : `
-                border-slate-200
-                bg-white/80
-                focus:border-brand-400
-                focus:ring-brand-500/20
+                border-[#17120f]/18
+                bg-[#fffaf6]
+                focus:border-brand-300
+                focus:ring-brand-500/18
               `,
 
             className,
@@ -242,16 +240,9 @@ export function Card({ className, children, ...rest }: React.HTMLAttributes<HTML
   return (
     <div
       className={cn(
-        'rounded-2xl p-6 shadow-lg shadow-slate-200/35 backdrop-blur-2xl transition-all duration-300',
+        'rounded-[1.5rem] border border-[#17120f]/14 bg-[#fffaf6]/92 p-6 shadow-[0_18px_45px_rgba(23,18,15,0.08)] transition-all duration-300',
         className,
       )}
-      style={{
-        background: 'rgba(255, 255, 255, 0.64)',
-        backdropFilter: 'blur(28px) saturate(170%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(170%)',
-        border: '1px solid rgba(255, 255, 255, 0.86)',
-        boxShadow: '0 16px 44px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.92)',
-      }}
       {...rest}
     >
       {children}
@@ -272,17 +263,17 @@ export function Badge({
   className?: string
 }) {
   const tones: Record<BadgeTone, string> = {
-    gray: 'bg-slate-100 text-slate-700',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-rose-100 text-rose-700',
-    amber: 'bg-amber-100 text-amber-800',
-    blue: 'bg-sky-100 text-sky-700',
-    violet: 'bg-violet-100 text-violet-700',
+    gray: 'border border-[#17120f]/12 bg-[#fffaf6] text-[#17120f]',
+    green: 'border border-emerald-200 bg-emerald-100 text-emerald-900',
+    red: 'border border-rose-200 bg-rose-100 text-rose-900',
+    amber: 'border border-[#17120f]/12 bg-[#fddf82]/75 text-[#17120f]',
+    blue: 'border border-brand-200 bg-brand-100 text-[#17120f]',
+    violet: 'border border-violet-200 bg-violet-100 text-violet-900',
   }
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black',
         tones[tone],
         className,
       )}
@@ -303,8 +294,8 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200/60 bg-white/30 px-6 py-12 text-center backdrop-blur-md">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100/80 text-slate-400">
+    <div className="flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-[#17120f]/20 bg-[#fffaf6]/80 px-6 py-12 text-center shadow-sm shadow-[#17120f]/5">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#17120f]/15 bg-brand-100 text-[#17120f]">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
       </div>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -327,7 +318,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">{title}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-[#17120f]">{title}</h1>
         {subtitle ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">{subtitle}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
@@ -389,13 +380,13 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'animate-panel-in relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-slate-200',
+          'animate-panel-in relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden border border-[#17120f]/12 bg-[#fffaf6] shadow-[0_24px_70px_rgba(23,18,15,0.16)]',
           mobilePlacement === 'center' ? 'rounded-2xl' : 'rounded-t-2xl sm:rounded-2xl',
           widths[size],
         )}
       >
         {title ? (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-[#17120f]/10 px-6 py-4">
             <div className="min-w-0">
               <h3 className="text-base font-semibold text-slate-900">{title}</h3>
               {description ? (
@@ -413,7 +404,7 @@ export function Modal({
         ) : null}
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer ? (
-          <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-[#17120f]/10 bg-[#f6eee8]/70 px-6 py-3 sm:flex-row sm:items-center">
             {footer}
           </div>
         ) : null}

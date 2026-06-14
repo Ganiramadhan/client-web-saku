@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { HiOutlineArrowRight, HiOutlineEnvelope, HiOutlineUser, HiOutlineXMark } from 'react-icons/hi2'
@@ -163,12 +164,12 @@ export function RegisterPage() {
           }}
           className="space-y-4"
         >
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4">
-            <div className="flex items-center gap-2 text-sm font-black text-blue-950">
-              <HiOutlineEnvelope className="h-5 w-5 text-blue-700" />
+          <div className="rounded-2xl border border-brand-100 bg-brand-50/80 p-4">
+            <div className="flex items-center gap-2 text-sm font-black text-brand-800">
+              <HiOutlineEnvelope className="h-5 w-5 text-brand-700" />
               {locale === 'id' ? 'Verifikasi email kamu' : 'Verify your email'}
             </div>
-            <p className="mt-2 text-xs leading-5 text-blue-900/70">
+            <p className="mt-2 text-xs leading-5 text-brand-800/75">
               {locale === 'id'
                 ? `Masukkan kode OTP yang dikirim ke ${pendingEmail}. Kode berlaku 5 menit.`
                 : `Enter the OTP sent to ${pendingEmail}. The code is valid for 5 minutes.`}
@@ -177,26 +178,26 @@ export function RegisterPage() {
           <OtpInput value={otp} onChange={setOtp} label="OTP" disabled={verify.isPending} />
           <Button
             type="submit"
-            className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
+            className="h-12 w-full rounded-xl border border-[#17120f]/25 !bg-brand-300 text-sm font-black !text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:-translate-y-px hover:!bg-brand-200 focus:ring-brand-500/30"
             loading={verify.isPending}
             disabled={otp.length !== 6}
             rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
           >
             {locale === 'id' ? 'Verifikasi & Masuk' : 'Verify & Sign In'}
           </Button>
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+          <div className="rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-bold text-blue-800">
+                <p className="text-xs font-bold text-brand-800">
                   {t.auth.otpExpiresPrefix} {formatCountdown(otpRemaining)}
                 </p>
-                <p className="mt-0.5 text-[11px] leading-5 text-blue-700/80">{t.auth.otpUseLatest}</p>
+                <p className="mt-0.5 text-[11px] leading-5 text-brand-700/80">{t.auth.otpUseLatest}</p>
               </div>
               <button
                 type="button"
                 disabled={resend.isPending || resendRemaining > 0}
                 onClick={() => resend.mutate()}
-                className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-brand-100 bg-white px-3 py-2 text-xs font-bold text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 {resendRemaining > 0
                   ? t.auth.resendOtpLabel.replace('{time}', formatCountdown(resendRemaining))
@@ -231,7 +232,7 @@ export function RegisterPage() {
               type="checkbox"
               checked={privacyAccepted}
               onChange={(e) => setPrivacyAccepted(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
               required
             />
             <span>
@@ -244,7 +245,7 @@ export function RegisterPage() {
                   e.preventDefault()
                   setTermsOpen(true)
                 }}
-                className="font-bold text-blue-700 underline underline-offset-2"
+                className="font-bold text-brand-700 underline underline-offset-2"
               >
                 {locale === 'id' ? 'Syarat & Ketentuan dan Privacy Policy' : 'Terms & Conditions and Privacy Policy'}
               </button>
@@ -253,7 +254,7 @@ export function RegisterPage() {
           </label>
           <Button
             type="submit"
-            className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
+            className="h-12 w-full rounded-xl border border-[#17120f]/25 !bg-brand-300 text-sm font-black !text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:-translate-y-px hover:!bg-brand-200 focus:ring-brand-500/30"
             loading={m.isPending}
             disabled={!privacyAccepted || (isTurnstileEnabled() && !turnstileToken)}
             rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
@@ -284,7 +285,7 @@ export function RegisterPage() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         {t.auth.hasAccount}{' '}
-        <Link to="/login" className="font-semibold text-blue-700 hover:underline">
+        <Link to="/login" className="font-semibold text-brand-700 hover:underline">
           {t.auth.submitLogin}
         </Link>
       </p>
@@ -307,7 +308,7 @@ function TermsModal({
   onClose: () => void
   onAgree: () => void
 }) {
-  if (!open) return null
+  if (!open || typeof document === 'undefined') return null
 
   const isId = locale === 'id'
   const sections = isId
@@ -326,19 +327,19 @@ function TermsModal({
         ['Agreement', 'By continuing, you confirm that you have read and agreed to SAKU Terms & Conditions and Privacy Policy.'],
       ]
 
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/55 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/20">
-        <div className="flex items-start justify-between gap-4 border-b border-blue-100 bg-gradient-to-br from-blue-50 via-white to-emerald-50/50 px-5 py-5 sm:px-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#17120f]/40 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[1.75rem] border border-[#17120f]/12 bg-[#fffaf6] shadow-2xl shadow-[#17120f]/20">
+        <div className="flex items-start justify-between gap-4 border-b border-[#17120f]/10 bg-[#fff3ee] px-5 py-5 sm:px-6">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-blue-700 shadow-sm">
-              <img src="/saku-logo.png" alt="SAKU" className="h-6 w-6 rounded-lg object-contain" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white/85 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-brand-700 shadow-sm">
+              <img src="/logo.png" alt="SAKU" className="h-6 w-6 rounded-lg object-contain" />
               SAKU Finance
             </div>
-            <h2 className="mt-4 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
+            <h2 className="mt-4 text-xl font-black tracking-tight text-[#17120f] sm:text-2xl">
               {isId ? 'Syarat & Privasi SAKU' : 'SAKU Terms & Privacy'}
             </h2>
-            <p className="mt-2 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
+            <p className="mt-2 max-w-xl text-xs leading-5 text-[#4f4540] sm:text-sm">
               {isId
                 ? 'Baca ringkasan ini sebelum membuat akun. Kamu bisa scroll untuk melihat seluruh poin penting.'
                 : 'Review this summary before creating your account. Scroll to see every important point.'}
@@ -347,39 +348,39 @@ function TermsModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:border-blue-200 hover:text-blue-700"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-[#17120f]/10 bg-white text-[#4f4540]/70 shadow-sm hover:border-brand-200 hover:text-brand-700"
             aria-label="Close"
           >
             <HiOutlineXMark className="h-5 w-5" />
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 sm:px-6">
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-            <p className="text-sm font-extrabold text-blue-950">
+          <div className="rounded-2xl border border-brand-100 bg-[#ffe4dc]/65 p-4">
+            <p className="text-sm font-black text-[#17120f]">
               {isId ? 'Ringkasan persetujuan' : 'Agreement summary'}
             </p>
-            <p className="mt-2 text-xs leading-6 text-blue-900/75">
+            <p className="mt-2 text-xs leading-6 text-[#4f4540]">
               {isId
                 ? 'Dengan mendaftar, kamu menyetujui pemrosesan data yang diperlukan agar fitur finansial, keamanan akun, dan verifikasi email berjalan dengan baik.'
                 : 'By registering, you agree to the data processing required for financial features, account security, and email verification to work properly.'}
             </p>
           </div>
           {sections.map(([title, body], index) => (
-            <section key={title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
+            <section key={title} className="rounded-2xl border border-[#17120f]/10 bg-white/78 p-4 shadow-sm shadow-[#17120f]/5">
               <div className="flex items-start gap-3">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-100 text-xs font-black text-slate-500">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#fddf82]/70 text-xs font-black text-[#17120f]">
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">{title}</h3>
-                  <p className="mt-1.5 text-xs leading-6 text-slate-600">{body}</p>
+                  <h3 className="text-sm font-black text-[#17120f]">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-6 text-[#4f4540]">{body}</p>
                 </div>
               </div>
             </section>
           ))}
         </div>
-        <div className="border-t border-slate-200 bg-slate-50/80 p-4 sm:p-5">
-          <p className="mb-3 text-[11px] leading-5 text-slate-500">
+        <div className="border-t border-[#17120f]/10 bg-white/42 p-4 sm:p-5">
+          <p className="mb-3 text-[11px] leading-5 text-[#4f4540]/75">
             {isId
               ? 'Klik setuju jika kamu memahami poin di atas dan ingin melanjutkan pendaftaran.'
               : 'Click agree if you understand the points above and want to continue registration.'}
@@ -388,20 +389,21 @@ function TermsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:border-slate-300 hover:text-slate-900"
+            className="rounded-xl border border-[#17120f]/10 bg-white px-4 py-3 text-sm font-bold text-[#4f4540] hover:border-brand-200 hover:text-[#17120f]"
           >
             {isId ? 'Tutup' : 'Close'}
           </button>
           <button
             type="button"
             onClick={onAgree}
-            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200/70 hover:bg-blue-500"
+            className="rounded-xl border border-[#17120f]/25 bg-brand-300 px-4 py-3 text-sm font-black text-[#17120f] shadow-sm shadow-[#17120f]/10 transition hover:-translate-y-0.5 hover:bg-brand-200"
           >
             {isId ? 'Saya Setuju' : 'I Agree'}
           </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -181,7 +181,7 @@ export function groupHistoryByDay(entries: ScanHistoryEntry[]) {
 }
 
 export function imageFileToOptimizedBase64(file: File): Promise<string> {
-  return imageFileToWebPBase64(file, { maxSide: 1800, quality: 0.88, filename: 'receipt-scan' })
+  return imageFileToWebPBase64(file, { maxSide: 1500, quality: 0.8, filename: 'receipt-scan' })
 }
 
 function rawString(raw: Record<string, unknown> | undefined, key: string): string {

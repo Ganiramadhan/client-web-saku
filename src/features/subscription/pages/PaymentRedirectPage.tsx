@@ -90,18 +90,15 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   const dashboard = token ? '/app' : '/'
   const tone = expired
     ? {
-        shell: 'from-amber-50 via-white to-blue-50',
         icon: 'text-amber-700 bg-amber-50 border-amber-100',
         badge: 'text-amber-700 bg-amber-50 border-amber-100',
       }
     : failed || cancelled
       ? {
-          shell: 'from-rose-50 via-white to-blue-50',
           icon: 'text-rose-700 bg-rose-50 border-rose-100',
           badge: 'text-rose-700 bg-rose-50 border-rose-100',
         }
       : {
-          shell: 'from-emerald-50 via-white to-blue-50',
           icon: 'text-emerald-700 bg-emerald-50 border-emerald-100',
           badge: 'text-emerald-700 bg-emerald-50 border-emerald-100',
         }
@@ -117,9 +114,9 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${tone.shell} px-4 py-6 sm:py-10`}>
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center">
-        <section className="grid w-full overflow-hidden rounded-[2rem] border border-white/80 bg-white/82 shadow-2xl shadow-slate-300/40 backdrop-blur-2xl lg:grid-cols-[1fr_0.82fr]">
+    <div className="app-surface min-h-screen px-4 py-6 sm:py-10">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl items-center">
+        <section className="saku-card-premium w-full overflow-hidden">
           <div className="p-6 sm:p-9 lg:p-10">
             <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-extrabold ${tone.badge}`}>
               <HiOutlineShieldCheck className="h-4 w-4" />
@@ -160,27 +157,16 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
             </div>
           </div>
 
-          <aside className="border-t border-white/70 bg-slate-950 p-6 text-white sm:p-8 lg:border-l lg:border-t-0">
-            <div className="rounded-3xl border border-white/10 bg-white/10 p-5">
-              <p className="text-xs font-black uppercase tracking-widest text-blue-200">SAKU Checkout</p>
-              <h2 className="mt-3 text-xl font-extrabold">
-                {locale === 'id' ? 'Checkout jelas, akses tetap terkontrol.' : 'Clear checkout, controlled access.'}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                {locale === 'id'
-                  ? 'Setiap perubahan status pembayaran disinkronkan ke paket langganan agar akses fitur tetap konsisten.'
-                  : 'Every payment status change is synced to your subscription so feature access stays consistent.'}
-              </p>
-            </div>
-            <div className="mt-4 space-y-3 text-sm">
+          <aside className="border-t border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+            <div className="grid gap-3 text-sm md:grid-cols-3">
               {[
                 locale === 'id' ? 'Status pembayaran diverifikasi otomatis' : 'Payment status is verified automatically',
                 locale === 'id' ? 'Paket pending bisa dilanjutkan dari Profile' : 'Pending plans can be continued from Profile',
                 locale === 'id' ? 'Invoice kedaluwarsa bukan kegagalan pembayaran' : 'Expired invoices are not payment failures',
               ].map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <HiOutlineShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-200" />
-                  <span className="leading-6 text-slate-200">{item}</span>
+                <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <HiOutlineShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                  <span className="leading-6 text-slate-600">{item}</span>
                 </div>
               ))}
             </div>

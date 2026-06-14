@@ -152,25 +152,25 @@ const receiptSteps = [
     Icon: HiOutlineSparkles,
     title: 'AI Ekstraksi Data',
     desc: 'Sistem cerdas AI akan membaca otomatis nominal, nama toko/merchant, tanggal, dan kategori.',
-    color: 'text-blue-600',
-    bg: 'rgba(239,246,255,0.90)',
-    border: 'rgba(191,219,254,0.70)',
+    color: 'text-brand-700',
+    bg: 'rgba(255,228,220,0.72)',
+    border: 'rgba(255,157,141,0.34)',
   },
   {
     num: '03',
     Icon: HiOutlineDocumentText,
     title: 'Review Detail',
     desc: 'Periksa kembali data transaksi hasil ekstraksi sebelum disimpan.',
-    color: 'text-violet-600',
-    bg: 'rgba(245,243,255,0.90)',
-    border: 'rgba(221,214,254,0.70)',
+    color: 'text-amber-700',
+    bg: 'rgba(253,223,130,0.42)',
+    border: 'rgba(245,158,11,0.18)',
   },
   {
     num: '04',
     Icon: HiOutlineCheckCircle,
     title: 'Konfirmasi & Simpan',
     desc: 'Simpan data ke dompet Anda seketika sebagai transaksi baru.',
-    color: 'text-emerald-600',
+    color: 'text-emerald-700',
     bg: 'rgba(236,253,245,0.90)',
     border: 'rgba(167,243,208,0.70)',
   },
@@ -198,13 +198,13 @@ export function ReceiptUploadPanel({
   const copy = useScanCopy()
   return (
     <div
-      className="rounded-3xl p-6 transition-all duration-300 lg:col-span-2"
+      className="rounded-[1.5rem] p-6 transition-all duration-300 lg:col-span-2"
       style={{
-        background: 'rgba(255,255,255,0.40)',
+        background: 'rgba(255,250,246,0.64)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.60)',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+        border: '1px solid rgba(23,18,15,0.10)',
+        boxShadow: '0 18px 45px rgba(23,18,15,0.06)',
       }}
     >
       <div
@@ -215,7 +215,7 @@ export function ReceiptUploadPanel({
           'flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
           isDragging
             ? 'scale-[0.99] border-brand-500 bg-brand-50/50 shadow-inner'
-            : 'border-slate-300 bg-white/50 hover:border-brand-400 hover:bg-white/80 hover:shadow-lg hover:shadow-brand-100/30',
+            : 'border-[#17120f]/14 bg-white/50 hover:border-brand-300 hover:bg-white/80 hover:shadow-lg hover:shadow-brand-100/30',
           isPending && 'cursor-wait opacity-80',
         )}
       >
@@ -230,7 +230,7 @@ export function ReceiptUploadPanel({
           disabled={isPending}
         />
         <div className="relative mb-5">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-[#17120f]/8">
             {isPending ? (
               <HiOutlineArrowPath className="h-10 w-10 animate-spin text-brand-600" />
             ) : (
@@ -244,10 +244,10 @@ export function ReceiptUploadPanel({
           )}
         </div>
 
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-black text-[#17120f]">
           {isPending ? copy.processingReceipt : copy.upload}
         </h2>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#4f4540]">
           {isPending ? copy.processingHint : copy.uploadHint}
         </p>
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { HiOutlineChatBubbleLeftRight, HiOutlinePencilSquare, HiOutlineSparkles, HiOutlineTrash, HiOutlineXMark } from 'react-icons/hi2'
+import { HiOutlineChatBubbleLeftRight, HiOutlinePencilSquare, HiOutlineSparkles, HiOutlineStar, HiOutlineTrash, HiOutlineXMark } from 'react-icons/hi2'
 import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { groupSessionsByDate, type AIMode, type ChatSession } from '../utils/freeText'
@@ -12,6 +12,7 @@ export function ChatSidebar({
   onNew,
   onSwitchMode,
   onDelete,
+  onTogglePin,
   onDeleteAll,
   onClose,
   mobileOpen,
@@ -23,6 +24,7 @@ export function ChatSidebar({
   onNew: (mode: AIMode) => void
   onSwitchMode: (mode: AIMode) => void
   onDelete: (id: string) => void
+  onTogglePin: (id: string) => void
   onDeleteAll: () => void
   onClose: () => void
   mobileOpen: boolean
@@ -36,6 +38,9 @@ export function ChatSidebar({
         deleteAll: 'Hapus semua riwayat',
         empty: 'Belum ada percakapan. Mulai chat baru di atas.',
         delete: 'Hapus',
+        pin: 'Pin riwayat',
+        unpin: 'Lepas pin',
+        pinned: 'Disematkan',
       }
     : {
         history: 'Chat History',
@@ -44,33 +49,42 @@ export function ChatSidebar({
         deleteAll: 'Delete all history',
         empty: 'No conversations yet. Start a new chat above.',
         delete: 'Delete',
+        pin: 'Pin history',
+        unpin: 'Unpin history',
+        pinned: 'Pinned',
       }
   const visibleSessions = useMemo(
-    () => sessions.filter((session) => session.mode === activeMode),
+    () => sessions
+      .filter((session) => session.mode === activeMode)
+      .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt - a.updatedAt),
     [sessions, activeMode],
   )
-  const groups = useMemo(() => groupSessionsByDate(visibleSessions, locale), [visibleSessions, locale])
+  const pinnedSessions = useMemo(() => visibleSessions.filter((session) => session.pinned), [visibleSessions])
+  const groups = useMemo(
+    () => groupSessionsByDate(visibleSessions.filter((session) => !session.pinned), locale),
+    [visibleSessions, locale],
+  )
 
   return (
     <>
       {mobileOpen ? (
         <button
           onClick={onClose}
-          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-[#17120f]/32 backdrop-blur-sm md:hidden"
           aria-label={copy.close}
         />
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/80 bg-white/76 shadow-xl shadow-slate-200/40 backdrop-blur-2xl transition-transform md:static md:inset-auto md:z-auto md:h-full md:translate-x-0 md:shadow-none',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-[#17120f]/8 bg-[#fffaf6]/82 shadow-xl shadow-[#17120f]/8 backdrop-blur-2xl transition-transform md:static md:inset-auto md:z-auto md:h-full md:translate-x-0 md:shadow-none',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div className="flex items-center justify-between border-b border-white/80 px-4 py-3">
-          <div className="text-sm font-semibold text-slate-700">{copy.history}</div>
+          <div className="text-sm font-black text-[#17120f]">{copy.history}</div>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-slate-500 hover:bg-slate-200 md:hidden"
+            className="rounded-md p-1 text-[#4f4540] hover:bg-[#ffe4dc] md:hidden"
             aria-label={copy.close}
           >
             <HiOutlineXMark className="h-5 w-5" />
@@ -80,7 +94,7 @@ export function ChatSidebar({
         <div className="space-y-2 p-3">
           <button
             onClick={() => onNew(activeMode)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-2 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#17120f]/12 bg-brand-500 px-2 py-2 text-xs font-black text-[#17120f] shadow-sm shadow-brand-100/60 transition hover:-translate-y-0.5 hover:bg-brand-300"
           >
             <HiOutlinePencilSquare className="h-4 w-4" /> {copy.newChat}
           </button>
@@ -90,8 +104,8 @@ export function ChatSidebar({
               className={cn(
                 'flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition',
                 activeMode === 'nlp'
-                  ? 'border-violet-300 bg-violet-50 text-violet-700'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-brand-50 hover:text-brand-700',
+                  ? 'border-brand-200 bg-[#ffe4dc] text-brand-800'
+                  : 'border-[#17120f]/10 bg-white/72 text-[#4f4540] hover:bg-[#fff3ee] hover:text-brand-700',
               )}
             >
               <HiOutlineSparkles className="h-4 w-4" /> NLP
@@ -101,8 +115,8 @@ export function ChatSidebar({
               className={cn(
                 'flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition',
                 activeMode === 'chatbot'
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-brand-50 hover:text-brand-700',
+                  ? 'border-[#a7f3d0] bg-[#ecfdf5] text-emerald-800'
+                  : 'border-[#17120f]/10 bg-white/72 text-[#4f4540] hover:bg-[#fff3ee] hover:text-brand-700',
               )}
             >
               <HiOutlineChatBubbleLeftRight className="h-4 w-4" /> Chatbot
@@ -124,6 +138,20 @@ export function ChatSidebar({
             </p>
           ) : null}
 
+          {pinnedSessions.length > 0 ? (
+            <SessionGroup
+              label={copy.pinned}
+              items={pinnedSessions}
+              activeId={activeId}
+              onSelect={onSelect}
+              onTogglePin={onTogglePin}
+              onDelete={onDelete}
+              deleteLabel={copy.delete}
+              pinLabel={copy.pin}
+              unpinLabel={copy.unpin}
+            />
+          ) : null}
+
           {groups.map((g) => (
             <SessionGroup
               key={g.label}
@@ -131,10 +159,14 @@ export function ChatSidebar({
               items={g.items}
               activeId={activeId}
               onSelect={onSelect}
+              onTogglePin={onTogglePin}
               onDelete={onDelete}
               deleteLabel={copy.delete}
+              pinLabel={copy.pin}
+              unpinLabel={copy.unpin}
             />
-          ))}        </div>
+          ))}
+        </div>
       </aside>
     </>
   )
@@ -146,15 +178,21 @@ function SessionGroup({
   items,
   activeId,
   onSelect,
+  onTogglePin,
   onDelete,
   deleteLabel,
+  pinLabel,
+  unpinLabel,
 }: {
   label: string
   items: ChatSession[]
   activeId: string | null
   onSelect: (id: string) => void
+  onTogglePin: (id: string) => void
   onDelete: (id: string) => void
   deleteLabel: string
+  pinLabel: string
+  unpinLabel: string
 }) {
   if (items.length === 0) return null
   return (
@@ -180,9 +218,9 @@ function SessionGroup({
                   className="flex flex-1 items-center gap-2 truncate text-left"
                 >
                   {s.mode === 'nlp' ? (
-                    <HiOutlineSparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                    <HiOutlineSparkles className="h-3.5 w-3.5 shrink-0 text-brand-500" />
                   ) : (
-                    <HiOutlineChatBubbleLeftRight className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    <HiOutlineChatBubbleLeftRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                   )}
                   <span
                     className={cn(
@@ -192,6 +230,19 @@ function SessionGroup({
                   >
                     {s.title === 'Chat baru' ? (deleteLabel === 'Hapus' ? 'Chat baru' : 'New chat') : s.title}
                   </span>
+                </button>
+                <button
+                  onClick={() => onTogglePin(s.id)}
+                  className={cn(
+                    'rounded p-1 transition',
+                    s.pinned
+                      ? 'text-amber-500 opacity-100 hover:text-amber-600'
+                      : 'text-slate-300 opacity-0 hover:text-amber-500 group-hover:opacity-100',
+                  )}
+                  aria-label={s.pinned ? unpinLabel : pinLabel}
+                  title={s.pinned ? unpinLabel : pinLabel}
+                >
+                  <HiOutlineStar className={cn('h-3.5 w-3.5', s.pinned ? 'fill-amber-400' : '')} />
                 </button>
                 <button
                   onClick={() => onDelete(s.id)}

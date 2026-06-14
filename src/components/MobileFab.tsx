@@ -16,7 +16,7 @@ export function MobileFab({
   className?: string
 }) {
   const baseClass = cn(
-    'fixed bottom-24 right-4 z-40 inline-flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-900/20 transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:bg-blue-500 hover:shadow-2xl hover:shadow-blue-900/25 active:translate-y-0 active:scale-95 sm:hidden',
+    'fixed bottom-24 right-4 z-40 inline-flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl border border-[#17120f]/16 bg-brand-300 text-[#17120f] shadow-xl shadow-brand-100/60 transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:bg-brand-200 hover:shadow-2xl hover:shadow-brand-100/80 active:translate-y-0 active:scale-95 sm:hidden',
     className,
   )
 

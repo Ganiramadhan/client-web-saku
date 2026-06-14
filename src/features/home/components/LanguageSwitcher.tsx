@@ -47,28 +47,28 @@ export function LanguageSwitcher() {
         className={cn(
           'group relative inline-flex items-center gap-2 overflow-hidden rounded-2xl px-3 py-2',
           'text-xs font-bold text-slate-600 transition-all duration-300',
-          'hover:-translate-y-0.5 hover:text-blue-700 active:translate-y-0',
-          open && 'text-blue-700'
+          'hover:-translate-y-0.5 hover:text-brand-700 active:translate-y-0',
+          open && 'text-brand-700'
         )}
         style={isMobile ? {
-          background: open ? 'rgba(239,246,255,0.96)' : 'rgba(255,255,255,0.92)',
-          border: open ? '1px solid rgba(96,165,250,0.75)' : '1px solid rgba(226,232,240,0.9)',
-          boxShadow: open ? '0 8px 20px rgba(37,99,235,0.12)' : '0 4px 12px rgba(15,23,42,0.05)',
+          background: open ? 'rgba(242,249,254,0.96)' : 'rgba(255,255,255,0.92)',
+          border: open ? '1px solid rgba(196,226,245,0.92)' : '1px solid rgba(196,226,245,0.72)',
+          boxShadow: open ? '0 8px 20px rgba(44,94,173,0.12)' : '0 4px 12px rgba(15,39,70,0.05)',
         } : {
           background: open
-            ? 'linear-gradient(135deg, rgba(239,246,255,0.96), rgba(255,255,255,0.88))'
-            : 'linear-gradient(135deg, rgba(255,255,255,0.74), rgba(248,250,252,0.56))',
+            ? 'rgba(242,249,254,0.96)'
+            : 'rgba(255,255,255,0.82)',
           border: open
-            ? '1px solid rgba(96,165,250,0.75)'
-            : '1px solid rgba(226,232,240,0.9)',
-          backdropFilter: 'blur(22px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+            ? '1px solid rgba(196,226,245,0.92)'
+            : '1px solid rgba(196,226,245,0.72)',
+          backdropFilter: 'blur(18px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(150%)',
           boxShadow: open
-            ? '0 14px 36px rgba(37,99,235,0.16), inset 0 1px 0 rgba(255,255,255,0.95)'
-            : '0 8px 22px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.85)',
+            ? '0 14px 36px rgba(44,94,173,0.14), inset 0 1px 0 rgba(255,255,255,0.95)'
+            : '0 8px 22px rgba(15,39,70,0.07), inset 0 1px 0 rgba(255,255,255,0.85)',
         }}
       >
-        <span className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-400/10" />
+        <span className="absolute inset-0 bg-brand-50/0 opacity-0 transition-opacity duration-300 group-hover:bg-brand-50/70 group-hover:opacity-100" />
 
         <span className="relative grid h-6 w-6 place-items-center rounded-full bg-white/85 text-sm shadow-sm ring-1 ring-slate-200/70">
           {active.flag}
@@ -80,8 +80,8 @@ export function LanguageSwitcher() {
 
         <HiOutlineChevronDown
           className={cn(
-            'relative h-3.5 w-3.5 text-slate-400 transition-all duration-300 group-hover:text-blue-600',
-            open && 'rotate-180 text-blue-600'
+            'relative h-3.5 w-3.5 text-slate-400 transition-all duration-300 group-hover:text-brand-600',
+            open && 'rotate-180 text-brand-600'
           )}
         />
       </button>
@@ -94,20 +94,19 @@ export function LanguageSwitcher() {
           )}
           style={isMobile ? {
             background: 'rgba(255,255,255,0.98)',
-            border: '1px solid rgba(226,232,240,0.9)',
-            boxShadow: '0 12px 30px rgba(15,23,42,0.12)',
+            border: '1px solid rgba(196,226,245,0.9)',
+            boxShadow: '0 12px 30px rgba(15,39,70,0.12)',
           } : {
-            background:
-              'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92))',
-            backdropFilter: 'blur(34px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(34px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.96)',
+            background: 'rgba(255,255,255,0.96)',
+            backdropFilter: 'blur(24px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(150%)',
+            border: '1px solid rgba(196,226,245,0.90)',
             boxShadow:
-              '0 28px 80px rgba(15,23,42,0.16), inset 0 1px 0 rgba(255,255,255,0.95)',
+              '0 28px 80px rgba(15,39,70,0.14), inset 0 1px 0 rgba(255,255,255,0.95)',
           }}
         >
-          <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-blue-500/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-cyan-400/10 blur-2xl" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-brand-100/40 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-brand-50/80 blur-2xl" />
 
           <div className="relative px-3 pb-2 pt-1">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
@@ -131,8 +130,8 @@ export function LanguageSwitcher() {
                     'group/item flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm',
                     'transition-all duration-300',
                     isActive
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/70'
-                      : 'text-slate-600 hover:bg-white hover:text-blue-700 hover:shadow-sm'
+                      ? 'border-2 border-[#17120f] bg-brand-500 text-[#17120f] shadow-[3px_3px_0_#17120f]'
+                      : 'text-slate-600 hover:bg-white hover:text-brand-700 hover:shadow-sm'
                   )}
                 >
                   <span
@@ -140,7 +139,7 @@ export function LanguageSwitcher() {
                       'grid h-9 w-9 place-items-center rounded-2xl text-base transition-all duration-300',
                       isActive
                         ? 'bg-white/20 ring-1 ring-white/20'
-                        : 'bg-slate-50 ring-1 ring-slate-200/70 group-hover/item:bg-blue-50'
+                        : 'bg-slate-50 ring-1 ring-slate-200/70 group-hover/item:bg-brand-50'
                     )}
                   >
                     {lang.flag}
@@ -153,7 +152,7 @@ export function LanguageSwitcher() {
                     <span
                       className={cn(
                         'mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em]',
-                        isActive ? 'text-blue-100' : 'text-slate-400'
+                        isActive ? 'text-brand-100' : 'text-slate-400'
                       )}
                     >
                       {lang.code}
@@ -171,7 +170,7 @@ export function LanguageSwitcher() {
                     {isActive ? (
                       <RiCheckLine className="h-4 w-4 text-white" />
                     ) : (
-                      <RiArrowRightLine className="h-3.5 w-3.5 text-blue-500" />
+                      <RiArrowRightLine className="h-3.5 w-3.5 text-brand-500" />
                     )}
                   </span>
                 </button>

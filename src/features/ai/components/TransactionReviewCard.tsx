@@ -122,7 +122,7 @@ export function TransactionReviewCard({
 
   if (!isEditing || saved) {
     return (
-      <div className={cn('relative mt-3 overflow-hidden rounded-2xl border border-white/80 bg-white/68 shadow-lg shadow-slate-200/35 backdrop-blur-2xl transition duration-300 hover:shadow-xl', saved && 'ring-1 ring-emerald-200')}>
+      <div className={cn('relative mt-3 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/78 shadow-[0_16px_38px_rgba(23,18,15,0.07)] backdrop-blur-2xl transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(23,18,15,0.09)]', saved && 'ring-1 ring-emerald-200')}>
         {saved ? (
           <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
             <HiOutlineCheckCircle className="h-3.5 w-3.5" />
@@ -131,12 +131,12 @@ export function TransactionReviewCard({
         ) : null}
         <div className="px-5 pb-4 pt-5">
           <div className="mb-3 flex items-center gap-2">
-            <RiSparklingLine className="h-4 w-4 text-blue-500 animate-pulse" />
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+            <RiSparklingLine className="h-4 w-4 animate-pulse text-brand-700" />
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700">
               {copy.preview}
             </p>
             {!saved ? (
-              <span className="ml-auto inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+              <span className="ml-auto inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
                 {copy.ready}
               </span>
             ) : null}
@@ -144,15 +144,15 @@ export function TransactionReviewCard({
 
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex w-full items-center gap-3 sm:min-w-0 sm:flex-1">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-base font-extrabold text-blue-700 shadow-sm shadow-blue-100/60">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-brand-200 bg-brand-50 text-base font-extrabold text-brand-700 shadow-sm shadow-brand-100/60">
               {letterMark}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-slate-900">
+              <p className="truncate text-sm font-black text-[#17120f]">
                 {form.description || copy.noDescription}
               </p>
-              <p className="truncate text-xs text-slate-400">
+              <p className="truncate text-xs text-[#4f4540]/60">
                 {categoryName || extractedCategoryName || copy.noCategory}
               </p>
             </div>
@@ -161,33 +161,33 @@ export function TransactionReviewCard({
             <span
               className={cn(
                 'self-start text-lg font-extrabold shrink-0 sm:ml-auto sm:self-center',
-                form.type === 'income' ? 'text-emerald-600' : 'text-rose-500',
+                form.type === 'income' ? 'text-emerald-700' : 'text-brand-600',
               )}
             >
               {form.type === 'income' ? '+' : '-'}Rp {form.amount.toLocaleString('id-ID')}
             </span>
           </div>
 
-          <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-2xl border border-[#17120f]/8 bg-white/52 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
-              <RiWalletLine className="h-4 w-4 text-slate-400 shrink-0" />
-              <span className="truncate text-xs font-medium text-slate-600">
+              <RiWalletLine className="h-4 w-4 text-[#4f4540]/45 shrink-0" />
+              <span className="truncate text-xs font-semibold text-[#4f4540]">
                 {walletName || copy.chooseWallet}
               </span>
             </div>
 
-            <span className="text-xs text-slate-400 shrink-0">
+            <span className="text-xs text-[#4f4540]/55 shrink-0">
               {form.transaction_date}
             </span>
           </div>
         </div>
 
         {!saved ? (
-          <div className="flex border-t border-slate-200/50 bg-white/30">
+          <div className="flex border-t border-[#17120f]/8 bg-white/32">
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="flex-1 py-3 text-xs font-semibold text-slate-500 transition-colors hover:bg-white/50"
+              className="flex-1 py-3 text-xs font-black text-[#4f4540] transition-colors hover:bg-white/55"
             >
               {copy.editDetail}
             </button>
@@ -251,7 +251,7 @@ export function TransactionReviewCard({
             )}
           </div>
           {!saved ? (
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+            <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
               {copy.ready}
             </span>
           ) : null}

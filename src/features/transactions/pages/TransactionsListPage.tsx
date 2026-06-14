@@ -363,7 +363,7 @@ export function TransactionsListPage() {
             <div
               className={
                 'whitespace-nowrap text-right font-semibold ' +
-                (isIncome ? 'text-emerald-700' : 'text-rose-700')
+                (isIncome ? 'text-emerald-700' : 'text-[#b4533f]')
               }
             >
               {isIncome ? '+' : '-'}
@@ -395,7 +395,7 @@ export function TransactionsListPage() {
             </button>
             <button
               onClick={() => onDelete(row.original)}
-              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-[#ffe4dc] hover:text-[#b4533f]"
               title={t.common.delete}
             >
               <HiOutlineTrash className="h-4 w-4" />
@@ -475,7 +475,7 @@ export function TransactionsListPage() {
             {hasActiveFilter ? (
               <button
                 onClick={resetFilters}
-                className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-rose-600"
+                className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-[#b4533f]"
               >
                 <HiOutlineXMark className="h-3.5 w-3.5" /> {txCopy.reset}
               </button>
@@ -550,16 +550,16 @@ export function TransactionsListPage() {
       </Card>
 
       {selectedIds.size > 0 ? (
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-rose-100 bg-rose-50/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-brand-100 bg-[#ffe4dc]/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-rose-600 shadow-sm">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#b4533f] shadow-sm">
               <HiOutlineTrash className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-extrabold text-rose-950">
+              <p className="text-sm font-extrabold text-[#17120f]">
                 {selectedIds.size} {txCopy.selected}
               </p>
-              <p className="mt-0.5 text-xs leading-5 text-rose-700">
+              <p className="mt-0.5 text-xs leading-5 text-[#7f2d23]">
                 {txCopy.bulkHelp}
               </p>
             </div>

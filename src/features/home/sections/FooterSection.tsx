@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { RiGithubLine, RiInstagramLine, RiLinkedinLine } from 'react-icons/ri'
+import { RiShieldCheckLine } from 'react-icons/ri'
 import { Logo } from '@/components/Logo'
 import { useLocale, useT } from '@/i18n'
 
@@ -10,25 +10,27 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
     { label: t.nav.features, id: 'features' },
     { label: locale === 'id' ? 'Cara Kerja' : 'How It Works', id: 'how-it-works' },
     { label: t.nav.pricing, id: 'pricing' },
+    { label: locale === 'id' ? 'Keamanan' : 'Security', id: 'security' },
     { label: t.nav.faq, id: 'faq' },
   ]
 
   const supportLinks = [
     { label: 'Contact Us', href: '/contact' },
     { label: 'About SAKU', href: '/about' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Email Support', href: 'mailto:hello@ganipedia.com' },
   ]
 
   const legalLinks = [
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
-    { label: 'Contact', href: '/contact' },
-    { label: 'About', href: '/about' },
+    { label: 'Cookies Policy', href: '/cookies' },
   ]
 
   return (
     <footer className="relative z-10 overflow-hidden bg-transparent">
-      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="rounded-[2rem] border border-[#17120f]/15 bg-[#fffaf6]/80 p-6 shadow-[0_24px_70px_rgba(23,18,15,0.06)] sm:p-8">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <Logo />
@@ -36,21 +38,9 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-500">
               {t.landing.footerTagline}
             </p>
-            <p className="mt-3 max-w-md text-xs font-semibold uppercase tracking-wider text-blue-600">
+            <p className="mt-3 max-w-md text-xs font-semibold uppercase tracking-wider text-brand-700">
               {locale === 'id' ? 'AI finance assistant untuk keputusan harian' : 'AI finance assistant for daily decisions'}
             </p>
-
-            <div className="mt-6 flex items-center gap-2">
-              {[RiInstagramLine, RiLinkedinLine, RiGithubLine].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="grid h-10 w-10 cursor-pointer place-items-center rounded-2xl border border-slate-200 bg-white text-slate-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md hover:shadow-blue-100/50"
-                >
-                  <Icon className="h-4.5 w-4.5" />
-                </a>
-              ))}
-            </div>
           </div>
 
           <FooterColumn title={t.landing.footerProduct}>
@@ -59,7 +49,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
                 key={link.label}
                 type="button"
                 onClick={() => onNavClick(link.id)}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-500 transition-all duration-300 hover:translate-x-1 hover:text-brand-700"
               >
                 {link.label}
               </button>
@@ -71,7 +61,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
               <a
                 key={link.label}
                 href={link.href}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-500 transition-all duration-300 hover:translate-x-1 hover:text-brand-700"
               >
                 {link.label}
               </a>
@@ -83,7 +73,7 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
               <a
                 key={link.label}
                 href={link.href}
-                className="block cursor-pointer text-sm font-medium text-slate-400 transition-all duration-300 hover:translate-x-1 hover:text-blue-600"
+                className="block cursor-pointer text-sm font-medium text-slate-500 transition-all duration-300 hover:translate-x-1 hover:text-brand-700"
               >
                 {link.label}
               </a>
@@ -91,9 +81,61 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
           </FooterColumn>
         </div>
 
+        <div className="mt-10">
+          <div className="mb-3 flex justify-center lg:justify-start">
+            <div className="inline-flex items-center gap-3 rounded-xl border border-[#17120f]/10 bg-white px-3.5 py-1.5 shadow-[0_10px_24px_rgba(23,18,15,0.05)]">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Powered by
+              </span>
+              <span className="flex h-7 w-36 items-center overflow-visible">
+                <img
+                  src="/logo-midtrans.webp"
+                  alt="Midtrans"
+                  className="h-7 w-7 origin-left scale-[3.85] object-contain"
+                  loading="lazy"
+                />
+              </span>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#17120f]/35 bg-[#071a2c] shadow-[0_22px_60px_rgba(7,26,44,0.16)]">
+            <div className="grid gap-5 p-5 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+              <div className="text-white">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-extrabold text-brand-100">
+                  <RiShieldCheckLine className="h-3.5 w-3.5" />
+                  {locale === 'id' ? 'Checkout aman' : 'Secure checkout'}
+                </div>
+                <h3 className="mt-3 text-lg font-black tracking-tight sm:text-xl">
+                  {locale === 'id' ? 'Banyak metode bayar, tetap dalam satu checkout.' : 'More ways to pay, one secure checkout.'}
+                </h3>
+                <p className="mt-2 max-w-lg text-sm leading-6 text-brand-50/80">
+                  {locale === 'id'
+                    ? 'SAKU mendukung QRIS, GoPay, kartu debit/kredit, virtual account bank, retail payment, dan paylater melalui Midtrans.'
+                    : 'SAKU supports QRIS, GoPay, debit/credit cards, bank virtual accounts, retail payment, and paylater through Midtrans.'}
+                </p>
+              </div>
+
+              <div className="overflow-visible rounded-[1.15rem] bg-transparent px-0 py-0">
+                <img
+                  src="/payment-support-midtrans.webp"
+                  alt="Metode pembayaran Midtrans"
+                  className="mx-auto h-auto max-h-[235px] w-full object-contain object-center"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs font-semibold leading-5 text-slate-400">
+                {locale === 'id'
+                  ? 'Metode pembayaran mengikuti ketersediaan channel Midtrans di checkout.'
+                  : 'Payment methods follow available Midtrans channels at checkout.'}
+          </p>
+        </div>
+
         <div className="mt-12 flex flex-col justify-between gap-4 border-t border-slate-200/70 pt-6 text-xs text-slate-400 md:flex-row">
           <p>© {new Date().getFullYear()} SAKU Finance. All rights reserved.</p>
           <p>{locale === 'id' ? 'Website resmi SAKU untuk pengelolaan keuangan pribadi.' : 'Official SAKU website for personal finance management.'}</p>
+        </div>
         </div>
       </div>
     </footer>

@@ -118,19 +118,19 @@ export function LoginPage() {
         />
 
         <div className="flex items-center justify-between gap-3 text-xs">
-          <label className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-1 py-1 text-slate-600 transition hover:bg-blue-50/60 hover:text-blue-700">
+          <label className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-1 py-1 text-slate-600 transition hover:bg-brand-50/70 hover:text-brand-700">
             <span className="relative flex h-4 w-4 items-center justify-center">
               <input
                 type="checkbox"
                 checked={remember}
                 onChange={(event) => setRemember(event.target.checked)}
-                className="peer h-4 w-4 cursor-pointer appearance-none rounded-md border border-slate-300 bg-white shadow-sm transition checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="peer h-4 w-4 cursor-pointer appearance-none rounded-md border border-[#17120f]/35 bg-white shadow-sm transition checked:border-[#17120f]/50 checked:bg-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
               <HiOutlineCheck className="pointer-events-none absolute h-3 w-3 scale-75 text-white opacity-0 transition peer-checked:scale-100 peer-checked:opacity-100" />
             </span>
             {t.auth.rememberMe}
           </label>
-          <Link to="/forgot-password" className="font-semibold text-blue-700 hover:underline">
+          <Link to="/forgot-password" className="font-semibold text-brand-700 hover:underline">
             {t.auth.forgotPassword}
           </Link>
         </div>
@@ -139,7 +139,7 @@ export function LoginPage() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
+          className="h-12 w-full rounded-xl border border-[#17120f]/25 !bg-brand-300 text-sm font-black !text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:-translate-y-px hover:!bg-brand-200 focus:ring-brand-500/30"
           loading={m.isPending}
           disabled={retryRemaining > 0 || (isTurnstileEnabled() && !turnstileToken)}
           rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
@@ -153,7 +153,7 @@ export function LoginPage() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         {t.auth.noAccount}{' '}
-        <Link to="/register" className="font-semibold text-blue-700 hover:underline">
+        <Link to="/register" className="font-semibold text-brand-700 hover:underline">
           {t.auth.submitRegister}
         </Link>
       </p>

@@ -11,6 +11,7 @@ import {
   Skeleton,
 } from '@/components/ui'
 import { useLocale } from '@/i18n'
+import { WalletRequiredState } from '@/components/WalletRequiredState'
 import { walletApi } from '@/features/wallets/api'
 import type { Wallet } from '@/types/api'
 import { TargetCard, TargetSummaryCard } from '../components/TargetPanels'
@@ -50,6 +51,10 @@ export function TargetsPage() {
   const totalTarget = pockets.reduce((s, w) => s + Number(w.target_amount ?? 0), 0)
   const overallPct =
     totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0
+
+  if (!wallets.isLoading && (wallets.data ?? []).length === 0) {
+    return <WalletRequiredState feature="targets" />
+  }
 
   return (
     <div className="space-y-6">

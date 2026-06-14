@@ -45,6 +45,7 @@ export interface ChatSession {
   messages: Message[]
   createdAt: number
   updatedAt: number
+  pinned?: boolean
   logIds?: string[]
 }
 

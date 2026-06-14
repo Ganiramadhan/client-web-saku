@@ -37,15 +37,15 @@ export function FAQSection() {
   const [open, setOpen] = useState<number | null>(0)
 
   return (
-    <section id="faq" className="relative overflow-hidden py-20 sm:py-28">
+    <section id="faq" className="relative overflow-hidden py-24 sm:py-32">
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={t.nav.faq}
-          title={t.landing.faqTitle}
-          description={t.landing.featuresSubtitle}
+          title={locale === 'id' ? 'Pertanyaan sebelum mulai pakai SAKU.' : 'Questions before starting with SAKU.'}
+          description={locale === 'id' ? 'Jawaban singkat untuk hal yang biasanya bikin ragu sebelum mulai mencatat uang dengan AI.' : 'Short answers to common doubts before tracking money with AI.'}
         />
 
-        <div className="mt-10 space-y-4">
+        <div className="mt-12 space-y-5">
           {items.map((item, i) => {
             const isOpen = open === i
 
@@ -53,22 +53,22 @@ export function FAQSection() {
               <div
                 key={item.q}
                 className={cn(
-                  'landing-mobile-hover relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/35',
-                  isOpen ? 'border-blue-200 shadow-blue-100/40' : 'border-slate-200',
+                  'landing-mobile-hover relative overflow-hidden rounded-3xl border border-[#17120f]/25 bg-[#fffaf6] shadow-[0_16px_40px_rgba(23,18,15,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-50',
+                  isOpen && 'bg-brand-100',
                 )}
               >
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="relative flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors duration-300 hover:bg-blue-50/35"
+                  className="relative flex w-full items-center justify-between gap-5 px-6 py-6 text-left transition-colors duration-300 sm:px-7"
                 >
                   <div className="flex items-center gap-4">
                     <span
                       className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-bold',
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/45 text-sm font-black',
                         isOpen
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                          : 'bg-slate-100 text-slate-500'
+                          ? 'bg-brand-500 text-[#17120f]'
+                          : 'bg-[#fddf82] text-[#17120f]'
                       )}
                     >
                       {String(i + 1).padStart(2, '0')}
@@ -83,8 +83,8 @@ export function FAQSection() {
                     className={cn(
                       'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
                       isOpen
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'bg-white/70 text-slate-400'
+                        ? 'border border-[#17120f]/45 bg-brand-500 text-[#17120f]'
+                        : 'border border-[#17120f]/25 bg-white text-[#17120f]'
                     )}
                   >
                     <HiOutlineChevronDown
@@ -103,8 +103,8 @@ export function FAQSection() {
                   )}
                 >
                   <div className="overflow-hidden">
-                    <div className="mx-6 border-t border-slate-200/70 px-0 py-5">
-                      <p className="text-sm leading-7 text-slate-600">
+                    <div className="mx-6 border-t border-[#17120f]/10 px-0 py-6 sm:mx-7">
+                      <p className="text-sm leading-7 text-[#4f4540]">
                         {item.a}
                       </p>
                     </div>

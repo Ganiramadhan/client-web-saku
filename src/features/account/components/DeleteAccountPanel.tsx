@@ -17,12 +17,12 @@ export function DeleteAccountPanel({ onDelete, loading }: { onDelete: () => void
       }
 
   return (
-    <Card className="border-rose-100 bg-rose-50/50">
+    <Card className="border-brand-100 bg-[#ffe4dc]/55">
       <div className="flex items-center gap-2">
-        <HiOutlineExclamationTriangle className="h-5 w-5 text-rose-600" />
-        <h3 className="text-sm font-bold text-rose-950">{copy.title}</h3>
+        <HiOutlineExclamationTriangle className="h-5 w-5 text-[#b4533f]" />
+        <h3 className="text-sm font-bold text-[#7f2d23]">{copy.title}</h3>
       </div>
-      <p className="mt-2 text-xs leading-5 text-rose-700/80">{copy.description}</p>
+      <p className="mt-2 text-xs leading-5 text-[#7f2d23]/75">{copy.description}</p>
       <Button
         type="button"
         variant="danger"

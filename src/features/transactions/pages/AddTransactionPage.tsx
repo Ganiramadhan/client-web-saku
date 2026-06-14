@@ -29,6 +29,7 @@ import { transactionApi, type TransactionPayload } from '@/features/transactions
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import { Button, Card, CurrencyInput, Input, Textarea, PageHeader, DateInput } from '@/components/ui'
+import { WalletRequiredState } from '@/components/WalletRequiredState'
 import { useLocale, useT } from '@/i18n'
 import type { TransactionType } from '@/types/api'
 import { toErrorMessage } from '@/lib/api'
@@ -155,6 +156,10 @@ export function AddTransactionPage() {
     { name: 'Lainnya', icon: IoEllipsisHorizontal },
   ]
 
+  if (!wallets.isLoading && (wallets.data ?? []).length === 0) {
+    return <WalletRequiredState feature="manualTransaction" />
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -164,14 +169,14 @@ export function AddTransactionPage() {
 
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/80 bg-white/62 p-1 shadow-sm backdrop-blur-xl">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/72 p-1 shadow-sm shadow-[#17120f]/5 backdrop-blur-xl">
           <button
             onClick={() => { setActiveTab('expense'); setForm({ ...form, type: 'expense', category_id: '', merchant_name: '' }) }}
             className={cn(
               'rounded-lg py-2.5 text-sm font-bold transition',
               activeTab === 'expense'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                ? 'bg-[#ffe4dc] text-[#7f2d23] shadow-sm'
+                : 'text-[#4f4540] hover:bg-white hover:text-[#17120f]'
             )}
           >
             {t.transactions.expense}
@@ -181,8 +186,8 @@ export function AddTransactionPage() {
             className={cn(
               'rounded-lg py-2.5 text-sm font-bold transition',
               activeTab === 'income'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                ? 'bg-[#ecfdf5] text-[#134e4a] shadow-sm'
+                : 'text-[#4f4540] hover:bg-white hover:text-[#17120f]'
             )}
           >
             {t.transactions.income}
@@ -219,8 +224,8 @@ export function AddTransactionPage() {
                       'min-h-24 rounded-xl border p-3 text-left transition hover:-translate-y-0.5',
                       isSelected
                         ? activeTab === 'income'
-                          ? 'border-emerald-300 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-100'
-                          : 'border-rose-300 bg-rose-50 text-rose-950 ring-1 ring-rose-100'
+                          ? 'border-emerald-200 bg-[#ecfdf5] text-[#134e4a] ring-1 ring-emerald-100'
+                          : 'border-brand-200 bg-[#ffe4dc] text-[#7f2d23] ring-1 ring-brand-100'
                         : 'border-slate-200 bg-white/70 text-slate-700 hover:border-brand-200 hover:bg-white'
                     )}
                   >
@@ -228,7 +233,7 @@ export function AddTransactionPage() {
                       className={cn(
                         'h-6 w-6 sm:h-7 sm:w-7 transition-transform duration-300', 
                         isSelected 
-                          ? (activeTab === 'income' ? 'text-emerald-600 scale-110' : 'text-rose-600 scale-110') 
+                          ? (activeTab === 'income' ? 'scale-110 text-emerald-700' : 'scale-110 text-[#b4533f]') 
                           : 'text-slate-500'
                       )} 
                     />
@@ -236,7 +241,7 @@ export function AddTransactionPage() {
                       className={cn(
                         'mt-3 block text-xs font-semibold leading-tight transition-colors',
                         isSelected 
-                          ? (activeTab === 'income' ? 'text-emerald-950' : 'text-rose-950') 
+                          ? (activeTab === 'income' ? 'text-[#134e4a]' : 'text-[#7f2d23]') 
                           : 'text-slate-600'
                       )}
                     >
@@ -264,11 +269,11 @@ export function AddTransactionPage() {
                     className={cn(
                       'flex min-w-0 items-center gap-2.5 rounded-xl border px-4 py-3 font-semibold transition hover:-translate-y-0.5',
                       isSelected
-                        ? 'border-blue-300 bg-blue-50 text-blue-950 ring-1 ring-blue-100'
+                        ? 'border-brand-300 bg-brand-50 text-brand-950 ring-1 ring-brand-100'
                         : 'border-slate-200 bg-white/70 text-slate-600 hover:border-brand-200 hover:bg-white'
                     )}
                   >
-                    <WalletIcon className={cn('h-5 w-5', isSelected ? 'text-blue-600' : 'text-gray-500')} />
+                    <WalletIcon className={cn('h-5 w-5', isSelected ? 'text-brand-700' : 'text-gray-500')} />
                     <span className="truncate text-sm font-semibold">{w.name}</span>
                   </button>
                 )
@@ -373,8 +378,8 @@ export function AddTransactionPage() {
               className={cn(
                 'flex-1 rounded-xl py-3.5 text-sm font-bold shadow-sm sm:py-4 sm:text-base transition-all duration-200',
                 activeTab === 'income'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
-                  : 'bg-rose-600 hover:bg-rose-700 text-white border-0'
+                  ? 'border-0 bg-[#7ddfc0] text-[#134e4a] hover:bg-[#6fd2b4]'
+                  : 'border-0 bg-brand-500 text-[#17120f] hover:bg-brand-300'
               )}
             >
               {t.common.save}
@@ -385,7 +390,7 @@ export function AddTransactionPage() {
 
         <Card className="h-fit">
           <div className="flex items-center gap-2 border-b border-white/60 pb-4">
-            <span className={cn('h-2.5 w-2.5 rounded-full', activeTab === 'income' ? 'bg-emerald-500' : 'bg-rose-500')} />
+            <span className={cn('h-2.5 w-2.5 rounded-full', activeTab === 'income' ? 'bg-[#7ddfc0]' : 'bg-brand-500')} />
             <h3 className="text-sm font-semibold text-slate-900">{txCopy.summary}</h3>
           </div>
           <dl className="mt-3 space-y-2 text-sm">

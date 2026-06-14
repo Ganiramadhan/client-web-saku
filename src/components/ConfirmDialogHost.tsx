@@ -34,27 +34,27 @@ export function ConfirmDialogHost() {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-6">
       <div
-        className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#17120f]/35 backdrop-blur-sm"
         onClick={() => finish(false)}
         aria-hidden
       />
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/90 bg-white shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5">
+      <div className="relative w-full max-w-md overflow-hidden rounded-[1.5rem] border border-[#17120f]/12 bg-[#fffaf6] shadow-2xl shadow-[#17120f]/18 ring-1 ring-[#17120f]/5">
         <button
           type="button"
           onClick={() => finish(false)}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          className="absolute right-3 top-3 rounded-xl p-1.5 text-[#4f4540]/55 transition hover:bg-white hover:text-[#17120f]"
           aria-label="Close"
         >
           <HiOutlineXMark className="h-4 w-4" />
         </button>
-        <div className={cn('h-1.5', isDanger ? 'bg-rose-600' : 'bg-brand-600')} />
+        <div className={cn('h-1.5', isDanger ? 'bg-[#ff9d8d]' : 'bg-brand-300')} />
         <div className="flex gap-4 p-6">
           <div
             className={cn(
-              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ring-1',
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1',
               isDanger
-                ? 'bg-rose-50 text-rose-600 ring-rose-100'
-                : 'bg-brand-50 text-brand-700 ring-brand-100',
+                ? 'bg-[#ffe4dc] text-[#b4533f] ring-brand-100'
+                : 'bg-[#fddf82]/70 text-[#17120f] ring-[#17120f]/10',
             )}
           >
             {isDanger ? (
@@ -64,15 +64,15 @@ export function ConfirmDialogHost() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="pr-6 text-base font-extrabold text-slate-950">{opts.title}</h3>
+            <h3 className="pr-6 text-base font-black text-[#17120f]">{opts.title}</h3>
             {opts.description ? (
-              <p className="mt-2 text-sm leading-6 text-slate-600">{opts.description}</p>
+              <p className="mt-2 text-sm leading-6 text-[#4f4540]">{opts.description}</p>
             ) : null}
           </div>
         </div>
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/90 px-6 py-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-[#17120f]/10 bg-white/42 px-6 py-4 sm:flex-row sm:justify-end">
           {!isAlert ? (
-            <Button variant="outline" className="border-slate-200 !bg-white text-slate-700" onClick={() => finish(false)}>
+            <Button variant="outline" className="!bg-white text-[#4f4540]" onClick={() => finish(false)}>
               {opts.cancelLabel ?? 'Batal'}
             </Button>
           ) : null}

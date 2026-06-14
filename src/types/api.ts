@@ -210,6 +210,7 @@ export interface SupportMessage {
 
 export interface SupportTicket {
   id: string
+  ticket_code?: string
   user_id: string
   user_name: string
   user_email: string

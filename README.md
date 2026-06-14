@@ -77,6 +77,20 @@ pnpm build
 
 ---
 
+## Monitoring
+
+Frontend error and performance monitoring uses Sentry when configured:
+
+```env
+VITE_SENTRY_DSN=
+VITE_SENTRY_ENVIRONMENT=production
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+Leave `VITE_SENTRY_DSN` empty for local development if monitoring is not needed. The app will keep running even when Sentry is not configured.
+
+---
+
 ## Preview Production Build
 
 ```bash

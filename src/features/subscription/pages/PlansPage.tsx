@@ -76,7 +76,7 @@ export function PlansPage() {
       toast.info(copy.freeActive)
       return
     }
-    if (pending && pending.plan_code !== plan.code) {
+    if (pending && isBlockingPendingPayment(pending) && pending.plan_code !== plan.code) {
       toast.info(copy.pendingPlanExists)
       return
     }
@@ -198,6 +198,13 @@ export function PlansPage() {
       <SubscriptionTrustSection />
     </div>
   )
+}
+
+function isBlockingPendingPayment(subscription: { payment_status?: string; expires_at?: string | null }) {
+  if (subscription.payment_status !== 'pending') return false
+  if (!subscription.expires_at) return true
+  const expiresAt = new Date(subscription.expires_at).getTime()
+  return Number.isNaN(expiresAt) || expiresAt > Date.now()
 }
 
 export default PlansPage

@@ -40,6 +40,7 @@ export function WalletsPage() {
         deleteDesc: (name: string) => `Dompet "${name}" akan dihapus permanen.`,
         hint: 'Gunakan beberapa dompet untuk memisahkan kebutuhan pribadi, bisnis, tabungan, atau dompet bersama agar laporan keuangan lebih mudah dianalisis.',
         transfer: 'Pindahkan Saldo',
+        transferNeedWallet: 'Transfer saldo membutuhkan minimal 2 dompet. Tambahkan dompet tujuan terlebih dahulu.',
         historyTitle: 'Riwayat Transfer Saldo',
         historySubtitle: 'Aktivitas pemindahan saldo antar wallet terbaru.',
         emptyTransfer: 'Belum ada transfer saldo.',
@@ -59,6 +60,7 @@ export function WalletsPage() {
         deleteDesc: (name: string) => `Wallet "${name}" will be permanently deleted.`,
         hint: 'Use multiple wallets to separate personal needs, business, savings, or shared money so reports are easier to analyze.',
         transfer: 'Transfer Balance',
+        transferNeedWallet: 'Balance transfer needs at least 2 wallets. Add a destination wallet first.',
         historyTitle: 'Transfer History',
         historySubtitle: 'Recent balance movements between wallets.',
         emptyTransfer: 'No balance transfers yet.',
@@ -242,8 +244,15 @@ export function WalletsPage() {
             <Button
               variant="outline"
               leftIcon={<HiOutlineArrowsRightLeft className="h-4 w-4" />}
-              onClick={() => setTransferOpen(true)}
-              disabled={wallets.length < 2}
+              onClick={() => {
+                if (wallets.length < 2) {
+                  toast.info(copy.transferNeedWallet)
+                  setEditing(null)
+                  setOpen(true)
+                  return
+                }
+                setTransferOpen(true)
+              }}
             >
               {copy.transfer}
             </Button>

@@ -8,6 +8,7 @@ import { walletApi } from '@/features/wallets/api'
 import { subscriptionApi } from '@/features/subscription/api'
 
 import { PageHeader, type SelectOption } from '@/components/ui'
+import { WalletRequiredState } from '@/components/WalletRequiredState'
 
 import { useT } from '@/i18n'
 import type { TransactionType } from '@/types/api'
@@ -443,6 +444,10 @@ export function ScanReceiptPage() {
       toast.error(toErrorMessage(error))
     }
   }
+  if (!wallets.isLoading && (wallets.data ?? []).length === 0) {
+    return <WalletRequiredState feature="scanReceipt" />
+  }
+
   return (
     <div className="relative mx-auto max-w-6xl">
       {/* Background ambient glows */}

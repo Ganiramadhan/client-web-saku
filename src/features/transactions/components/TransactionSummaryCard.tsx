@@ -47,7 +47,7 @@ export function SummaryCard({
 
   const colour = isIncome
     ? 'text-emerald-700'
-    : 'text-rose-700'
+    : 'text-[#b4533f]'
 
   return (
     <div
@@ -68,7 +68,7 @@ export function SummaryCard({
         <span
           className={cn(
             'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-black',
-            isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700',
+            isIncome ? 'bg-[#ecfdf5] text-emerald-700' : 'bg-[#ffe4dc] text-[#b4533f]',
           )}
         >
           {isIncome ? '+' : '-'}

@@ -46,19 +46,19 @@ export function WalletsSummaryCard({
     totalIncome30d > 0 ? Math.max(0, Math.min(100, Math.round((net30d / totalIncome30d) * 100))) : 0
 
   return (
-    <section className="rounded-xl border border-white/80 bg-white/72 p-5 shadow-sm backdrop-blur-2xl">
+    <section className="rounded-[1.35rem] border border-[#17120f]/10 bg-[#fffaf6]/72 p-5 shadow-[0_16px_38px_rgba(23,18,15,0.06)] backdrop-blur-2xl">
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1.4fr] lg:items-end">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <HiOutlineBanknotes className="h-4 w-4 text-slate-700" />
+          <div className="inline-flex items-center gap-2 rounded-xl border border-[#17120f]/10 bg-white/72 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#4f4540]">
+            <HiOutlineBanknotes className="h-4 w-4 text-brand-700" />
             {copy.totalBalance}
           </div>
 
-          <p className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          <p className="mt-4 text-3xl font-black tracking-tight text-[#17120f] sm:text-4xl">
             {formatCurrency(totalBalance)}
           </p>
 
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-[#4f4540]">
             {copy.activeWallets(wallets.length)}
           </p>
 
@@ -66,8 +66,8 @@ export function WalletsSummaryCard({
             className={[
               'mt-4 inline-flex items-center rounded-lg border px-3 py-2 text-sm font-semibold',
               net30d >= 0
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                : 'border-rose-200 bg-rose-50 text-rose-700',
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-brand-200 bg-[#fff3ee] text-brand-800',
             ].join(' ')}
           >
             {copy.net30d}: {net30d >= 0 ? '+' : ''}
@@ -95,12 +95,12 @@ function SummaryMetric({
   tone: 'emerald' | 'rose' | 'slate'
 }) {
   const valueClass =
-    tone === 'emerald' ? 'text-emerald-700' : tone === 'rose' ? 'text-rose-600' : 'text-slate-950'
+    tone === 'emerald' ? 'text-emerald-800' : tone === 'rose' ? 'text-brand-700' : 'text-[#17120f]'
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/82 p-4 shadow-sm">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className={cn('mt-2 truncate text-lg font-bold tabular-nums', valueClass)}>{value}</p>
+    <div className="rounded-xl border border-[#17120f]/8 bg-white/64 p-4 shadow-sm shadow-[#17120f]/4">
+      <p className="text-xs font-semibold text-[#4f4540]/70">{label}</p>
+      <p className={cn('mt-2 truncate text-lg font-black tabular-nums', valueClass)}>{value}</p>
     </div>
   )
 }

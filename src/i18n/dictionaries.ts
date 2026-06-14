@@ -250,6 +250,20 @@ export const dictionaries = {
       typePersonal: 'Pribadi',
       typeBusiness: 'Bisnis',
       typeShared: 'Bersama',
+      requiredEyebrow: 'Dompet dibutuhkan',
+      requiredTitle: 'Buat dompet pertama dulu',
+      requiredDescription:
+        'Untuk memakai {feature}, SAKU perlu tahu sumber dana yang digunakan. Tambahkan dompet seperti Cash, Bank Mandiri, atau e-wallet agar transaksi dan insight AI lebih akurat.',
+      requiredPrimary: 'Buat Dompet',
+      requiredSecondary: 'Kembali ke Dashboard',
+      requiredFeatures: {
+        default: 'fitur ini',
+        manualTransaction: 'transaksi manual',
+        scanReceipt: 'scan receipt dan OCR AI',
+        aiChat: 'Chat AI dan input transaksi NLP',
+        walletTransfer: 'transfer saldo',
+        targets: 'target dan kantong tujuan',
+      },
     },
     categories: {
       title: 'Kategori',
@@ -581,6 +595,20 @@ export const dictionaries = {
       typePersonal: 'Personal',
       typeBusiness: 'Business',
       typeShared: 'Shared',
+      requiredEyebrow: 'Wallet required',
+      requiredTitle: 'Create your first wallet',
+      requiredDescription:
+        'To use {feature}, SAKU needs to know which source of money is being used. Add a wallet such as Cash, Bank Mandiri, or an e-wallet so transactions and AI insights stay accurate.',
+      requiredPrimary: 'Create Wallet',
+      requiredSecondary: 'Back to Dashboard',
+      requiredFeatures: {
+        default: 'this feature',
+        manualTransaction: 'manual transactions',
+        scanReceipt: 'receipt scanning and OCR AI',
+        aiChat: 'AI Chat and NLP transaction input',
+        walletTransfer: 'balance transfers',
+        targets: 'targets and goal pockets',
+      },
     },
     categories: {
       title: 'Categories',

@@ -98,22 +98,22 @@ export function DataTable<T>({
 
   return (
     <div className={cn(
-      'overflow-hidden rounded-2xl shadow-lg shadow-slate-200/40 backdrop-blur-2xl',
-      admin ? 'border border-slate-200/80 bg-white/72' : 'border border-white/80 bg-white/58',
+      'overflow-hidden rounded-[1.35rem] shadow-[0_18px_45px_rgba(23,18,15,0.07)] backdrop-blur-2xl',
+      admin ? 'border border-[#17120f]/12 bg-[#fffaf6]/78' : 'border border-[#17120f]/10 bg-[#fffaf6]/62',
     )}>
       <div className={cn(
         'flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between',
-        admin ? 'border-b border-slate-200/80 bg-slate-50/45' : 'border-b border-white/70 bg-white/35',
+        admin ? 'border-b border-[#17120f]/10 bg-white/45' : 'border-b border-[#17120f]/8 bg-white/32',
       )}>
         <div className="relative w-full sm:max-w-xs">
-          <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4f4540]/45" />
           <input
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder={searchPlaceholder}
             className={cn(
-              'w-full rounded-xl py-2 pl-9 pr-9 text-sm shadow-sm transition focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
-              admin ? 'border border-slate-200 bg-white/90' : 'border border-white/80 bg-white/75',
+              'w-full rounded-2xl py-2.5 pl-9 pr-9 text-sm font-semibold text-[#17120f] shadow-sm transition placeholder:text-[#4f4540]/45 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
+              admin ? 'border border-[#17120f]/10 bg-[#fffaf6]/95' : 'border border-[#17120f]/10 bg-[#fffaf6]/82',
             )}
           />
           {globalFilter ? (
@@ -121,7 +121,7 @@ export function DataTable<T>({
               type="button"
               onClick={() => setGlobalFilter('')}
               aria-label={labels?.clearSearch ?? 'Clear search'}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-white hover:text-slate-700"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#4f4540]/45 hover:bg-white hover:text-brand-700"
             >
               <HiOutlineXMark className="h-4 w-4" />
             </button>
@@ -147,7 +147,7 @@ export function DataTable<T>({
           <table className="min-w-full text-sm">
             <thead className={cn(
               'text-left text-xs uppercase tracking-wide text-slate-500',
-              admin ? 'border-b border-slate-200 bg-slate-50/80' : 'border-b border-white/70 bg-white/45',
+              admin ? 'border-b border-[#17120f]/10 bg-white/70' : 'border-b border-[#17120f]/8 bg-white/45',
             )}>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
@@ -159,8 +159,8 @@ export function DataTable<T>({
                         key={h.id}
                         className={cn(
                           'px-4 py-3 font-semibold',
-                          admin && 'border-r border-slate-100 last:border-r-0',
-                          canSort && 'cursor-pointer select-none hover:text-slate-700',
+                          admin && 'border-r border-[#17120f]/6 last:border-r-0',
+                          canSort && 'cursor-pointer select-none hover:text-[#17120f]',
                         )}
                         onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
                       >
@@ -182,14 +182,15 @@ export function DataTable<T>({
                 </tr>
               ))}
             </thead>
-            <tbody className={cn(admin ? 'divide-y divide-slate-200/80' : 'divide-y divide-white/65')}>
-              {table.getRowModel().rows.map((row) => (
+            <tbody className={cn(admin ? 'divide-y divide-[#17120f]/8' : 'divide-y divide-[#17120f]/6')}>
+              {table.getRowModel().rows.map((row, index) => (
                 <tr
                   key={row.id}
                   className={cn(
                     'transition-colors',
-                    admin ? 'hover:bg-slate-50/70' : 'hover:bg-white/35',
-                    onRowClick && 'cursor-pointer hover:bg-brand-50/45',
+                    index % 2 === 1 && 'bg-white/24',
+                    admin ? 'hover:bg-white/70' : 'hover:bg-white/45',
+                    onRowClick && 'cursor-pointer hover:bg-brand-50/55',
                   )}
                   onClick={
                     onRowClick
@@ -204,7 +205,7 @@ export function DataTable<T>({
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className={cn(
                       'px-4 py-3 align-middle text-slate-700',
-                      admin && 'border-r border-slate-100 last:border-r-0',
+                      admin && 'border-r border-[#17120f]/6 last:border-r-0',
                     )}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -218,16 +219,16 @@ export function DataTable<T>({
 
       {!disablePagination && totalRows > 0 ? (
         <div className={cn(
-          'flex flex-col gap-3 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between',
-          admin ? 'border-t border-slate-200/80 bg-slate-50/45' : 'border-t border-white/70 bg-white/30',
+          'flex flex-col gap-3 px-4 py-3 text-xs text-[#4f4540] sm:flex-row sm:items-center sm:justify-between',
+          admin ? 'border-t border-[#17120f]/10 bg-[#fffaf6]/64' : 'border-t border-[#17120f]/8 bg-[#fffaf6]/48',
         )}>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-1.5 text-xs text-slate-500">
+            <label className="flex items-center gap-1.5 rounded-2xl border border-[#17120f]/8 bg-white/48 px-2.5 py-1.5 text-xs font-semibold text-[#4f4540] shadow-sm shadow-[#17120f]/4">
               <span>{labels?.show ?? 'Tampilkan'}</span>
               <select
                 value={pageSize}
                 onChange={(e) => table.setPageSize(Number(e.target.value))}
-                className="rounded-md border border-white/80 bg-white/80 px-1.5 py-1 text-xs text-slate-700 shadow-sm focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="rounded-xl border border-[#17120f]/10 bg-[#fffaf6] px-2 py-1.5 text-xs font-black text-[#17120f] shadow-sm focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               >
                 {[5, 10, 25, 50, 100].map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -235,11 +236,11 @@ export function DataTable<T>({
               </select>
               <span>{labels?.rows ?? 'data'}</span>
             </label>
-            <span className="hidden sm:inline text-slate-300">·</span>
-            <span>
-              {labels?.showing ?? 'Menampilkan'} <span className="font-medium text-slate-700">{start}</span>–
-              <span className="font-medium text-slate-700">{end}</span> dari{' '}
-              <span className="font-medium text-slate-700">{totalRows}</span> {labels?.entries ?? 'entri'}
+            <span className="hidden text-[#17120f]/20 sm:inline">·</span>
+            <span className="rounded-2xl border border-[#17120f]/8 bg-white/40 px-2.5 py-1.5 font-semibold shadow-sm shadow-[#17120f]/4">
+              {labels?.showing ?? 'Menampilkan'} <span className="font-black text-[#17120f]">{start}</span>–
+              <span className="font-black text-[#17120f]">{end}</span> dari{' '}
+              <span className="font-black text-[#17120f]">{totalRows}</span> {labels?.entries ?? 'entri'}
             </span>
           </div>
           <NumberedPagination
@@ -269,7 +270,7 @@ function NumberedPagination({
 }) {
   const pages = buildPageList(page, totalPages)
   return (
-    <nav className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/60 bg-white/35 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible" aria-label="Pagination">
+    <nav className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/72 p-1.5 shadow-sm shadow-[#17120f]/5 backdrop-blur-md sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible" aria-label="Pagination">
       <PageBtn
         onClick={() => onChange(1)}
         disabled={!canPrev}
@@ -289,7 +290,7 @@ function NumberedPagination({
         p === '…' ? (
           <span
             key={`gap-${i}`}
-            className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-slate-400"
+            className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-black text-[#4f4540]/45"
             aria-hidden
           >
             …
@@ -344,11 +345,11 @@ function PageBtn({
       aria-label={aria}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex h-8 min-w-[2rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-all duration-200 ease-out',
+        'inline-flex h-8 min-w-[2rem] shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 text-xs font-black transition-all duration-200 ease-out',
         active
-          ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
-          : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
-        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-slate-600 hover:shadow-none',
+          ? 'border-[#17120f]/16 bg-brand-200 text-[#17120f] shadow-sm shadow-brand-100/50'
+          : 'border-transparent bg-transparent text-[#4f4540] hover:-translate-y-0.5 hover:border-[#17120f]/10 hover:bg-white/75 hover:text-brand-700 hover:shadow-sm',
+        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-[#4f4540] hover:shadow-none',
         className,
       )}
     >

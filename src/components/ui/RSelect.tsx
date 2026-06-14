@@ -36,19 +36,19 @@ const createStyles = <V,>(
   control: (base, s) => ({
     ...base,
     minHeight: hasDescription ? 54 : 44,
-    borderRadius: 12,
-    borderColor: s.isFocused ? 'rgb(147 197 253)' : 'rgb(226 232 240)',
+    borderRadius: 16,
+    borderColor: s.isFocused ? 'rgba(255, 111, 97, 0.55)' : 'rgba(23, 18, 15, 0.12)',
     boxShadow: s.isFocused
-      ? '0 0 0 3px rgb(37 99 235 / 0.14), 0 10px 28px rgb(15 23 42 / 0.05)'
-      : '0 8px 22px rgb(15 23 42 / 0.035)',
-    backgroundColor: 'rgba(255,255,255,0.78)',
+      ? '0 0 0 3px rgba(255, 111, 97, 0.16), 0 12px 28px rgba(23, 18, 15, 0.06)'
+      : '0 8px 22px rgba(23, 18, 15, 0.035)',
+    backgroundColor: 'rgba(255,250,246,0.86)',
     backdropFilter: 'blur(18px) saturate(170%)',
     WebkitBackdropFilter: 'blur(18px) saturate(170%)',
     fontSize: 14,
     transition: 'all 0.15s ease',
     cursor: 'pointer',
     ':hover': {
-      borderColor: s.isFocused ? 'rgb(147 197 253)' : 'rgb(203 213 225)',
+      borderColor: s.isFocused ? 'rgba(255, 111, 97, 0.62)' : 'rgba(23, 18, 15, 0.20)',
     },
   }),
 
@@ -60,18 +60,18 @@ const createStyles = <V,>(
   menu: (base) => ({
     ...base,
     marginTop: 6,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
-    border: '1px solid rgb(226 232 240)',
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    boxShadow: '0 20px 42px rgb(15 23 42 / 0.10)',
+    border: '1px solid rgba(23, 18, 15, 0.12)',
+    backgroundColor: 'rgba(255,250,246,0.98)',
+    boxShadow: '0 20px 42px rgba(23, 18, 15, 0.12)',
     zIndex: 9999,
   }),
 
   menuList: (base) => ({
     ...base,
     padding: 6,
-    backgroundColor: 'rgb(248 250 252)',
+    backgroundColor: 'rgb(255 250 246)',
   }),
 
   menuPortal: (base) => ({
@@ -84,11 +84,11 @@ const createStyles = <V,>(
     borderRadius: hasDescription ? 14 : 12,
     fontSize: 14,
     backgroundColor: s.isSelected
-      ? 'rgb(37 99 235)'
+      ? 'rgb(255 111 97)'
       : s.isFocused
-        ? 'rgb(239 246 255)'
+        ? 'rgb(255 243 238)'
         : 'transparent',
-    color: s.isSelected ? 'white' : 'rgb(15 23 42)',
+    color: s.isSelected ? 'rgb(23 18 15)' : 'rgb(23 18 15)',
     cursor: s.isDisabled ? 'not-allowed' : 'pointer',
     paddingTop: hasDescription ? 12 : 9,
     paddingBottom: hasDescription ? 12 : 9,
@@ -98,23 +98,23 @@ const createStyles = <V,>(
     transition: 'all 0.15s ease',
     opacity: s.isDisabled ? 0.5 : 1,
     ':active': {
-      backgroundColor: s.isSelected ? 'rgb(37 99 235)' : 'rgb(219 234 254)',
+      backgroundColor: s.isSelected ? 'rgb(255 111 97)' : 'rgb(255 228 220)',
     },
   }),
 
   singleValue: (base) => ({
     ...base,
-    color: 'rgb(15 23 42)',
+    color: 'rgb(23 18 15)',
   }),
 
   placeholder: (base) => ({
     ...base,
-    color: 'rgb(148 163 184)',
+    color: 'rgba(79, 69, 64, 0.55)',
   }),
 
   input: (base) => ({
     ...base,
-    color: 'rgb(15 23 42)',
+    color: 'rgb(23 18 15)',
   }),
 
   indicatorSeparator: () => ({
@@ -123,13 +123,13 @@ const createStyles = <V,>(
 
   dropdownIndicator: (base) => ({
     ...base,
-    color: 'rgb(100 116 139)',
+    color: 'rgba(79, 69, 64, 0.72)',
     padding: 6,
   }),
 
   clearIndicator: (base) => ({
     ...base,
-    color: 'rgb(100 116 139)',
+    color: 'rgba(79, 69, 64, 0.72)',
     padding: 6,
   }),
 })
@@ -200,7 +200,7 @@ export function RSelect<V extends string | number = string>({
   return (
     <label className="block" htmlFor={id}>
       {label ? (
-        <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+        <span className="mb-1.5 block text-xs font-black text-[#4f4540]">
           {label}
         </span>
       ) : null}

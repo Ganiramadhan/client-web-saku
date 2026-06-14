@@ -44,7 +44,7 @@ export function ReceiptScanPanel({
         detail: 'Click to view receipt scan details',
       }
   return (
-    <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+    <div className="rounded-2xl border border-brand-200 bg-brand-50/55 p-4">
       <input
         ref={inputRef}
         type="file"
@@ -54,7 +54,7 @@ export function ReceiptScanPanel({
       />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm">
             <HiOutlinePhoto className="h-5 w-5" />
           </div>
           <div>
@@ -67,7 +67,7 @@ export function ReceiptScanPanel({
         <Button
           variant="outline"
           size="sm"
-          className="cursor-pointer transition hover:-translate-y-0.5 hover:border-blue-200 hover:!bg-white hover:text-blue-700 hover:shadow-md active:scale-[0.98]"
+          className="cursor-pointer transition hover:-translate-y-0.5 hover:border-brand-200 hover:!bg-white hover:text-brand-700 hover:shadow-md active:scale-[0.98]"
           loading={isScanning}
           leftIcon={
             isScanning ? (
@@ -85,10 +85,10 @@ export function ReceiptScanPanel({
         <button
           type="button"
           onClick={onOpenDetail}
-          className="mt-4 block w-full cursor-pointer overflow-hidden rounded-2xl border border-white/80 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg active:scale-[0.99]"
+          className="mt-4 block w-full cursor-pointer overflow-hidden rounded-2xl border border-white/80 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-brand-100 hover:shadow-lg active:scale-[0.99]"
         >
           <img src={preview} alt={copy.previewAlt} className="max-h-72 w-full object-contain" />
-          <div className="border-t border-slate-100 px-4 py-3 text-xs font-semibold text-blue-700">
+          <div className="border-t border-slate-100 px-4 py-3 text-xs font-semibold text-brand-700">
             {copy.detail}
           </div>
         </button>

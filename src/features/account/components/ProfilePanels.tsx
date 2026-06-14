@@ -67,6 +67,7 @@ export function SubscriptionCard({
         voucherApply: 'Terapkan',
         voucherContinue: 'Lanjut Pembayaran',
         voucherSuccess: (code: string) => `Voucher ${code} berhasil digunakan`,
+        launchPromo: 'Promo launching',
         voucherInvalid: 'Kode voucher tidak ditemukan atau sudah kedaluwarsa.',
         discount: 'Diskon',
         originalPrice: 'Harga Awal',
@@ -120,6 +121,7 @@ export function SubscriptionCard({
         voucherApply: 'Apply',
         voucherContinue: 'Continue Payment',
         voucherSuccess: (code: string) => `Voucher ${code} applied successfully`,
+        launchPromo: 'Launch promo',
         voucherInvalid: 'Voucher code was not found or has expired.',
         discount: 'Discount',
         originalPrice: 'Original Price',
@@ -252,7 +254,7 @@ export function SubscriptionCard({
         }}
         footer={
           <Button
-            className="w-full bg-[#2563EB] hover:bg-blue-700 sm:w-auto"
+            className="w-full sm:w-auto"
             loading={Boolean(checkoutPlan && busyPlan === checkoutPlan.code) || validateVoucher.isPending}
             onClick={() => void submitVoucherCheckout(voucherCode)}
           >
@@ -277,26 +279,29 @@ export function SubscriptionCard({
     const pendingExpiresAt = pendingSub?.expires_at ? new Date(pendingSub.expires_at) : null
     const remainingMs = pendingExpiresAt ? pendingExpiresAt.getTime() - nowMs : null
     const isPendingExpired = pendingSub?.payment_status === 'expired' || (remainingMs !== null && remainingMs <= 0)
+    const pendingVoucherCode = String(pendingSub?.voucher_code ?? '').trim()
+    const isLaunchPromoDiscount = !pendingVoucherCode || /^(welcome|launch|promo)/i.test(pendingVoucherCode)
+    const pendingDiscountLabel = isLaunchPromoDiscount ? copy.launchPromo : `Voucher ${pendingVoucherCode}`
     return (
       <>
       <Card>
-        {pendingSub ? (
+        {pendingSub && !isPendingExpired ? (
           <div className="mb-5 rounded-2xl border border-white/75 bg-white/70 p-4 shadow-sm shadow-slate-200/50">
             <div className="grid gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold text-slate-900">{isPendingExpired ? copy.expiredTitle : copy.pendingTitle}</p>
-                  <Badge tone={isPendingExpired ? 'red' : 'amber'}>{isPendingExpired ? copy.expired : 'Pending'}</Badge>
+                  <p className="text-sm font-bold text-slate-900">{copy.pendingTitle}</p>
+                  <Badge tone="amber">Pending</Badge>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-slate-700">
                   {pendingSub.plan_name} · {formatCurrency(Number(pendingSub.amount), pendingSub.currency)}
                 </p>
                 <p className="mt-3 w-full text-xs leading-5 text-slate-500">
-                  {isPendingExpired ? copy.expiredDesc : copy.pendingDesc}
+                  {copy.pendingDesc}
                 </p>
                 {Number(pendingSub.discount_amount ?? 0) > 0 ? (
                   <p className="mt-2 text-xs font-semibold text-emerald-700">
-                    Voucher {pendingSub.voucher_code}: -{formatCurrency(Number(pendingSub.discount_amount), pendingSub.currency)}
+                    {pendingDiscountLabel}: -{formatCurrency(Number(pendingSub.discount_amount), pendingSub.currency)}
                   </p>
                 ) : null}
                 {pendingExpiresAt ? (
@@ -313,7 +318,7 @@ export function SubscriptionCard({
                       })}
                     </span>
                     <span className="text-amber-800/80 sm:ml-1">
-                      {isPendingExpired ? copy.expired : formatPaymentRemaining(remainingMs ?? 0, locale)}
+                      {formatPaymentRemaining(remainingMs ?? 0, locale)}
                     </span>
                   </div>
                 ) : null}
@@ -325,7 +330,7 @@ export function SubscriptionCard({
                   loading={resumeLoading}
                   onClick={() => onSubscribe(pendingSub.plan_code, cleanVoucherCode, true)}
                 >
-                  {isPendingExpired ? copy.createInvoice : copy.continuePay}
+                  {copy.continuePay}
                 </Button>
                 <Button
                   size="sm"
@@ -464,7 +469,7 @@ export function SubscriptionCard({
         }}
         footer={
           <Button
-            className="w-full bg-[#2563EB] hover:bg-blue-700 sm:w-auto"
+            className="w-full sm:w-auto"
             loading={Boolean(checkoutPlan && busyPlan === checkoutPlan.code) || validateVoucher.isPending}
             onClick={() => void submitVoucherCheckout(voucherCode)}
           >

@@ -1,38 +1,42 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { HiOutlineArrowTrendingUp } from 'react-icons/hi2'
-import { RiArrowRightLine, RiChatSmile3Line, RiScanLine, RiShieldCheckLine, RiSparklingLine, RiTimeLine } from 'react-icons/ri'
+import {
+  RiArrowRightLine,
+  RiChatSmile3Line,
+  RiReceiptLine,
+  RiSparklingLine,
+  RiWallet3Line,
+} from 'react-icons/ri'
 import { useLocale } from '@/i18n'
-import { cn } from '@/lib/utils'
 import { smoothScrollTo } from '../components/landingUtils'
 
 export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
   const { locale } = useLocale()
   const isId = locale === 'id'
+
   const copy = isId
     ? {
-        eyebrow: 'AI Financial Assistant untuk cashflow pribadi',
-        titleTop: 'Kelola uang harian',
-        titleAccent: 'dengan bantuan AI.',
-        desc: 'SAKU membantu mencatat transaksi, membaca struk, mengatur banyak wallet, memantau budget, dan memberi insight keuangan tanpa spreadsheet rumit.',
+        eyebrow: 'AI-powered personal finance assistant',
+        title: 'Catat keuangan harianmu, dibantu AI.',
+        accent: 'Chat, scan struk, dan pahami pengeluaran tanpa ribet.',
+        desc: 'SAKU membantu mencatat transaksi, mengatur wallet, membaca struk, dan memberi insight AI yang mudah dipahami setiap hari.',
         primary: 'Mulai Gratis',
         secondary: 'Lihat Cara Kerja',
-        promo: 'Coba gratis dulu. Upgrade ke Pro saat kamu siap membuka kuota AI lebih besar, OCR, split bill, dan insight lengkap.',
-        trust: ['Gratis digunakan', 'Tanpa kartu kredit', 'Data aman'],
       }
     : {
-        eyebrow: 'AI Financial Assistant for personal cashflow',
-        titleTop: 'Manage daily money',
-        titleAccent: 'with AI support.',
-        desc: 'SAKU helps record transactions, scan receipts, manage multiple wallets, track budgets, and surface financial insights without complex spreadsheets.',
+        eyebrow: 'AI-powered personal finance assistant',
+        title: 'Track daily money with AI by your side.',
+        accent: 'Chat, scan receipts, and understand spending without the fuss.',
+        desc: 'SAKU helps record transactions, organize wallets, read receipts, and deliver AI insights you can act on every day.',
         primary: 'Start Free',
         secondary: 'See How It Works',
-        promo: 'Start free first. Upgrade to Pro when you are ready for larger AI quota, OCR, split bill, and richer insights.',
-        trust: ['Free to start', 'No credit card', 'Secure data'],
       }
-  const [isMobile, setIsMobile] = useState(() => (
-    typeof window === 'undefined' ? false : window.matchMedia('(max-width: 767px)').matches
-  ))
+
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window === 'undefined'
+      ? false
+      : window.matchMedia('(max-width: 767px)').matches,
+  )
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -40,198 +44,254 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
 
     update()
     media.addEventListener('change', update)
+
     return () => media.removeEventListener('change', update)
   }, [])
 
   return (
-    <section id="home" className="relative overflow-hidden pb-12 pt-7 sm:pb-16 sm:pt-9 lg:pb-[4.5rem] lg:pt-7">
-      <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10 lg:px-8">
-        <div className="max-w-xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/85 px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm shadow-blue-100/60 sm:mb-5">
-            <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
+    <section
+      id="home"
+      className="relative overflow-hidden pb-16 pt-8 sm:pb-20 sm:pt-10 lg:pb-28 lg:pt-12"
+    >
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-16 lg:px-8 xl:gap-20">
+        <div className="relative pt-7 lg:pt-10 xl:pt-12">
+          <div className="inline-flex rotate-[-1deg] items-center gap-2 rounded-full border border-[#17120f]/60 bg-[#fddf82] px-4 py-2 text-xs font-black uppercase tracking-widest text-[#17120f] shadow-[0_10px_24px_rgba(23,18,15,0.08)]">
+            <RiSparklingLine className="h-3.5 w-3.5" />
             {copy.eyebrow}
           </div>
-          <h1 className="text-4xl font-extrabold leading-[1.06] tracking-tight text-slate-900 sm:text-6xl lg:text-[3.55rem]">
-            {copy.titleTop}<br />
-            <span className="relative inline-block">
-              <span className="text-[#2563EB]">{copy.titleAccent}</span>
-              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 280 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M2 7.5C50 3 100 1.5 140 3C180 4.5 230 6 278 4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.5"/>
-              </svg>
-            </span>
+
+          <h1 className="mt-7 max-w-3xl text-[2.2rem] font-black leading-[0.94] tracking-[-0.05em] text-[#17120f] sm:text-[3.2rem] lg:text-[3.9rem] xl:text-[4.2rem]">
+            {copy.title}
           </h1>
-          <p className="mt-5 max-w-md text-base leading-7 text-slate-500 sm:mt-6 sm:text-[17px]">
+
+          <p className="mt-6 max-w-xl text-lg font-black leading-tight text-brand-600 sm:text-xl">
+            {copy.accent}
+          </p>
+
+          <p className="mt-5 max-w-xl text-sm font-medium leading-7 text-[#4f4540] sm:text-base">
             {copy.desc}
           </p>
-          <p className="mt-2 max-w-md text-sm font-semibold leading-6 text-blue-700 sm:mt-3">
-            {copy.promo}
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
+
+          <div className="mt-9 flex flex-wrap gap-4">
             <Link to={isAuthed ? '/app' : '/register'}>
-              <button className="group inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-200/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#1D4ED8]">
-                {copy.primary} <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <button className="saku-primary-action group inline-flex items-center gap-2 rounded-2xl px-7 py-3.5 text-sm font-black transition-all duration-200">
+                {copy.primary}
+                <RiArrowRightLine className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </Link>
-            <button onClick={() => smoothScrollTo('how-it-works')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-7 py-3.5 text-sm font-semibold text-slate-600 transition-colors duration-200 hover:bg-white hover:text-slate-900">
+
+            <button
+              onClick={() => smoothScrollTo('how-it-works')}
+              className="saku-secondary-action inline-flex items-center gap-2 rounded-2xl px-7 py-3.5 text-sm font-black transition-all duration-200"
+            >
               {copy.secondary}
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
-            {copy.trust.map((item) => (
-              <span key={item} className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-xs font-bold text-slate-500">
-                {item}
-              </span>
-            ))}
-          </div>
-          <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
-            {[
-              { Icon: RiChatSmile3Line, value: 'AI Chat', label: isId ? 'Catat otomatis' : 'Auto recording', color: 'text-blue-600', bg: 'rgba(239,246,255,0.80)' },
-              { Icon: RiScanLine, value: 'AI OCR', label: isId ? 'Scan struk' : 'Receipt scanner', color: 'text-violet-600', bg: 'rgba(245,243,255,0.80)' },
-              { Icon: RiTimeLine, value: '24/7', label: isId ? 'Siap bantu' : 'Always available', color: 'text-emerald-600', bg: 'rgba(236,253,245,0.80)' },
-            ].map((s) => (
-              <div key={s.label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 shadow-sm shadow-slate-200/50">
-                <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', s.color)} style={{ background: s.bg }}>
-                  <s.Icon className="h-3.5 w-3.5" />
-                </div>
-                <div>
-                  <p className={cn('text-xs font-extrabold', s.color)}>{s.value}</p>
-                  <p className="text-[10px] text-slate-400">{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-        <div className="lg:max-w-[560px] lg:justify-self-end">
+
+        <div className="relative mt-4 lg:mt-3 lg:justify-self-end xl:mt-5">
+          <DoodleBubble
+            className="right-0 top-4 hidden rotate-6 lg:block"
+            label="Rp"
+          />
+
           <HeroPreview isMobile={isMobile} isId={isId} />
         </div>
       </div>
+      <button
+        type="button"
+        onClick={() => smoothScrollTo('features')}
+        className="absolute bottom-4 left-1/2 z-20 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#4f4540]/70 transition hover:text-brand-700 lg:flex"
+        aria-label={isId ? 'Scroll ke fitur' : 'Scroll to features'}
+      >
+        <span>{isId ? 'Scroll' : 'Scroll'}</span>
+        <span className="grid h-9 w-6 animate-bounce place-items-start rounded-full border-2 border-[#17120f]/40 bg-[#fffaf6] p-1 shadow-sm shadow-[#17120f]/10">
+          <span className="h-2 w-2 rounded-full bg-brand-500" />
+        </span>
+      </button>
     </section>
   )
 }
 
 function HeroPreview({ isMobile, isId }: { isMobile: boolean; isId: boolean }) {
-  if (isMobile) {
-    return <MobileHeroPreview isId={isId} />
-  }
-
-  return <DesktopHeroPreview isId={isId} />
-}
-
-function MobileHeroPreview({ isId }: { isId: boolean }) {
   return (
-    <div className="relative">
-      <div className="rounded-3xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-200/70 md:hidden">
-        <div className="rounded-[1.35rem] bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-4 rounded-2xl bg-white p-3 shadow-sm">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{isId ? 'Uang yang bisa disimpan' : 'Money saved this month'}</p>
-              <h2 className="mt-1.5 text-2xl font-extrabold text-slate-900 tracking-tight">Rp 1.420.000</h2>
-              <p className="mt-1 text-[11px] font-semibold text-slate-500">{isId ? 'Terdeteksi dari 42 transaksi' : 'Detected from 42 transactions'}</p>
-            </div>
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-              <HiOutlineArrowTrendingUp className="h-3 w-3" />+18%
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
-              <p className="text-[11px] text-slate-500">{isId ? 'Aman dipakai' : 'Safe to spend'}</p>
-              <p className="mt-1 text-sm font-bold text-blue-600">{isId ? 'Rp 185rb/hari' : 'Rp 185rb/day'}</p>
-            </div>
-            <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
-              <p className="text-[11px] text-slate-500">{isId ? 'Kategori rawan' : 'Risk category'}</p>
-              <p className="mt-1 text-sm font-bold text-rose-500">{isId ? 'Makan 42%' : 'Food 42%'}</p>
-            </div>
-          </div>
-          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3">
-            <div className="mb-1 flex items-center gap-1.5">
-              <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
-              <p className="text-[11px] font-bold text-blue-700">AI Insight</p>
-            </div>
-            <p className="text-[11px] leading-5 text-blue-700/80">{isId ? 'Kurangi delivery kopi 3x/minggu untuk sisihkan Rp 312.000 bulan ini.' : 'Cut coffee delivery 3x/week to free up Rp 312.000 this month.'}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+    <div className="relative mx-auto mt-4 max-w-[680px] lg:mt-0 xl:mt-0">
+      <div className="saku-coral-panel relative overflow-hidden rounded-[2rem] p-5 sm:p-7">
+        <div className="absolute -right-8 -top-8 h-28 w-28 rounded-[50%_45%_55%_40%] border border-[#17120f]/30 bg-[#fffaf6]/70" />
+        <div className="absolute -bottom-7 left-8 h-20 w-20 rotate-12 rounded-[1.5rem] border border-[#17120f]/30 bg-[#fddf82]/70" />
 
-function DesktopHeroPreview({ isId }: { isId: boolean }) {
-  return (
-    <div className="relative">
-      <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/86 p-2 shadow-2xl shadow-slate-200/70">
-        <div className="rounded-[1.55rem] border border-slate-100 bg-slate-50/90 p-5">
-          <div className="flex items-start justify-between gap-4 rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{isId ? 'AI menemukan uang yang bisa disimpan' : 'AI found money you can save'}</p>
-              <h2 className="mt-1.5 text-3xl font-extrabold text-slate-900 tracking-tight">Rp 1.420.000</h2>
-              <p className="mt-1 text-xs font-medium text-slate-500">{isId ? 'Dari 42 transaksi di 4 dompet' : 'From 42 transactions across 4 wallets'}</p>
-            </div>
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold text-emerald-700" style={{ background: 'rgba(209,250,229,0.80)', border: '1px solid rgba(167,243,208,0.80)' }}>
-              <HiOutlineArrowTrendingUp className="h-3 w-3" />{isId ? '+18% cashflow lebih sehat' : '+18% better cashflow'}
-            </span>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2.5">
-            {[
-              { label: isId ? 'Aman/hari' : 'Safe/day', value: 'Rp 185rb', color: 'text-blue-600', bg: 'rgba(219,234,254,0.55)', border: 'rgba(191,219,254,0.65)', Icon: RiShieldCheckLine },
-              { label: isId ? 'Struk discan' : 'OCR saved', value: isId ? '18 struk' : '18 receipts', color: 'text-violet-600', bg: 'rgba(245,243,255,0.65)', border: 'rgba(221,214,254,0.75)', Icon: RiScanLine },
-              { label: isId ? 'Tagihan auto' : 'Auto bills', value: 'Rp 920rb', color: 'text-emerald-600', bg: 'rgba(209,250,229,0.50)', border: 'rgba(167,243,208,0.60)', Icon: RiTimeLine },
-            ].map((c) => (
-              <div key={c.label} className="rounded-xl p-3.5" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <c.Icon className={cn('h-3 w-3', c.color)} />
-                  <p className="text-[11px] text-slate-500">{c.label}</p>
-                </div>
-                <p className={cn('text-sm font-bold', c.color)}>{c.value}</p>
+        <div className="relative grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="animate-[saku-float_6s_ease-in-out_infinite] rounded-[1.5rem] border border-[#17120f]/60 bg-[#fffaf6] p-4 shadow-[0_16px_38px_rgba(23,18,15,0.10)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-[#4f4540]">
+                  {isId ? 'Saldo terbaca' : 'Readable balance'}
+                </p>
+
+                <h2 className="mt-1 text-3xl font-black tracking-tight text-[#17120f] sm:text-4xl">
+                  Rp 4.820.000
+                </h2>
               </div>
-            ))}
+
+              <span className="rounded-full border border-[#17120f]/50 bg-emerald-100 px-3 py-1 text-xs font-black text-[#17120f]">
+                +18%
+              </span>
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {[
+                [RiChatSmile3Line, isId ? 'Chat' : 'Chat', '35rb'],
+                [RiReceiptLine, isId ? 'Struk' : 'Receipt', '18'],
+                [RiWallet3Line, 'Wallet', '5'],
+              ].map(([Icon, label, value]) => {
+                const I = Icon as typeof RiChatSmile3Line
+
+                return (
+                  <div
+                    key={label as string}
+                    className="rounded-2xl border border-[#17120f]/35 bg-[#f6eee8] p-3 text-center"
+                  >
+                    <I className="mx-auto h-5 w-5 text-[#17120f]" />
+
+                    <p className="mt-2 text-[11px] font-black text-[#4f4540]">
+                      {label as string}
+                    </p>
+
+                    <p className="text-sm font-black text-[#17120f]">
+                      {value as string}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-[#17120f]/45 bg-[#fddf82] p-3">
+              <div className="mb-2 flex items-center justify-between text-xs font-black text-[#17120f]">
+                <span>{isId ? 'Budget makan' : 'Food budget'}</span>
+                <span>72%</span>
+              </div>
+
+              <div className="h-3 rounded-full border border-[#17120f]/45 bg-[#fffaf6]">
+                <div
+                  className="h-full rounded-full bg-brand-500"
+                  style={{ width: '72%' }}
+                />
+              </div>
+            </div>
           </div>
-          <div className="mt-4 rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
-            <div className="mb-1.5 flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{isId ? 'Tekanan budget makan' : 'Food budget pressure'}</p>
-              <p className="text-[11px] font-bold text-slate-600">72%</p>
+
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-[#17120f]/70 bg-[#17120f] p-4 text-white shadow-[0_16px_38px_rgba(23,18,15,0.12)]">
+              <div className="flex items-center gap-2">
+                <RiSparklingLine className="h-5 w-5 text-brand-300" />
+
+                <p className="text-xs font-black uppercase tracking-widest text-brand-100">
+                  AI Insight
+                </p>
+              </div>
+
+              <p className="mt-3 text-sm leading-6 text-white/80">
+                {isId
+                  ? 'Kalau pola ini lanjut, kamu masih aman sekitar Rp185rb per hari.'
+                  : 'If this pattern continues, you still have around Rp185k/day safe to spend.'}
+              </p>
             </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
-              <div className="h-full rounded-full transition-all duration-1000" style={{ width: '72%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
+
+            <div className="animate-[saku-float_7s_ease-in-out_infinite_0.6s] rounded-[1.5rem] border border-[#17120f]/60 bg-[#fffaf6] p-4 shadow-[0_16px_38px_rgba(23,18,15,0.10)]">
+              <p className="text-xs font-black uppercase tracking-widest text-[#4f4540]">
+                {isId ? 'Preview chat' : 'Chat preview'}
+              </p>
+
+              <div className="mt-3 rounded-2xl border border-[#17120f]/40 bg-[#f6eee8] px-3 py-2 text-sm font-black text-[#17120f]">
+                beli nasi padang 35rb
+              </div>
+
+              <div className="mt-3 flex items-center justify-between rounded-2xl border border-[#17120f]/40 bg-brand-100 px-3 py-2">
+                <span className="text-sm font-black text-[#17120f]">
+                  {isId ? 'Makanan' : 'Food'}
+                </span>
+
+                <span className="text-sm font-black text-[#17120f]">
+                  -Rp35.000
+                </span>
+              </div>
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">{isId ? 'Makan Rp 1.2jt' : 'Dining Rp 1.2jt'}</span>
-              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">Coffee Rp 312rb</span>
-              <span className="rounded-lg bg-slate-50 px-2 py-1 font-semibold text-slate-500">{isId ? 'Tagihan Rp 920rb' : 'Bills Rp 920rb'}</span>
-            </div>
-          </div>
-          <div className="mt-3 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(241,245,249,1)' }}>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-800">{isId ? 'AI mencatat untuk kamu' : 'AI records it for you'}</p>
-              <p className="text-[11px] text-blue-500 font-medium cursor-pointer">{isId ? 'Preview langsung' : 'Live preview'}</p>
-            </div>
-            <div className="space-y-2.5">
-              <TxRow icon="AI" title="beli nasi padang 35rb" cat={isId ? 'Makanan - Cash' : 'Food & Drink - Cash'} amount="-Rp 35.000" />
-              <TxRow icon="OCR" title={isId ? 'Struk berhasil discan' : 'Receipt scanned'} cat={isId ? 'Merchant, tanggal, nominal terbaca' : 'Merchant, date, amount detected'} amount="-Rp 128.500" />
-              <TxRow icon="IN" title={isId ? 'Pembayaran freelance' : 'Freelance payout'} cat={isId ? 'Pemasukan - Bank Jago' : 'Income - Bank Jago'} amount="+Rp 5.500.000" positive />
-            </div>
-          </div>
-          <div className="mt-3 rounded-2xl p-3.5" style={{ background: 'rgba(239,246,255,0.85)', border: '1px solid rgba(191,219,254,0.60)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <RiSparklingLine className="h-3.5 w-3.5 text-blue-500" />
-              <p className="text-[11px] font-bold text-blue-700">AI Insight</p>
-            </div>
-            <p className="text-[11px] leading-5 text-blue-600/80">{isId ? 'Kurangi delivery kopi 3x/minggu untuk sisihkan Rp 312.000 dan tetap aman belanja Rp 185.000/hari.' : 'Cut coffee delivery 3x/week to free up Rp 312.000 and keep Rp 185.000/day safe to spend.'}</p>
           </div>
         </div>
+
+        {!isMobile ? (
+          <div className="relative mt-4 flex items-center justify-between border-t border-[#17120f]/25 pt-4 text-xs font-black text-[#17120f]">
+            <span>{isId ? 'Chat AI' : 'AI Chat'}</span>
+            <span>{isId ? 'Scan Struk' : 'Receipt Scan'}</span>
+            <span>{isId ? 'Insight Harian' : 'Daily Insight'}</span>
+          </div>
+        ) : null}
       </div>
     </div>
   )
 }
 
-function TxRow({ icon, title, cat, amount, positive = false }: { icon: string; title: string; cat: string; amount: string; positive?: boolean }) {
+function DoodleBubble({
+  className,
+  label,
+  small = false,
+}: {
+  className?: string
+  label: string
+  small?: boolean
+}) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">{title}</p>
-        <p className="text-[11px] text-slate-400">{cat}</p>
-      </div>
-      <p className={cn('text-sm font-bold tabular-nums shrink-0', positive ? 'text-emerald-600' : 'text-slate-700')}>{amount}</p>
-    </div>
+    <svg
+      className={`pointer-events-none absolute z-20 ${
+        small ? 'h-20 w-24' : 'h-28 w-36'
+      } ${className ?? ''}`}
+      viewBox="0 0 140 100"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        className="saku-doodle-line"
+        d="M20 30C30 10 92 8 118 25C136 37 131 66 106 76C78 86 44 81 28 66C15 55 11 42 20 30Z"
+        fill="#fffaf6"
+        strokeWidth="3"
+      />
+
+      <path
+        className="saku-doodle-line"
+        d="M34 67L28 84L46 73"
+        fill="#fffaf6"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+
+      <path
+        className="saku-doodle-line"
+        d="M24 18L28 26L36 30L28 34L24 42L20 34L12 30L20 26Z"
+        fill="#fddf82"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+
+      <path
+        className="saku-doodle-line"
+        d="M112 14L115 20L122 23L115 26L112 33L109 26L102 23L109 20Z"
+        fill="#ff9d8d"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+
+      <text
+        x="70"
+        y="58"
+        textAnchor="middle"
+        fontSize={small ? '22' : '28'}
+        fontWeight="900"
+        fill="#ff6f61"
+      >
+        {label}
+      </text>
+    </svg>
   )
 }
+
+export default HeroSection

@@ -13,6 +13,7 @@ export interface AuthUser {
   referral_code?: string
   referral_reward?: number
   telegram_chat_id?: string
+  telegram_username?: string
   last_login_at?: string | null
 }
 

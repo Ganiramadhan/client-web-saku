@@ -5,6 +5,7 @@ import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import type { SelectOption } from '@/components/ui'
+import { WalletRequiredState } from '@/components/WalletRequiredState'
 import { useLocale, useT } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import type { TransactionType } from '@/types/api'
@@ -53,6 +54,7 @@ import {
 
 const FREE_TEXT_DRAFT_KEY = 'saku-free-text-draft-v1'
 const FREE_TEXT_SAVED_KEY = 'saku-free-text-saved-reviews-v1'
+const FREE_TEXT_PINNED_KEY = 'saku-free-text-pinned-v1'
 const currentAIReference = () => ({
   reference_date: localDateKey(new Date()),
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
@@ -127,14 +129,15 @@ export function FreeTextPage() {
       }
 
   const [initialDraft] = useState(() => loadFreeTextDraft(locale, user?.id))
+  const [initialPinnedIds] = useState(() => loadPinnedSessionIds(user?.id))
 
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    if (initialDraft.sessions.length > 0) return initialDraft.sessions
+    if (initialDraft.sessions.length > 0) return sortSessions(applyPinnedSessions(initialDraft.sessions, initialPinnedIds))
     const fresh = createEmptySession(locale)
     return [fresh]
   })
 
-  const [activeId, setActiveId] = useState<string | null>(() => sessions[0]?.id ?? null)
+  const [activeId, setActiveId] = useState<string | null>(() => findNewestSession(sessions)?.id ?? sessions[0]?.id ?? null)
 
   const [text, setText] = useState('')
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null)
@@ -154,10 +157,11 @@ export function FreeTextPage() {
 
   useEffect(() => {
     const nextDraft = loadFreeTextDraft(locale, user?.id)
+    const pinnedIds = loadPinnedSessionIds(user?.id)
     if (nextDraft.sessions.length > 0) {
-      const sorted = [...nextDraft.sessions].sort((a, b) => b.updatedAt - a.updatedAt)
+      const sorted = sortSessions(applyPinnedSessions(nextDraft.sessions, pinnedIds))
       setSessions(sorted)
-      setActiveId(sorted[0]?.id ?? null)
+      setActiveId(findNewestSession(sorted)?.id ?? sorted[0]?.id ?? null)
       pickedInitialLatestRef.current = false
       return
     }
@@ -185,10 +189,11 @@ export function FreeTextPage() {
   })
 
   useEffect(() => {
-    const dbSessions = applySavedReviewSignatures([
+    const pinnedIds = loadPinnedSessionIds(user?.id)
+    const dbSessions = applyPinnedSessions(applySavedReviewSignatures([
       ...(chatLogs.data ? chatSessionsFromLogs(chatLogs.data.data) : []),
       ...(nlpLogs.data ? nlpSessionsFromLogs(nlpLogs.data.data) : []),
-    ].filter(Boolean) as ChatSession[], user?.id)
+    ].filter(Boolean) as ChatSession[], user?.id), pinnedIds)
 
     const timer = window.setTimeout(() => {
       let shouldActivateDb = false
@@ -225,7 +230,7 @@ export function FreeTextPage() {
           return !signature || !keepLocalSignatures.has(signature)
         })
         const next = [...nextDbSessions, ...transient]
-        if (next.length > 0) return next.sort((a, b) => b.updatedAt - a.updatedAt)
+        if (next.length > 0) return sortSessions(next)
         return [
           {
             id: uid(),
@@ -310,6 +315,25 @@ export function FreeTextPage() {
     handleNew(m)
   }
 
+  const handleTogglePin = (id: string) => {
+    const target = sessions.find((session) => session.id === id)
+    if (!target) return
+    const nextPinned = !target.pinned
+    setSessions((prev) => {
+      const nextPinned = !target.pinned
+      const next = sortSessions(prev.map((session) =>
+        session.id === id ? { ...session, pinned: nextPinned } : session,
+      ))
+      savePinnedSessionIds(next.filter((session) => session.pinned).map((session) => session.id), user?.id)
+      return next
+    })
+    toast.success(
+      nextPinned
+        ? locale === 'id' ? 'Riwayat disematkan' : 'History pinned'
+        : locale === 'id' ? 'Pin riwayat dilepas' : 'History unpinned',
+    )
+  }
+
   const handleDelete = async (id: string) => {
     const target = sessions.find((s) => s.id === id)
     if (target?.logIds?.length) {
@@ -338,6 +362,7 @@ export function FreeTextPage() {
         }
         next = [fresh]
       }
+      savePinnedSessionIds(next.filter((session) => session.pinned).map((session) => session.id), user?.id)
       if (id === activeId || !next.some((s) => s.id === activeId)) {
         setActiveId(next[0]?.id ?? null)
       }
@@ -385,6 +410,7 @@ export function FreeTextPage() {
       updatedAt: Date.now(),
     }
     setSessions((prev) => [fresh, ...prev.filter((session) => session.mode !== mode)])
+    savePinnedSessionIds(sessions.filter((session) => session.mode !== mode && session.pinned).map((session) => session.id), user?.id)
     setActiveId(fresh.id)
     setSidebarOpen(false)
     toast.success(locale === 'id' ? 'Riwayat berhasil dihapus' : 'History deleted')
@@ -1042,12 +1068,16 @@ export function FreeTextPage() {
     ? locale === 'id' ? NLP_EXAMPLES : NLP_EXAMPLES_EN
     : locale === 'id' ? CHAT_EXAMPLES : CHAT_EXAMPLES_EN
 
+  if (!wallets.isLoading && (wallets.data ?? []).length === 0) {
+    return <WalletRequiredState feature="aiChat" />
+  }
+
   return (
-    <div className="relative flex h-[calc(100dvh-5.75rem)] min-h-[560px] overflow-hidden rounded-xl border border-white/80 bg-white/30 shadow-lg shadow-slate-200/30 backdrop-blur-xl sm:h-[calc(100dvh-8rem)] sm:min-h-[680px] sm:rounded-2xl">
+    <div className="relative flex h-[calc(100dvh-5.75rem)] min-h-[560px] overflow-hidden rounded-[1.35rem] border border-[#17120f]/10 bg-[#fffaf6]/64 shadow-[0_18px_45px_rgba(23,18,15,0.07)] backdrop-blur-2xl sm:h-[calc(100dvh-8rem)] sm:min-h-[680px] sm:rounded-[1.75rem]">
       {/* Background ambient glows */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl animate-pulse" />
-        <div className="absolute -right-20 bottom-10 h-[500px] w-[500px] rounded-full bg-violet-500/10 blur-3xl" style={{ animationDelay: '2s' }} />
+        <div className="absolute -right-20 bottom-10 h-[500px] w-[500px] rounded-full bg-[#fddf82]/24 blur-3xl" style={{ animationDelay: '2s' }} />
       </div>
       <ChatSidebar
         sessions={sessions}
@@ -1060,6 +1090,7 @@ export function FreeTextPage() {
         onNew={handleNew}
         onSwitchMode={handleSwitchMode}
         onDelete={handleDelete}
+        onTogglePin={handleTogglePin}
         onDeleteAll={handleDeleteAll}
         onClose={() => setSidebarOpen(false)}
         mobileOpen={sidebarOpen}
@@ -1114,8 +1145,8 @@ export function FreeTextPage() {
                       className={cn(
                         'whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
                         msg.role === 'user'
-                          ? 'bg-brand-600 text-white'
-                          : 'bg-slate-100 text-slate-800',
+                          ? 'bg-brand-500 text-[#17120f] shadow-sm shadow-brand-100/60'
+                          : 'border border-[#17120f]/8 bg-white/62 text-[#17120f]',
                       )}
                     >
                       {msg.content}
@@ -1172,10 +1203,10 @@ export function FreeTextPage() {
             {isPending && (
               <div className="flex items-center gap-3">
                 <AIAvatar />
-                <div className="flex items-center gap-1 rounded-2xl bg-slate-100 px-4 py-3">
-                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
-                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
-                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+                <div className="flex items-center gap-1 rounded-2xl border border-[#17120f]/8 bg-white/62 px-4 py-3">
+                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400 [animation-delay:0ms]" />
+                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400 [animation-delay:150ms]" />
+                  <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-brand-400 [animation-delay:300ms]" />
                 </div>
               </div>
             )}
@@ -1230,6 +1261,41 @@ function createEmptySession(locale: 'id' | 'en'): ChatSession {
 
 function scopedStorageKey(base: string, userId?: string | null): string {
   return userId ? `${base}:${userId}` : `${base}:anonymous`
+}
+
+function findNewestSession(sessions: ChatSession[]): ChatSession | null {
+  return [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
+}
+
+function sortSessions(sessions: ChatSession[]): ChatSession[] {
+  return [...sessions].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt - a.updatedAt)
+}
+
+function loadPinnedSessionIds(userId?: string | null): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = window.localStorage.getItem(scopedStorageKey(FREE_TEXT_PINNED_KEY, userId))
+    const parsed = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function savePinnedSessionIds(ids: string[], userId?: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(scopedStorageKey(FREE_TEXT_PINNED_KEY, userId), JSON.stringify(ids.slice(0, 80)))
+  } catch {
+    // Pinning is convenience-only; history remains available without it.
+  }
+}
+
+function applyPinnedSessions(sessions: ChatSession[], pinnedIds: Set<string>): ChatSession[] {
+  return sessions.map((session) => ({
+    ...session,
+    pinned: Boolean(session.pinned || pinnedIds.has(session.id)),
+  }))
 }
 
 function loadFreeTextDraft(locale: 'id' | 'en', userId?: string | null): { sessions: ChatSession[]; activeId: string | null } {

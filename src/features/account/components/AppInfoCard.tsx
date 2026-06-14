@@ -37,7 +37,7 @@ export function AppInfoCard() {
   return (
     <Card>
       <div className="flex items-center gap-2">
-        <HiOutlineCog6Tooth className="h-5 w-5 text-blue-600" />
+        <HiOutlineCog6Tooth className="h-5 w-5 text-brand-700" />
         <h3 className="text-sm font-bold text-slate-900">{copy.title}</h3>
       </div>
       <div className="mt-3 divide-y divide-slate-100 rounded-2xl border border-white/70 bg-white/50">

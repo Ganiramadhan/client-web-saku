@@ -13,7 +13,6 @@ import { useT } from '@/i18n'
 import type { Dict } from '@/i18n/dictionaries'
 import { preloadTurnstileScript } from '@/features/auth/components/TurnstileWidget'
 import { cn } from '@/lib/utils'
-import { Logo } from '@/components/Logo'
 
 export function getPasswordValidationError(t: Dict, password: string, confirmPassword: string): string | null {
   if (password.length < 8) return t.auth.passwordNewTooShort
@@ -72,7 +71,7 @@ export function PasswordStrengthMeter({ score }: { score: number }) {
           key={index}
           className={cn(
             'h-1.5 rounded-full transition',
-            index < score ? (score >= 4 ? 'bg-emerald-500' : 'bg-blue-500') : 'bg-slate-200',
+            index < score ? (score >= 4 ? 'bg-emerald-500' : 'bg-brand-500') : 'bg-slate-200',
           )}
         />
       ))}
@@ -97,7 +96,7 @@ export function PasswordPolicyPanel({
         <button
           type="button"
           onClick={onGenerate}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-blue-100 bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-blue-200 active:scale-[0.98]"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#17120f]/25 bg-brand-300 px-3 py-2 text-xs font-black text-[#17120f] shadow-sm shadow-[#17120f]/10 transition hover:-translate-y-0.5 hover:bg-brand-200 active:scale-[0.98]"
         >
           <HiOutlineSparkles className="h-4 w-4" />
           Generate
@@ -130,32 +129,31 @@ export function AuthShell({
         : t.landing.heroTitle
 
   return (
-    <div className="app-surface auth-page relative flex min-h-screen flex-col overflow-hidden font-sans antialiased">
+    <div className="app-surface auth-page relative flex min-h-screen flex-col overflow-hidden bg-[#f6eee8] font-sans antialiased">
       <div className="auth-fixed-bg pointer-events-none absolute inset-x-0 top-0 z-0 min-h-screen overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-20 -top-40 h-[680px] w-[680px] rounded-full animate-[pulse_8s_ease-in-out_infinite]" style={{ background: 'radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 65%)' }} />
-        <div className="absolute -right-40 top-1/4 h-[560px] w-[560px] rounded-full animate-[pulse_10s_ease-in-out_infinite_2s]" style={{ background: 'radial-gradient(circle, rgba(196,181,253,0.28) 0%, transparent 65%)' }} />
-        <div className="absolute bottom-0 left-1/4 h-[480px] w-[480px] rounded-full animate-[pulse_9s_ease-in-out_infinite_1s]" style={{ background: 'radial-gradient(circle, rgba(167,243,208,0.22) 0%, transparent 65%)' }} />
+        <div className="absolute -left-20 top-24 h-64 w-64 rounded-[45%_55%_35%_65%] border border-[#17120f]/15 bg-brand-100/55" />
+        <div className="absolute right-12 top-28 h-44 w-44 rounded-[62%_38%_55%_45%] border border-[#17120f]/15 bg-[#fddf82]/55" />
+        <div className="absolute bottom-16 left-1/3 h-28 w-28 rotate-12 rounded-[2rem] border border-[#17120f]/10 bg-white/45" />
       </div>
 
       <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between gap-3 sm:inset-x-6 sm:top-6">
-        <Link to="/" className="inline-flex items-center gap-2 px-1 py-1 text-xs font-bold text-slate-600 hover:text-blue-700">
+        <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-[#17120f]/25 bg-[#fffaf6]/90 px-3 py-1.5 text-xs font-black text-[#17120f] shadow-sm shadow-[#17120f]/5 transition hover:-translate-y-0.5 hover:border-[#17120f]/40 hover:bg-[#fddf82]/70">
           <HiOutlineArrowLeft className="h-4 w-4" />
           Back
         </Link>
-        <Logo size="sm" />
       </div>
 
       <main className="relative z-10 flex flex-1 items-center px-4 pb-8 pt-16 sm:px-6 sm:py-10">
         <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[minmax(0,600px)_440px] lg:items-stretch xl:gap-14">
           <section className="hidden lg:flex">
             <div className="relative flex min-h-[560px] flex-col justify-center pr-4">
-              <div className="pointer-events-none absolute -left-10 top-12 h-64 w-64 rounded-full bg-blue-100/45 blur-3xl" />
-              <div className="pointer-events-none absolute bottom-6 right-0 h-56 w-56 rounded-full bg-emerald-100/40 blur-3xl" />
-              <h5 className="relative mt-5 max-w-xl text-5xl font-black leading-[1.04] tracking-tight text-slate-950">
+              <div className="pointer-events-none absolute -left-10 top-12 h-64 w-64 rounded-[45%_55%_35%_65%] border border-[#17120f]/12 bg-brand-100/45" />
+              <div className="pointer-events-none absolute bottom-6 right-0 h-40 w-40 rounded-[2.5rem] border border-[#17120f]/12 bg-[#fddf82]/45" />
+              <h5 className="relative mt-5 max-w-xl text-5xl font-black leading-[0.98] tracking-[-0.045em] text-[#17120f]">
                 {leftTitle}
               </h5>
         
-              <AuthSideIllustration />
+              <AuthSideIllustration mode={mode} />
 
               <div className="relative mt-6 grid max-w-lg gap-3">
                 {[
@@ -164,9 +162,9 @@ export function AuthShell({
                   [t.landing.featureMultiWalletTitle, t.landing.featureMultiWalletDesc],
                 ].map(([label, description]) => (
                   <div key={label} className="flex items-start gap-3">
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                    <span className="mt-2 h-3 w-3 shrink-0 rounded-full border border-[#17120f]/35 bg-brand-500" />
                     <div>
-                      <p className="text-sm font-extrabold text-slate-950">{label}</p>
+                      <p className="text-sm font-black text-[#17120f]">{label}</p>
                       <p className="mt-0.5 line-clamp-1 text-xs leading-5 text-slate-500">{description}</p>
                     </div>
                   </div>
@@ -176,20 +174,20 @@ export function AuthShell({
           </section>
 
           <div className="mx-auto flex w-full max-w-md items-center lg:mx-0">
-            <div className="w-full rounded-2xl p-5 sm:p-7" style={{ background: 'rgba(255,255,255,0.84)', backdropFilter: 'blur(40px) saturate(200%)', WebkitBackdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 32px 80px rgba(15,23,42,0.10), 0 8px 24px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}>
+            <div className="w-full rounded-[1.75rem] border border-[#17120f]/20 bg-[#fffaf6]/92 p-5 shadow-[0_24px_70px_rgba(23,18,15,0.12)] backdrop-blur sm:p-7">
               <div className="mb-5 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600" style={{ border: '1px solid rgba(191,219,254,0.70)' }}>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#17120f]/20 bg-brand-300 text-[#17120f] shadow-sm shadow-[#17120f]/10">
                   <HiOutlineShieldCheck className="h-6 w-6" />
                 </div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{subtitle}</p>
+                <h1 className="text-2xl font-black tracking-tight text-[#17120f] sm:text-3xl">{title}</h1>
+                <p className="mt-2 text-sm leading-6 text-[#4f4540]">{subtitle}</p>
               </div>
               {children}
-              <div className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 border-t border-slate-100 pt-4 text-[11px] font-semibold text-slate-400">
-                <Link to="/privacy" className="hover:text-blue-700 hover:underline">Privacy Policy</Link>
-                <Link to="/terms" className="hover:text-blue-700 hover:underline">Terms</Link>
-                <Link to="/contact" className="hover:text-blue-700 hover:underline">Contact</Link>
-                <Link to="/about" className="hover:text-blue-700 hover:underline">About SAKU</Link>
+              <div className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 border-t border-[#17120f]/10 pt-4 text-[11px] font-black text-[#4f4540]">
+                <Link to="/privacy" className="hover:text-brand-700 hover:underline">Privacy Policy</Link>
+                <Link to="/terms" className="hover:text-brand-700 hover:underline">Terms</Link>
+                <Link to="/contact" className="hover:text-brand-700 hover:underline">Contact</Link>
+                <Link to="/about" className="hover:text-brand-700 hover:underline">About SAKU</Link>
               </div>
             </div>
           </div>
@@ -203,7 +201,14 @@ export function AuthShell({
   )
 }
 
-function AuthSideIllustration() {
+function AuthSideIllustration({ mode }: { mode: 'login' | 'register' | 'forgot' }) {
+  const isRegister = mode === 'register'
+  const isForgot = mode === 'forgot'
+  const bubbleText = isForgot ? 'OTP' : isRegister ? 'GO' : 'AI'
+  const primaryLabel = isForgot ? 'Reset aman' : isRegister ? 'Mulai rapi' : 'Masuk lagi'
+  const cardAccent = isForgot ? '#fddf82' : isRegister ? '#ecfdf5' : '#ffe4dc'
+  const sideAccent = isForgot ? '#ffe4dc' : isRegister ? '#fddf82' : '#ff9d8d'
+
   return (
     <svg
       className="relative mt-7 h-auto w-full max-w-xl"
@@ -212,34 +217,51 @@ function AuthSideIllustration() {
       role="img"
       aria-label="SAKU finance illustration"
     >
-      <defs>
-        <linearGradient id="authChart" x1="64" y1="258" x2="480" y2="78" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2563EB" />
-          <stop offset="1" stopColor="#10B981" />
-        </linearGradient>
-        <linearGradient id="authPanel" x1="112" y1="56" x2="442" y2="276" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FFFFFF" />
-          <stop offset="1" stopColor="#EFF6FF" />
-        </linearGradient>
-      </defs>
-      <path d="M86 248C126 178 180 144 248 147c46 2 70 22 113 18 48-5 84-40 114-88" stroke="#DBEAFE" strokeWidth="34" strokeLinecap="round" />
-      <path d="M86 248C126 178 180 144 248 147c46 2 70 22 113 18 48-5 84-40 114-88" stroke="url(#authChart)" strokeWidth="11" strokeLinecap="round" />
-      <circle cx="86" cy="248" r="13" fill="#2563EB" />
-      <circle cx="248" cy="147" r="13" fill="#7C3AED" />
-      <circle cx="475" cy="77" r="13" fill="#10B981" />
+      <path d="M73 278C112 235 164 213 229 214c75 1 116 27 179 15 45-9 72-34 92-66" stroke="#ffe4dc" strokeWidth="30" strokeLinecap="round" />
+      <path d="M73 278C112 235 164 213 229 214c75 1 116 27 179 15 45-9 72-34 92-66" stroke="#17120f" strokeOpacity=".55" strokeWidth="4" strokeLinecap="round" />
 
-      <rect x="128" y="74" width="236" height="154" rx="30" fill="url(#authPanel)" stroke="#BFDBFE" />
-      <rect x="154" y="104" width="92" height="13" rx="6.5" fill="#93C5FD" />
-      <rect x="154" y="130" width="148" height="9" rx="4.5" fill="#DBEAFE" />
-      <rect x="154" y="152" width="116" height="9" rx="4.5" fill="#DBEAFE" />
-      <rect x="154" y="184" width="62" height="18" rx="9" fill="#2563EB" />
-      <rect x="232" y="184" width="86" height="18" rx="9" fill="#ECFDF5" />
-      <path d="M253 193h44" stroke="#059669" strokeWidth="5" strokeLinecap="round" />
+      <path d="M66 252C78 229 93 218 112 221c-1 24-15 38-46 31Z" fill="#ff9d8d" stroke="#17120f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M88 295C87 260 96 232 115 204" stroke="#17120f" strokeWidth="4" strokeLinecap="round" />
+      <path d="M104 276C126 259 144 260 154 278c-22 18-39 17-50-2Z" fill="#fddf82" stroke="#17120f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-      <rect x="348" y="132" width="98" height="122" rx="26" fill="#FFFFFF" stroke="#BFDBFE" />
-      <path d="M378 172h38M378 194h28" stroke="#93C5FD" strokeWidth="9" strokeLinecap="round" />
-      <path d="M374 224l12 12 32-40" stroke="#10B981" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M130 258h316" stroke="#E2E8F0" strokeWidth="8" strokeLinecap="round" />
+      <rect x="142" y="86" width="196" height="124" rx="30" fill="#fffaf6" stroke="#17120f" strokeOpacity=".72" strokeWidth="3" />
+      <rect x="166" y="112" width="84" height="12" rx="6" fill={isForgot ? '#17120f' : '#ff6f61'} />
+      <rect x="166" y="139" width="128" height="9" rx="4.5" fill="#ffe4dc" />
+      <rect x="166" y="161" width="98" height="9" rx="4.5" fill="#ffe4dc" />
+      <rect x="166" y="184" width="50" height="15" rx="7.5" fill={cardAccent} stroke="#17120f" strokeOpacity=".45" />
+      <rect x="230" y="184" width="72" height="15" rx="7.5" fill={isRegister ? '#ff6f61' : '#ecfdf5'} />
+      <path d="M249 191h34" stroke={isRegister ? '#17120f' : '#059669'} strokeWidth="4" strokeLinecap="round" />
+      <text x="166" y="101" fontSize="11" fontWeight="900" fill="#17120f">{primaryLabel}</text>
+
+      <path d="M365 100h92c15 0 25 10 25 25v48c0 15-10 25-25 25h-92c-15 0-25-10-25-25v-48c0-15 10-25 25-25Z" fill={sideAccent} stroke="#17120f" strokeOpacity=".72" strokeWidth="3" />
+      {isForgot ? (
+        <>
+          <circle cx="384" cy="148" r="11" fill="#fffaf6" stroke="#17120f" strokeWidth="3" />
+          <circle cx="421" cy="148" r="11" fill="#fffaf6" stroke="#17120f" strokeWidth="3" />
+          <circle cx="458" cy="148" r="11" fill="#fffaf6" stroke="#17120f" strokeWidth="3" />
+          <path d="M392 174h58" stroke="#17120f" strokeOpacity=".58" strokeWidth="5" strokeLinecap="round" />
+        </>
+      ) : isRegister ? (
+        <>
+          <path d="M383 144h72M383 166h42" stroke="#17120f" strokeOpacity=".58" strokeWidth="5" strokeLinecap="round" />
+          <path d="M392 121l8 8 19-25" stroke="#17120f" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M451 125l14 14-14 14" stroke="#ff6f61" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : (
+        <>
+          <path d="M365 134h92M365 161h56" stroke="#17120f" strokeOpacity=".58" strokeWidth="5" strokeLinecap="round" />
+          <path d="M454 124c14 7 21 19 20 35" stroke="#ff6f61" strokeWidth="5" strokeLinecap="round" />
+        </>
+      )}
+
+      <rect x="363" y="205" width="92" height="58" rx="18" fill="#fffaf6" stroke="#17120f" strokeOpacity=".72" strokeWidth="3" />
+      <path d="M385 225h44M385 244h26" stroke="#17120f" strokeOpacity=".55" strokeWidth="5" strokeLinecap="round" />
+      <path d="M438 218l15 15-15 15" stroke="#ff6f61" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+
+      <path d="M306 58c0-18 16-32 42-32h54c27 0 43 14 43 32s-16 32-43 32h-13l-16 17-5-17h-20c-26 0-42-14-42-32Z" fill="#fffaf6" stroke="#17120f" strokeOpacity=".72" strokeWidth="3" />
+      <text x="375" y="67" textAnchor="middle" fontSize={isForgot ? '18' : '22'} fontWeight="900" fill="#ff6f61">{bubbleText}</text>
+      <path d="M482 65l5 10 11 5-11 5-5 11-5-11-10-5 10-5Z" fill="#fddf82" stroke="#17120f" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M110 66l4 8 8 4-8 4-4 8-4-8-8-4 8-4Z" fill="#ff9d8d" stroke="#17120f" strokeWidth="2.5" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -269,8 +291,8 @@ export function Field({ icon: Icon, label, rightSlot, className, ...rest }: Fiel
         <input
           {...rest}
           className={cn(
-            'h-12 w-full rounded-xl border border-slate-200 bg-white/85 pl-10 pr-3 text-sm font-medium shadow-sm transition placeholder:text-slate-400',
-            'hover:border-blue-200 hover:bg-white focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20',
+            'saku-field-focus h-12 w-full rounded-xl border bg-white/85 pl-10 pr-3 text-sm font-medium shadow-sm transition placeholder:text-slate-400',
+            'hover:bg-white focus:bg-white focus:outline-none',
             rightSlot && 'pr-10',
             className,
           )}
@@ -349,7 +371,7 @@ export function OtpInput({
               setDigit(index, event.clipboardData.getData('text'))
             }}
             onKeyDown={(event) => handleKeyDown(index, event)}
-            className="h-12 rounded-xl border border-slate-200 bg-white/85 text-center text-lg font-extrabold tabular-nums text-slate-900 shadow-sm transition placeholder:text-slate-400 hover:border-blue-200 hover:bg-white focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:h-14"
+            className="saku-field-focus h-12 rounded-xl border bg-white/85 text-center text-lg font-extrabold tabular-nums text-slate-900 shadow-sm transition placeholder:text-slate-400 hover:bg-white focus:bg-white focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:h-14"
           />
         ))}
       </div>
@@ -420,7 +442,7 @@ export function FieldPassword({
         <button
           type="button"
           onClick={onToggle}
-          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700"
+          className="rounded-lg p-1.5 text-slate-400 transition hover:bg-brand-50 hover:text-brand-700"
           aria-label={show ? 'Hide password' : 'Show password'}
           tabIndex={-1}
         >

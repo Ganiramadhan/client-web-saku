@@ -128,7 +128,7 @@ export function MobileTransactionList({
                   <div
                     className={
                       'shrink-0 text-right text-base font-black ' +
-                      (isIncome ? 'text-emerald-700' : 'text-rose-700')
+                      (isIncome ? 'text-emerald-700' : 'text-[#b4533f]')
                     }
                   >
                     {isIncome ? '+' : '-'}
@@ -151,7 +151,7 @@ export function MobileTransactionList({
                   </button>
                   <button
                     onClick={() => onDelete(tx)}
-                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 transition-all"
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#b4533f] transition-all hover:bg-[#ffe4dc]"
                   >
                     <HiOutlineTrash className="h-3.5 w-3.5" /> {copy.delete}
                   </button>

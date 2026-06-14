@@ -19,10 +19,10 @@ export function LogoutPanel({ onLogout }: { onLogout: () => void }) {
   return (
     <Card>
       <div className="flex items-center gap-2">
-        <HiOutlineArrowRightOnRectangle className="h-5 w-5 text-rose-600" />
-        <h3 className="text-sm font-bold text-slate-900">{copy.title}</h3>
+        <HiOutlineArrowRightOnRectangle className="h-5 w-5 text-[#b4533f]" />
+        <h3 className="text-sm font-bold text-[#17120f]">{copy.title}</h3>
       </div>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
+      <p className="mt-2 text-xs leading-5 text-[#4f4540]/75">
         {copy.description}
       </p>
       <Button

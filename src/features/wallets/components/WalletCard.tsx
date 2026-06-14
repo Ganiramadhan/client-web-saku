@@ -67,13 +67,13 @@ export function WalletCard({
   const targetProgress = getTargetProgress(wallet)
 
   return (
-    <article className="overflow-hidden rounded-xl border border-white/80 bg-white/72 shadow-sm backdrop-blur-2xl transition hover:-translate-y-0.5 hover:border-brand-100 hover:bg-white hover:shadow-md">
+    <article className="overflow-hidden rounded-[1.25rem] border border-[#17120f]/10 bg-[#fffaf6]/72 shadow-sm shadow-[#17120f]/5 backdrop-blur-2xl transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-white/86 hover:shadow-md">
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
               className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm',
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#17120f]/10 bg-white/72 shadow-sm',
                 theme.iconText,
               )}
             >
@@ -82,7 +82,7 @@ export function WalletCard({
 
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <h3 className="truncate text-base font-bold text-slate-950">{wallet.name}</h3>
+                <h3 className="truncate text-base font-black text-[#17120f]">{wallet.name}</h3>
                 {wallet.is_default ? (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200">
                     <HiOutlineStar className="h-3 w-3" />
@@ -90,13 +90,13 @@ export function WalletCard({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-0.5 text-xs uppercase tracking-wide text-slate-500">
+              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[#4f4540]/65">
                 {labelForType(wallet.type, locale)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="flex items-center gap-1 rounded-xl border border-[#17120f]/10 bg-white/70 p-1 shadow-sm">
             {!wallet.is_default ? (
               <button
                 type="button"
@@ -130,8 +130,8 @@ export function WalletCard({
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-medium text-slate-500">{copy.balance}</p>
-          <p className="mt-1 truncate text-2xl font-bold tabular-nums text-slate-950 sm:text-3xl">
+          <p className="text-xs font-semibold text-[#4f4540]/65">{copy.balance}</p>
+          <p className="mt-1 truncate text-2xl font-black tabular-nums text-[#17120f] sm:text-3xl">
             {formatCurrency(Number(wallet.balance ?? 0), wallet.currency)}
           </p>
         </div>
@@ -141,8 +141,8 @@ export function WalletCard({
           <MiniStat label={copy.expense30d} value={formatCurrency(expense, wallet.currency)} tone="rose" />
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-          <span className={cn('font-semibold tabular-nums', net >= 0 ? 'text-emerald-700' : 'text-rose-600')}>
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#4f4540]/70">
+          <span className={cn('font-black tabular-nums', net >= 0 ? 'text-emerald-800' : 'text-brand-700')}>
             {net >= 0 ? '+' : ''}
             {formatCurrency(net, wallet.currency)} {copy.net}
           </span>

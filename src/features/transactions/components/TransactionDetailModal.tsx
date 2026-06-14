@@ -80,8 +80,8 @@ export function DetailModal({
           backdrop-blur-xl
           `,
           isIncome
-            ? 'border-emerald-100 bg-emerald-50/60'
-            : 'border-rose-100 bg-rose-50/60',
+            ? 'border-emerald-100 bg-[#ecfdf5]/70'
+            : 'border-brand-100 bg-[#ffe4dc]/72',
         )}
         style={{
           boxShadow:
@@ -105,7 +105,7 @@ export function DetailModal({
               `,
               isIncome
                 ? 'border-emerald-100 text-emerald-700'
-                : 'border-rose-100 text-rose-700',
+                : 'border-brand-100 text-[#b4533f]',
             )}
           >
             <CatIcon className="h-7 w-7" />
@@ -134,7 +134,7 @@ export function DetailModal({
             <div
               className={cn(
                 'mt-1 text-2xl font-black tabular-nums sm:text-3xl',
-                isIncome ? 'text-emerald-700' : 'text-rose-700',
+                isIncome ? 'text-emerald-700' : 'text-[#b4533f]',
               )}
             >
               {isIncome ? '+ ' : '- '}
@@ -173,10 +173,10 @@ export function DetailModal({
                     className={cn(
                       'h-full rounded-full transition-all',
                       tx.confidence_score >= 0.8
-                        ? 'bg-emerald-500'
+                        ? 'bg-[#7ddfc0]'
                         : tx.confidence_score >= 0.5
                           ? 'bg-amber-500'
-                          : 'bg-rose-500',
+                          : 'bg-[#ff9d8d]',
                     )}
                     data-pct={(tx.confidence_score * 100).toFixed(0)}
                     style={{

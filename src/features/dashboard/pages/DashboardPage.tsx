@@ -51,36 +51,36 @@ interface DashboardGoal {
 
 const TONE = {
   brand: {
-    bg: 'rgba(239, 246, 255, 0.55)',
-    border: '1px solid rgba(191, 219, 254, 0.70)',
-    iconBg: 'rgba(219, 234, 254, 0.90)',
-    iconBorder: '1px solid rgba(191, 219, 254, 0.80)',
-    icon: 'text-blue-600',
-    value: 'text-blue-950',
+    bg: 'rgba(255, 228, 220, 0.62)',
+    border: '1px solid rgba(23, 18, 15, 0.16)',
+    iconBg: 'rgba(255, 111, 97, 0.22)',
+    iconBorder: '1px solid rgba(23, 18, 15, 0.16)',
+    icon: 'text-brand-700',
+    value: 'text-[#17120f]',
   },
   emerald: {
     bg: 'rgba(236, 253, 245, 0.55)',
     border: '1px solid rgba(167, 243, 208, 0.70)',
     iconBg: 'rgba(209, 250, 229, 0.90)',
     iconBorder: '1px solid rgba(167, 243, 208, 0.80)',
-    icon: 'text-emerald-600',
-    value: 'text-emerald-950',
+    icon: 'text-emerald-700',
+    value: 'text-[#134e4a]',
   },
   rose: {
-    bg: 'rgba(255, 241, 242, 0.55)',
-    border: '1px solid rgba(254, 205, 211, 0.70)',
-    iconBg: 'rgba(254, 226, 226, 0.90)',
-    iconBorder: '1px solid rgba(254, 205, 211, 0.80)',
-    icon: 'text-rose-600',
-    value: 'text-rose-950',
+    bg: 'rgba(255, 228, 220, 0.55)',
+    border: '1px solid rgba(255, 157, 141, 0.46)',
+    iconBg: 'rgba(255, 228, 220, 0.90)',
+    iconBorder: '1px solid rgba(255, 157, 141, 0.48)',
+    icon: 'text-[#b4533f]',
+    value: 'text-[#7f2d23]',
   },
   slate: {
-    bg: 'rgba(245, 243, 255, 0.55)',
-    border: '1px solid rgba(221, 214, 254, 0.70)',
-    iconBg: 'rgba(237, 233, 254, 0.90)',
-    iconBorder: '1px solid rgba(221, 214, 254, 0.80)',
-    icon: 'text-violet-600',
-    value: 'text-violet-950',
+    bg: 'rgba(253, 223, 130, 0.45)',
+    border: '1px solid rgba(23, 18, 15, 0.16)',
+    iconBg: 'rgba(253, 223, 130, 0.72)',
+    iconBorder: '1px solid rgba(23, 18, 15, 0.16)',
+    icon: 'text-[#17120f]',
+    value: 'text-[#17120f]',
   },
 }
 
@@ -152,8 +152,8 @@ const DASHBOARD_COPY = {
     monitorBilling: 'Pantau billing',
     goalRecommendation: 'Target → Rekomendasi Harian',
     reduceDaily: 'Kalau kurangi jajan',
-    youCanAdd: 'hari, kamu bisa menambah tabungan sekitar',
-    monthlyAndAdvance: 'bulan dan target berpotensi maju sekitar',
+    youCanAdd: 'kamu bisa menambah tabungan sekitar',
+    monthlyAndAdvance: 'dan target berpotensi maju sekitar',
     days: 'hari',
     monthUnit: 'bulan',
     remainingTarget: 'Sisa target',
@@ -239,7 +239,7 @@ const DASHBOARD_COPY = {
     goalRecommendation: 'Goal → Daily Recommendation',
     reduceDaily: 'If you reduce discretionary spending by',
     youCanAdd: 'per day, you can add around',
-    monthlyAndAdvance: 'per month and potentially move the goal forward by',
+    monthlyAndAdvance: 'and potentially move the goal forward by',
     days: 'days',
     monthUnit: 'month',
     remainingTarget: 'Remaining target',
@@ -631,11 +631,11 @@ export function DashboardPage() {
                         className={cn(
                           'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-105',
                           tx.type === 'income'
-                            ? 'bg-emerald-55 text-emerald-700 border border-emerald-100'
-                            : 'bg-rose-55 text-rose-700 border border-rose-100',
+                            ? 'border border-emerald-100 bg-[#ecfdf5] text-emerald-700'
+                            : 'border border-brand-100 bg-[#ffe4dc] text-[#b4533f]',
                         )}
                         style={{
-                          background: tx.type === 'income' ? 'rgba(209, 250, 229, 0.60)' : 'rgba(254, 226, 226, 0.60)',
+                          background: tx.type === 'income' ? 'rgba(209, 250, 229, 0.60)' : 'rgba(255, 228, 220, 0.72)',
                         }}
                       >
                         {tx.type === 'income' ? (
@@ -659,7 +659,7 @@ export function DashboardPage() {
                     <p
                       className={cn(
                         'shrink-0 text-sm font-bold',
-                        tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600',
+                        tx.type === 'income' ? 'text-emerald-700' : 'text-[#b4533f]',
                       )}
                     >
                       {tx.type === 'income' ? '+' : '-'}
@@ -701,19 +701,19 @@ function CashflowBriefing({
   copy: DashboardCopy
 }) {
   return (
-    <section className="overflow-hidden rounded-[1.75rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/50 to-white shadow-sm shadow-blue-100/40">
+    <section className="overflow-hidden rounded-[1.75rem] border border-[#17120f]/14 bg-[#fffaf6]/92 shadow-[0_18px_45px_rgba(23,18,15,0.08)]">
       <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-stretch lg:justify-between">
         <div className="flex min-w-0 flex-col justify-between">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-700">
+            <span className="grid h-9 w-9 place-items-center rounded-xl border border-[#17120f]/14 bg-brand-200 text-[#17120f] shadow-sm shadow-[#17120f]/8">
               <HiOutlineSparkles className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-base font-extrabold text-slate-950">{copy.cashflowTitle}</h2>
-              <p className="mt-0.5 text-xs text-slate-500">{copy.cashflowDesc}</p>
+              <h2 className="text-base font-black text-[#17120f]">{copy.cashflowTitle}</h2>
+              <p className="mt-0.5 text-xs text-[#4f4540]">{copy.cashflowDesc}</p>
             </div>
           </div>
-          <p className="mt-4 inline-flex w-fit rounded-full border border-blue-100 bg-white/80 px-3 py-1 text-[11px] font-bold text-blue-700">
+          <p className="mt-4 inline-flex w-fit rounded-full border border-[#17120f]/14 bg-[#fddf82]/75 px-3 py-1 text-[11px] font-black text-[#17120f]">
             {copy.updatedAt} {updatedAtLabel}
           </p>
         </div>
@@ -741,12 +741,12 @@ function BriefingItem({
   compact?: boolean
 }) {
   const toneClass = {
-    blue: 'bg-blue-50 text-blue-900 border-blue-100',
-    emerald: 'bg-emerald-50 text-emerald-900 border-emerald-100',
-    rose: 'bg-rose-50 text-rose-900 border-rose-100',
+    blue: 'bg-[#ffe4dc]/70 text-[#17120f] border-brand-200',
+    emerald: 'bg-[#ecfdf5]/80 text-[#134e4a] border-emerald-100',
+    rose: 'bg-[#ffe4dc]/80 text-[#7f2d23] border-brand-100',
   }[tone]
   return (
-    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+    <div className={`rounded-2xl border p-4 shadow-sm shadow-[#17120f]/5 ${toneClass}`}>
       <p className="text-[11px] font-black uppercase tracking-wide opacity-70">{label}</p>
       {loading ? (
         <Shimmer className="mt-3 h-6 w-28 rounded-xl bg-white/60" />
@@ -822,13 +822,13 @@ function MobileTrendSummary({ data, copy }: { data: ReturnType<typeof buildTrend
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
+        <div className="rounded-2xl border border-emerald-100 bg-[#ecfdf5]/80 p-4">
           <p className="text-xs font-bold text-emerald-700">{copy.income}</p>
-          <p className="mt-2 text-lg font-extrabold text-emerald-900">{formatCurrency(income)}</p>
+          <p className="mt-2 text-lg font-extrabold text-[#134e4a]">{formatCurrency(income)}</p>
         </div>
-        <div className="rounded-2xl border border-rose-100 bg-rose-50/80 p-4">
-          <p className="text-xs font-bold text-rose-700">{copy.expense}</p>
-          <p className="mt-2 text-lg font-extrabold text-rose-900">{formatCurrency(expense)}</p>
+        <div className="rounded-2xl border border-brand-100 bg-[#ffe4dc]/80 p-4">
+          <p className="text-xs font-bold text-[#b4533f]">{copy.expense}</p>
+          <p className="mt-2 text-lg font-extrabold text-[#7f2d23]">{formatCurrency(expense)}</p>
         </div>
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
@@ -837,11 +837,11 @@ function MobileTrendSummary({ data, copy }: { data: ReturnType<typeof buildTrend
             <div key={item.label} className="grid grid-cols-[54px_1fr] items-center gap-3">
               <span className="text-[11px] font-semibold text-slate-400">{item.label}</span>
               <div className="space-y-1.5">
-                <div className="h-2 overflow-hidden rounded-full bg-emerald-50">
-                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(4, (item.income / maxValue) * 100)}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-[#ecfdf5]">
+                  <div className="h-full rounded-full bg-[#7ddfc0]" style={{ width: `${Math.max(4, (item.income / maxValue) * 100)}%` }} />
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-rose-50">
-                  <div className="h-full rounded-full bg-rose-500" style={{ width: `${Math.max(4, (item.expense / maxValue) * 100)}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-[#ffe4dc]">
+                  <div className="h-full rounded-full bg-[#ff9d8d]" style={{ width: `${Math.max(4, (item.expense / maxValue) * 100)}%` }} />
                 </div>
               </div>
             </div>
@@ -871,32 +871,32 @@ function MonthlyInsight({
 
   return (
     <div
-      className="rounded-2xl p-6 text-white transition-all duration-300"
+      className="rounded-2xl p-6 text-[#17120f] transition-all duration-300"
       style={{
-        background: 'linear-gradient(135deg, rgba(29, 78, 216, 0.92), rgba(15, 23, 42, 0.90))',
+        background: 'rgba(255, 250, 246, 0.92)',
         backdropFilter: 'blur(32px) saturate(180%)',
         WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+        border: '1px solid rgba(23, 18, 15, 0.14)',
+        boxShadow: '0 18px 45px rgba(23, 18, 15, 0.08)',
       }}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <p className="text-xs font-black uppercase tracking-wide text-brand-700">
         {copy.monthlyInsight}
       </p>
 
       {loading ? (
         <div className="mt-5 space-y-3">
-          <Shimmer className="h-8 w-40 bg-white/10" />
-          <Shimmer className="h-4 w-full bg-white/10" />
-          <Shimmer className="h-4 w-2/3 bg-white/10" />
+          <Shimmer className="h-8 w-40 bg-brand-100" />
+          <Shimmer className="h-4 w-full bg-brand-50" />
+          <Shimmer className="h-4 w-2/3 bg-brand-50" />
         </div>
       ) : (
         <>
-          <h3 className="mt-3 text-3xl font-bold tracking-tight">
+          <h3 className="mt-3 text-3xl font-black tracking-tight text-[#17120f]">
             {formatCurrency(saved)}
           </h3>
 
-          <p className="mt-3 text-sm leading-6 text-slate-300">
+          <p className="mt-3 text-sm leading-6 text-[#4f4540]">
             {isPositive
               ? copy.positiveInsight
               : copy.negativeInsight}
@@ -908,9 +908,9 @@ function MonthlyInsight({
             <InsightRow label={copy.savingRate} value={`${savingRate.toFixed(0)}%`} />
           </div>
 
-          <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-6 h-2 overflow-hidden rounded-full bg-[#17120f]/8">
             <div
-              className={cn('h-full rounded-full', isPositive ? 'bg-emerald-400' : 'bg-rose-400')}
+              className={cn('h-full rounded-full', isPositive ? 'bg-[#7ddfc0]' : 'bg-[#ff9d8d]')}
               style={{ width: `${Math.min(100, savingRate).toFixed(0)}%` }}
             />
           </div>
@@ -923,8 +923,8 @@ function MonthlyInsight({
 function InsightRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-slate-400">{label}</span>
-      <span className="font-semibold text-white">{value}</span>
+      <span className="text-[#4f4540]/70">{label}</span>
+      <span className="font-semibold text-[#17120f]">{value}</span>
     </div>
   )
 }
@@ -963,17 +963,17 @@ function FinancialActionEngine({
       <Card className="xl:col-span-2">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+            <p className="text-xs font-black uppercase tracking-wide text-brand-700">
               AI Focus
             </p>
-            <h2 className="mt-1 text-base font-bold text-slate-950">
+            <h2 className="mt-1 text-base font-black text-[#17120f]">
               {copy.actionTitle}
             </h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            <p className="mt-1 text-xs leading-5 text-[#4f4540]">
               {copy.actionDesc}
             </p>
           </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/14 bg-brand-200 text-[#17120f] shadow-sm shadow-[#17120f]/8">
             <HiOutlineSparkles className="h-5 w-5" />
           </div>
         </div>
@@ -999,7 +999,7 @@ function FinancialActionEngine({
               copy={copy}
             />
             <ActionCard
-              tone="violet"
+              tone="yellow"
               title={nextBill ? nextBill.name : copy.recurringTitle}
               description={
                 nextBill
@@ -1026,8 +1026,8 @@ function FinancialActionEngine({
         )}
       </Card>
 
-      <Card>
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+      <Card className="border-brand-100/80 bg-[#fffaf6]/88">
+        <p className="text-xs font-black uppercase tracking-wide text-brand-700">
           {copy.goalRecommendation}
         </p>
         {loading ? (
@@ -1037,32 +1037,32 @@ function FinancialActionEngine({
           </div>
         ) : activeGoal ? (
           <>
-            <h2 className="mt-2 text-base font-bold text-slate-950">{activeGoal.name}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <h2 className="mt-2 text-base font-black text-[#17120f]">{activeGoal.name}</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-[#4f4540]">
               {copy.reduceDaily} {formatCurrency(dailyCut)}/{copy.perDay}, {copy.youCanAdd} {formatCurrency(monthlyExtra)}/{copy.monthUnit} {copy.monthlyAndAdvance} {daysAdvanced} {copy.days}.
             </p>
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
-              <p className="text-xs font-semibold text-emerald-800">{copy.remainingTarget}</p>
-              <p className="mt-1 text-xl font-extrabold text-emerald-950">
+            <div className="mt-4 rounded-2xl border border-[#17120f]/10 bg-[#fddf82]/42 p-3">
+              <p className="text-xs font-black text-[#6f5a16]">{copy.remainingTarget}</p>
+              <p className="mt-1 text-xl font-black text-[#17120f]">
                 {formatCurrency(Number(activeGoal.remaining ?? 0))}
               </p>
             </div>
             <Link
               to="/app/targets"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-[#17120f]/14 bg-brand-500 px-4 py-2 text-sm font-black text-[#17120f] shadow-sm shadow-brand-200/60 transition hover:-translate-y-0.5 hover:bg-brand-300"
             >
               {copy.viewTarget}
             </Link>
           </>
         ) : (
           <>
-            <h2 className="mt-2 text-base font-bold text-slate-950">{copy.noActiveGoal}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <h2 className="mt-2 text-base font-black text-[#17120f]">{copy.noActiveGoal}</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-[#4f4540]">
               {copy.noActiveGoalDesc}
             </p>
             <Link
               to="/app/targets"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-200/70 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-[#17120f]/14 bg-brand-500 px-4 py-2 text-sm font-black text-[#17120f] shadow-sm shadow-brand-200/60 transition hover:-translate-y-0.5 hover:bg-brand-300"
             >
               {copy.createTarget}
             </Link>
@@ -1085,26 +1085,26 @@ function ActionCard({
   description: string
   actionLabel: string
   to: string
-  tone: 'blue' | 'violet' | 'emerald'
+  tone: 'blue' | 'yellow' | 'emerald'
   copy: DashboardCopy
 }) {
   const toneClass =
     tone === 'emerald'
-      ? 'border-emerald-100 bg-emerald-50/60 text-emerald-700'
-      : tone === 'violet'
-        ? 'border-violet-100 bg-violet-50/60 text-violet-700'
-        : 'border-blue-100 bg-blue-50/60 text-blue-700'
+      ? 'border-emerald-200 bg-emerald-50/70 text-emerald-800'
+      : tone === 'yellow'
+        ? 'border-[#17120f]/14 bg-[#fddf82]/75 text-[#17120f]'
+        : 'border-brand-200 bg-brand-100 text-[#17120f]'
 
   return (
-    <div className="rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm">
-      <div className={cn('mb-3 inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider', toneClass)}>
+    <div className="rounded-2xl border border-[#17120f]/14 bg-[#fffaf6] p-4 shadow-sm shadow-[#17120f]/6">
+      <div className={cn('mb-3 inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider', toneClass)}>
         {copy.actionBadge}
       </div>
-      <h3 className="text-sm font-extrabold text-slate-950">{title}</h3>
-      <p className="mt-2 min-h-16 text-xs leading-5 text-slate-600">{description}</p>
+      <h3 className="text-sm font-black text-[#17120f]">{title}</h3>
+      <p className="mt-2 min-h-16 text-xs leading-5 text-[#4f4540]">{description}</p>
       <Link
         to={to}
-        className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:underline"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-black text-brand-700 hover:underline"
       >
         {actionLabel}
         <HiOutlineArrowRight className="h-3.5 w-3.5" />
@@ -1141,18 +1141,18 @@ function AiCategoryInsight({
     <Card className="xl:col-span-2">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+          <p className="text-xs font-black uppercase tracking-wide text-brand-700">
             {copy.aiInsight}
           </p>
-          <h2 className="mt-1 text-base font-bold text-slate-950">
+          <h2 className="mt-1 text-base font-black text-[#17120f]">
             {copy.categoryTitle}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[#4f4540]">
             {copy.categoryDesc}
           </p>
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/14 bg-[#fddf82]/75 text-[#17120f] shadow-sm shadow-[#17120f]/8">
           <HiOutlineLightBulb className="h-5 w-5" />
         </div>
       </div>
@@ -1169,11 +1169,11 @@ function AiCategoryInsight({
         </div>
       ) : (
         <>
-          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <p className="text-sm font-semibold text-blue-950">
+          <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-100/70 p-4 shadow-sm shadow-[#17120f]/6">
+            <p className="text-sm font-black text-[#17120f]">
               {top.name} {copy.categoryAbsorbs} {topPct}% {copy.categorySpendSuffix}
             </p>
-            <p className="mt-1 text-sm leading-6 text-blue-800">
+            <p className="mt-1 text-sm leading-6 text-[#4f4540]">
               {copy.categoryAdvice}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1187,7 +1187,7 @@ function AiCategoryInsight({
               </Button>
               <Link
                 to="/app/transactions"
-                className="inline-flex rounded-xl border border-blue-100 bg-white/70 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-white"
+                className="inline-flex rounded-xl border border-[#17120f]/14 bg-white px-3 py-1.5 text-xs font-black text-[#17120f] shadow-sm shadow-[#17120f]/5 transition hover:-translate-y-0.5 hover:bg-[#fddf82]/70"
               >
                 {copy.reviewTransactions}
               </Link>
@@ -1235,15 +1235,15 @@ function UpcomingBillingCard({
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+          <p className="text-xs font-black uppercase tracking-wide text-brand-700">
             {copy.upcomingEyebrow}
           </p>
-          <h2 className="mt-1 text-base font-bold text-slate-950">
+          <h2 className="mt-1 text-base font-black text-[#17120f]">
             {copy.upcomingTitle}
           </h2>
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-600">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/14 bg-[#fddf82]/75 text-[#17120f] shadow-sm shadow-[#17120f]/8">
           <HiOutlineCalendarDays className="h-5 w-5" />
         </div>
       </div>
@@ -1255,14 +1255,14 @@ function UpcomingBillingCard({
         </div>
       ) : rows.length > 0 ? (
         <div className="mt-5">
-          <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+          <div className="rounded-2xl border-2 border-[#17120f] bg-[#fddf82]/70 p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#17120f]">
               {copy.closestReminder}
             </p>
             <p className="mt-1 text-xl font-extrabold text-slate-950">
               {rows[0].name}
             </p>
-            <p className="mt-1 text-sm leading-6 text-violet-900">
+            <p className="mt-1 text-sm leading-6 text-[#4f4540]">
               {formatCurrency(rows[0].amount, rows[0].currency)} {copy.dueOn} {formatDate(rows[0].dueDate)}
             </p>
           </div>
@@ -1445,7 +1445,7 @@ function RangeTabs({
   ]
 
   return (
-    <div className="inline-flex rounded-xl border border-white/80 bg-white/65 p-1 text-xs font-semibold shadow-sm">
+    <div className="inline-flex rounded-xl border border-[#17120f]/14 bg-[#fffaf6] p-1 text-xs font-black shadow-sm shadow-[#17120f]/6">
       {options.map((option) => (
         <button
           key={option.value}
@@ -1454,8 +1454,8 @@ function RangeTabs({
           className={cn(
             'rounded-lg px-3 py-1.5 transition',
             value === option.value
-              ? 'bg-brand-600 text-white shadow-sm shadow-brand-200/70'
-              : 'text-slate-500 hover:text-slate-800',
+              ? 'bg-brand-500 text-[#17120f]'
+              : 'text-[#4f4540] hover:bg-[#fddf82] hover:text-[#17120f]',
           )}
         >
           {option.label}

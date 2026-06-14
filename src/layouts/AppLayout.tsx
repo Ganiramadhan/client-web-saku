@@ -29,7 +29,6 @@ import { getMe, logout } from '@/features/auth/api'
 import { notificationApi, type NotificationItem } from '@/features/notifications/api'
 import { subscriptionApi } from '@/features/subscription/api'
 import { Logo } from '@/components/Logo'
-import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useLocale, useT } from '@/i18n'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -171,7 +170,7 @@ export function AppLayout() {
 
   return (
     <div
-      className="app-surface relative flex min-h-screen items-stretch"
+      className="app-surface relative flex min-h-screen items-stretch bg-[#f6eee8]"
     >
       {/* Ambient background */}
       <div className="app-ambient-bg pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -179,10 +178,12 @@ export function AppLayout() {
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(135deg, rgba(239,246,255,0.92) 0%, rgba(248,250,252,0.96) 38%, rgba(240,253,250,0.90) 100%)',
+              'linear-gradient(135deg, rgba(246,238,232,0.98) 0%, rgba(255,250,246,0.96) 45%, rgba(236,253,245,0.82) 100%)',
           }}
         />
-        <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="absolute inset-0 opacity-[0.035]" style={{ backgroundImage: 'radial-gradient(circle, #17120f 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="absolute -left-24 top-24 h-72 w-72 rounded-[45%_55%_35%_65%] border border-[#17120f]/10 bg-brand-100/35" />
+        <div className="absolute right-10 top-28 h-48 w-48 rounded-[62%_38%_55%_45%] border border-[#17120f]/10 bg-[#fddf82]/35" />
       </div>
 
       {/* Sidebar - desktop */}
@@ -192,11 +193,11 @@ export function AppLayout() {
           collapsed ? 'w-16 px-2' : 'w-64 px-3',
         )}
         style={{
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.72), rgba(248,252,255,0.62))',
+          background: 'linear-gradient(180deg, rgba(255,250,246,0.82), rgba(255,255,255,0.66))',
           backdropFilter: 'blur(36px) saturate(180%)',
           WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-          borderRight: '1px solid rgba(226,232,240,0.52)',
-          boxShadow: '12px 0 36px rgba(15,23,42,0.035), inset -1px 0 0 rgba(255,255,255,0.62)',
+          borderRight: '1px solid rgba(23,18,15,0.10)',
+          boxShadow: '12px 0 36px rgba(23,18,15,0.045), inset -1px 0 0 rgba(255,255,255,0.62)',
         }}
       >
         <div
@@ -236,11 +237,11 @@ export function AppLayout() {
         <header
           className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 px-3 lg:px-6"
           style={{
-            background: 'rgba(248,250,252,0.64)',
+            background: 'rgba(255,250,246,0.76)',
             backdropFilter: 'blur(36px) saturate(180%)',
             WebkitBackdropFilter: 'blur(36px) saturate(180%)',
-            borderBottom: '1px solid rgba(226,232,240,0.52)',
-            boxShadow: '0 8px 28px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.72)',
+            borderBottom: '1px solid rgba(23,18,15,0.10)',
+            boxShadow: '0 8px 28px rgba(23,18,15,0.045), inset 0 1px 0 rgba(255,255,255,0.72)',
           }}
         >
           <div className="flex min-w-0 items-center gap-2">
@@ -253,7 +254,6 @@ export function AppLayout() {
           <GlobalNavSearch sections={sections} onNavigate={navigate} />
 
           <div className="flex items-center gap-2">
-            <LanguageSwitcher className="hidden sm:inline-flex" />
             <NotificationsBell
               items={notificationsQ.data ?? []}
               onMarkAllRead={() => markAllRead.mutate()}
@@ -315,13 +315,11 @@ function BottomNavigation({
         { to: '/super-admin/vouchers', label: 'Vouchers', icon: HiOutlineReceiptPercent },
         { to: '/super-admin/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
         { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
-        { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
       ]
     : inAdminArea
       ? [
           { to: '/admin/categories', label: t.nav.categories, icon: HiOutlineTag },
           { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
-          { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
         ]
       : [
           { to: '/app/scan-receipt', label: t.nav.scanReceipt, icon: HiOutlineCamera },
@@ -330,7 +328,6 @@ function BottomNavigation({
           { to: '/app/split-bills', label: t.nav.splitBill, icon: HiOutlineUserGroup },
           { to: '/app/customer-service', label: 'Customer Service', icon: HiOutlineChatBubbleLeftRight },
           { to: '/app/profile', label: 'Profile', icon: HiOutlineUser },
-          { to: '/app/settings', label: 'Settings', icon: HiOutlineCog6Tooth },
         ]
   const moreActive = moreItems.some((item) => isNavItemActive(item, pathname))
 
@@ -345,7 +342,7 @@ function BottomNavigation({
       ) : null}
       {moreOpen ? <MobileMoreSheet items={moreItems} pathname={pathname} onClose={() => setMoreOpen(false)} /> : null}
 
-      <nav className="saku-mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 rounded-t-[1.65rem] border border-b-0 border-slate-200/80 bg-white/95 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden" aria-label="Primary mobile navigation">
+      <nav className="saku-mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 rounded-t-[1.65rem] border border-b-0 border-[#17120f]/10 bg-[#fffaf6]/95 shadow-[0_-12px_30px_rgba(23,18,15,0.08)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden" aria-label="Primary mobile navigation">
         <div className="mx-auto max-w-md px-2 pb-[calc(0.4rem+env(safe-area-inset-bottom))] pt-1.5">
           <div className="grid grid-cols-5 gap-1">
             {primaryItems.map((item) => (
@@ -359,7 +356,7 @@ function BottomNavigation({
                 'group relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl px-1.5 py-2 text-[10px] font-extrabold leading-none transition-all duration-300 ease-out active:scale-95',
                 moreOpen || moreActive
                   ? 'text-brand-700'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                  : 'text-[#4f4540] hover:bg-white/70 hover:text-[#17120f]',
               )}
             >
               <span
@@ -371,7 +368,7 @@ function BottomNavigation({
               <HiOutlineEllipsisHorizontal
                 className={cn(
                   'relative z-10 h-5 w-5 transition-all duration-300 ease-out group-hover:-translate-y-0.5',
-                  moreOpen || moreActive ? 'text-brand-600' : 'text-slate-400',
+                  moreOpen || moreActive ? 'text-brand-700' : 'text-[#4f4540]/55',
                 )}
               />
               <span className="relative z-10 block max-w-full truncate transition-colors duration-300">More</span>
@@ -396,7 +393,7 @@ function BottomNavItem({ item, pathname }: { item: NavItem; pathname: string }) 
         'group relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl px-1.5 py-2 text-[10px] font-extrabold leading-none transition-all duration-300 ease-out active:scale-95',
         isActive
           ? 'text-brand-700'
-          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+          : 'text-[#4f4540] hover:bg-white/70 hover:text-[#17120f]',
       )}
     >
       <span
@@ -408,7 +405,7 @@ function BottomNavItem({ item, pathname }: { item: NavItem; pathname: string }) 
       <Icon
         className={cn(
           'relative z-10 h-5 w-5 transition-all duration-300 ease-out group-hover:-translate-y-0.5',
-          isActive ? 'text-brand-600' : 'text-slate-400',
+          isActive ? 'text-brand-700' : 'text-[#4f4540]/55',
         )}
       />
       <span className="relative z-10 block max-w-full truncate transition-colors duration-300">{item.label}</span>
@@ -427,7 +424,7 @@ function MobileMoreSheet({
 }) {
   return (
     <div className="fixed inset-x-0 bottom-[calc(4.9rem+env(safe-area-inset-bottom))] z-40 px-3 lg:hidden">
-      <div className="mx-auto max-w-md overflow-hidden rounded-[1.5rem] border border-white/80 bg-white p-2 shadow-2xl shadow-slate-900/16 backdrop-blur-2xl">
+      <div className="mx-auto max-w-md overflow-hidden rounded-[1.5rem] border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-2xl shadow-[#17120f]/12 backdrop-blur-2xl">
         <div className="px-3 pb-2 pt-2">
           <p className="text-xs font-black uppercase tracking-wide text-slate-400">More menu</p>
         </div>
@@ -445,10 +442,10 @@ function MobileMoreSheet({
                   'flex min-w-0 items-center gap-3 rounded-2xl border px-3 py-3 text-left text-xs font-bold transition active:scale-[0.98]',
                   isActive
                     ? 'border-brand-100 bg-brand-50 text-brand-700'
-                    : 'border-slate-100 bg-slate-50/70 text-slate-700 hover:border-slate-200 hover:bg-white',
+                    : 'border-[#17120f]/8 bg-white/65 text-[#4f4540] hover:border-brand-100 hover:bg-white',
                 )}
               >
-                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl', isActive ? 'bg-white text-brand-600' : 'bg-white text-slate-500')}>
+                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl', isActive ? 'bg-white text-brand-700' : 'bg-white text-[#4f4540]/65')}>
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 truncate">{item.label}</span>
@@ -505,19 +502,19 @@ function NotificationsBell({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/65 text-slate-600 shadow-sm backdrop-blur-xl transition hover:bg-white"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#17120f]/10 bg-white/65 text-[#4f4540] shadow-sm shadow-[#17120f]/5 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
         aria-label={copy.notifications}
       >
         <HiOutlineBell className="h-5 w-5" />
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-400 px-1 text-[10px] font-bold text-white">
             {unread}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/70">
+        <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-xl shadow-[#17120f]/10">
           <div className="flex items-center justify-between px-2 py-2">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{copy.notifications}</p>
             {unread > 0 ? (
@@ -531,9 +528,9 @@ function NotificationsBell({
           ) : (
             <div className="max-h-96 overflow-y-auto">
               {items.map((item) => (
-                <div key={item.id} className="rounded-xl px-3 py-2 hover:bg-slate-50">
+                <div key={item.id} className="rounded-xl px-3 py-2 hover:bg-white/70">
                   <div className="flex gap-2">
-                    {!item.read_at ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-600" /> : null}
+                    {!item.read_at ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-400" /> : null}
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900">{item.title}</p>
                       <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500">{formatNotificationMessage(item.message)}</p>
@@ -572,11 +569,11 @@ function NavSections({
       {sections.map((section, idx) => (
         <div key={section.label}>
           {!collapsed ? (
-            <div className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#4f4540]/50">
               {section.label}
             </div>
           ) : idx > 0 ? (
-            <div className="mx-2 mb-2 h-px bg-slate-200" />
+            <div className="mx-2 mb-2 h-px bg-[#17120f]/10" />
           ) : null}
           <NavList items={section.items} collapsed={collapsed} hasPro={hasPro} onItemClick={onItemClick} />
         </div>
@@ -647,7 +644,7 @@ function GlobalNavSearch({
         </span>
 
         {open ? (
-          <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-200/70">
+          <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-xl shadow-[#17120f]/10">
             {results.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm font-medium text-slate-400">No menu found</div>
             ) : (
@@ -663,7 +660,7 @@ function GlobalNavSearch({
                     }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-brand-50"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -723,8 +720,8 @@ function NavList({
               'group flex items-center gap-3 rounded-2xl text-sm font-semibold transition-all duration-300 border border-transparent',
               collapsed ? 'justify-center p-2.5' : 'px-4 py-2.5',
               isActive
-                ? 'bg-brand-600 text-white border-brand-500/20 shadow-lg shadow-brand-500/18'
-                : 'text-slate-600 hover:bg-white/50 hover:text-slate-950 hover:border-white/60',
+                ? 'border-brand-200 bg-brand-50 text-[#17120f] shadow-sm shadow-[#17120f]/5'
+                : 'text-[#4f4540] hover:bg-white/62 hover:text-[#17120f] hover:border-[#17120f]/8',
             )
           }
         >
@@ -733,7 +730,7 @@ function NavList({
               <Icon
                 className={cn(
                   'h-5 w-5 shrink-0 transition-transform duration-300 group-hover:scale-105',
-                  isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600',
+                  isActive ? 'text-brand-700' : 'text-[#4f4540]/55 group-hover:text-[#17120f]',
                 )}
               />
               {!collapsed && (
@@ -786,8 +783,8 @@ function UserDropdown({
         className={cn(
           'flex items-center gap-2.5 rounded-full border py-1.5 pl-1.5 pr-3 transition duration-300',
           open
-            ? 'bg-slate-100 border-slate-200 shadow-sm'
-            : 'border-transparent hover:bg-slate-50 hover:border-slate-200',
+            ? 'border-[#17120f]/10 bg-white/72 shadow-sm'
+            : 'border-transparent hover:border-[#17120f]/10 hover:bg-white/62',
         )}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -810,9 +807,9 @@ function UserDropdown({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-30 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          className="absolute right-0 top-full z-30 mt-2 w-64 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] shadow-xl shadow-[#17120f]/10"
         >
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-[#17120f]/10 bg-white/62 px-4 py-3">
             <Avatar user={user} />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold text-slate-900">
@@ -837,7 +834,7 @@ function UserDropdown({
             />
           </div>
 
-          <div className="border-t border-slate-100 p-1">
+          <div className="border-t border-[#17120f]/10 p-1">
             <button
               type="button"
               onClick={() => { setOpen(false); onLogout() }}
@@ -870,13 +867,13 @@ function DropdownItem({
         cn(
           'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-300 border border-transparent',
           isActive
-            ? 'bg-brand-600/10 text-brand-700 border-brand-500/10'
-            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+            ? 'border-brand-200 bg-brand-50 text-brand-700'
+            : 'text-[#4f4540] hover:bg-white/70 hover:text-[#17120f]',
         )
       }
       role="menuitem"
     >
-      <Icon className="h-4 w-4 text-slate-400" />
+      <Icon className="h-4 w-4 text-[#4f4540]/55" />
       {label}
     </NavLink>
   )
@@ -891,10 +888,10 @@ function Avatar({ user }: { user: { name?: string; photo_url?: string } | null }
     .join('')
     .toUpperCase()
   if (user?.photo_url) {
-    return <img src={user.photo_url} alt="" referrerPolicy="no-referrer" className="h-9 w-9 rounded-full object-cover ring-1 ring-slate-200" />
+    return <img src={user.photo_url} alt="" referrerPolicy="no-referrer" className="h-9 w-9 rounded-full object-cover ring-1 ring-[#17120f]/10" />
   }
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#17120f]/10 bg-brand-200 text-xs font-black text-[#17120f]">
       {initials || 'U'}
     </div>
   )

@@ -42,9 +42,9 @@ export function useSEO({
   title,
   description = DEFAULT_DESCRIPTION,
   canonical,
-  image = `${SITE_URL}/saku-logo.png`,
+  image = `${SITE_URL}/logo.png`,
   keywords = 'SAKU, AI Financial Assistant, aplikasi keuangan pribadi, AI finance tracker, receipt scanner, budget tracker, digital wallet, split bill',
-  locale = 'en_US',
+  locale = 'id_ID',
   noIndex,
 }: SEOOptions) {
   useEffect(() => {
@@ -62,6 +62,11 @@ export function useSEO({
     upsertMeta('meta[property="og:locale"]', { property: 'og:locale', content: locale })
     upsertMeta('meta[property="og:url"]', { property: 'og:url', content: currentUrl })
     upsertMeta('meta[property="og:image"]', { property: 'og:image', content: imageUrl })
+    upsertMeta('meta[property="og:image:secure_url"]', { property: 'og:image:secure_url', content: imageUrl })
+    upsertMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' })
+    upsertMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' })
+    upsertMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' })
+    upsertMeta('meta[property="og:image:alt"]', { property: 'og:image:alt', content: 'Logo SAKU' })
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'SAKU' })
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: fullTitle })

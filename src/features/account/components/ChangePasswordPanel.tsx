@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import {
@@ -20,7 +20,13 @@ import {
   scoreStrength,
 } from '../utils/password'
 
-export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolean }) {
+export function ChangePasswordPanel({
+  showHeader = true,
+  embedded = false,
+}: {
+  showHeader?: boolean
+  embedded?: boolean
+}) {
   const navigate = useNavigate()
   const { locale } = useLocale()
   const clearSession = useAuthStore((s) => s.clear)
@@ -143,7 +149,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
         />
       ) : null}
 
-      <Card>
+      <PasswordPanelFrame embedded={embedded}>
         <div className="flex items-center gap-3 border-b border-white/60 pb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-500/10 bg-brand-600/10 text-brand-700">
             <HiOutlineKey className="h-5 w-5" />
@@ -206,7 +212,7 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-blue-100 !bg-blue-50 text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-blue-100"
+                className="border-brand-100 !bg-brand-50 text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:!bg-brand-100"
                 leftIcon={<HiOutlineSparkles className="h-4 w-4" />}
                 onClick={generatePassword}
               >
@@ -249,9 +255,16 @@ export function ChangePasswordPanel({ showHeader = true }: { showHeader?: boolea
             </Button>
           </div>
         </form>
-      </Card>
+      </PasswordPanelFrame>
     </div>
   )
+}
+
+function PasswordPanelFrame({ embedded, children }: { embedded?: boolean; children: ReactNode }) {
+  if (embedded) {
+    return <div>{children}</div>
+  }
+  return <Card>{children}</Card>
 }
 
 function EyeBtn({

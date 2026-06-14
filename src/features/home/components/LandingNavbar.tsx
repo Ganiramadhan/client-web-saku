@@ -33,41 +33,32 @@ export function LandingNavbar({
   const registerHint = locale === 'id' ? 'Tanpa kartu kredit' : 'No credit card'
   const shellStyle = isMobile
     ? {
-        background: 'rgba(255,255,255,0.95)',
-        border: '1px solid rgba(226,232,240,0.85)',
-        boxShadow: scrolled ? '0 8px 22px rgba(15,23,42,0.08)' : '0 4px 14px rgba(15,23,42,0.05)',
+        background: '#fffaf6',
+        border: '2px solid #17120f',
+        boxShadow: scrolled ? '5px 5px 0 #17120f' : '3px 3px 0 #17120f',
       }
     : {
-        background: scrolled
-          ? 'rgba(255,255,255,0.88)'
-          : 'rgba(255,255,255,0.72)',
-        backdropFilter: 'blur(30px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.9)',
-        boxShadow: scrolled
-          ? '0 12px 40px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.95)'
-          : '0 8px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.95)',
+        background: '#fffaf6',
+        border: '2px solid #17120f',
+        boxShadow: scrolled ? '7px 7px 0 #17120f' : '4px 4px 0 #17120f',
       }
   const mobileMenuStyle = isMobile
     ? {
-        background: 'rgba(255,255,255,0.98)',
-        border: '1px solid rgba(226,232,240,0.9)',
-        boxShadow: '0 10px 28px rgba(15,23,42,0.10)',
+        background: '#fffaf6',
+        border: '2px solid #17120f',
+        boxShadow: '6px 6px 0 #17120f',
       }
     : {
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(30px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.92)',
-        boxShadow:
-          '0 20px 60px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.95)',
+        background: '#fffaf6',
+        border: '2px solid #17120f',
+        boxShadow: '7px 7px 0 #17120f',
       }
 
   return (
     <header className="fixed left-0 right-0 top-0 z-50 flex justify-center px-3 py-3 sm:px-4 sm:py-4">
-        <div className="mx-auto w-full max-w-5xl">
+        <div className="mx-auto w-full max-w-6xl">
           <div
-            className="flex items-center justify-between rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5"
+            className="flex items-center justify-between rounded-[1.35rem] px-3 py-2 sm:px-4 sm:py-2.5"
             style={shellStyle}
           >
             {/* Logo */}
@@ -89,13 +80,13 @@ export function LandingNavbar({
                     className={cn(
                       'group relative cursor-pointer overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300 ease-out',
                       isActive
-                        ? 'bg-blue-50/90 text-blue-700 shadow-sm shadow-blue-100/60'
-                        : 'text-slate-600 hover:bg-white/80 hover:text-blue-700'
+                        ? 'bg-brand-100 text-[#17120f]'
+                        : 'text-[#4f4540] hover:bg-[#fddf82] hover:text-[#17120f]'
                     )}
                   >
                     <span
                       className={cn(
-                        'absolute inset-x-3 bottom-1 h-0.5 origin-center rounded-full bg-blue-500 transition-all duration-300 ease-out',
+                        'absolute inset-x-3 bottom-1 h-0.5 origin-center rounded-full bg-[#17120f] transition-all duration-300 ease-out',
                         isActive ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0 group-hover:scale-x-75 group-hover:opacity-60',
                       )}
                       aria-hidden
@@ -121,13 +112,13 @@ export function LandingNavbar({
                 <>
                   <Link
                     to="/login"
-                    className="cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition-all duration-300 hover:bg-blue-50/70 hover:text-blue-700 hover:underline hover:underline-offset-4"
+                    className="cursor-pointer rounded-xl px-4 py-2 text-sm font-black text-[#4f4540] transition-all duration-300 hover:bg-[#fddf82] hover:text-[#17120f]"
                   >
                     {t.nav.login}
                   </Link>
 
                   <Link to="/register" className="cursor-pointer">
-                    <PrimaryBtn className="relative overflow-hidden px-5 shadow-lg shadow-blue-200/70 hover:-translate-y-0.5 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-blue-300/70">
+                    <PrimaryBtn className="group relative overflow-hidden px-5">
                       <span className="pointer-events-none absolute inset-y-0 -left-8 w-7 rotate-12 bg-white/30 transition-transform duration-700 group-hover:translate-x-36" />
                       {registerCta}
                       <RiArrowRightLine className="h-3.5 w-3.5" />
@@ -141,9 +132,9 @@ export function LandingNavbar({
             <button
               type="button"
               onClick={() => setNavOpen((v) => !v)}
-              className="grid h-9 w-9 cursor-pointer place-items-center rounded-xl text-slate-600 transition-all duration-300 hover:bg-white/80 hover:text-blue-700 sm:h-10 sm:w-10 lg:hidden"
+              className="grid h-9 w-9 cursor-pointer place-items-center rounded-xl border-2 border-[#17120f] bg-[#fffaf6] text-[#17120f] transition-all duration-300 hover:bg-[#fddf82] sm:h-10 sm:w-10 lg:hidden"
               style={{
-                border: '1px solid rgba(226,232,240,0.80)',
+                boxShadow: '3px 3px 0 #17120f',
               }}
             >
               {navOpen ? (
@@ -175,14 +166,14 @@ export function LandingNavbar({
                       className={cn(
                         'relative flex w-full cursor-pointer items-center rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ease-out',
                         isActive
-                          ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/60'
-                          : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                          ? 'bg-brand-100 text-[#17120f]'
+                          : 'text-[#4f4540] hover:bg-[#fddf82] hover:text-[#17120f]'
                       )}
                     >
                       {item.label}
                       <span
                         className={cn(
-                          'absolute bottom-1 left-4 h-0.5 w-12 rounded-full bg-blue-500 transition-all duration-300 ease-out',
+                          'absolute bottom-1 left-4 h-0.5 w-12 rounded-full bg-[#17120f] transition-all duration-300 ease-out',
                           isActive ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0',
                         )}
                         aria-hidden
@@ -204,14 +195,14 @@ export function LandingNavbar({
                     <Link to="/login" className="cursor-pointer">
                       <button
                         type="button"
-                        className="w-full cursor-pointer rounded-xl py-3 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
+                        className="w-full cursor-pointer rounded-xl py-3 text-sm font-black text-[#4f4540] transition-all duration-300 hover:bg-[#fddf82] hover:text-[#17120f]"
                       >
                         {t.nav.login}
                       </button>
                     </Link>
 
                     <Link to="/register" className="cursor-pointer">
-                      <PrimaryBtn className="w-full justify-center shadow-lg shadow-blue-200/70 hover:bg-[#1D4ED8]">
+                      <PrimaryBtn className="w-full justify-center">
                         {registerCta}
                       </PrimaryBtn>
                     </Link>

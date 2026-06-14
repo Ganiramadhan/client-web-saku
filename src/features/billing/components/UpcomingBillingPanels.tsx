@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { HiOutlineCalendarDays, HiOutlineCheckCircle, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineXMark, HiPlus } from 'react-icons/hi2'
 import { Badge, Button, Card, CurrencyInput, DateInput, Input, Modal, RSelect, type SelectOption } from '@/components/ui'
@@ -117,6 +117,19 @@ function cycleLabel(cycle: BillingCycle, copy: BillingCopy) {
   if (cycle === 'weekly') return copy.weekly
   if (cycle === 'yearly') return copy.yearly
   return copy.monthly
+}
+
+function initialBillingForm(editing: UpcomingBilling | null): UpcomingBillingPayload {
+  return {
+    name: editing?.name ?? '',
+    provider: editing?.provider ?? '',
+    amount: editing ? Number(editing.amount) : 0,
+    currency: editing?.currency ?? 'IDR',
+    cycle: editing?.cycle ?? 'monthly',
+    due_date: editing?.due_date ? editing.due_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    status: editing?.status ?? 'active',
+    notes: editing?.notes ?? '',
+  }
 }
 
 export function UpcomingBillingManager({
@@ -295,9 +308,9 @@ export function UpcomingBillingManager({
                       {formatCurrency(Number(item.amount), item.currency)}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-blue-50 px-3 py-2 ring-1 ring-blue-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400">{copy.dueDate}</p>
-                    <p className="mt-1 text-sm font-extrabold text-blue-800">{formatDate(item.due_date)}</p>
+                  <div className="rounded-lg bg-brand-50 px-3 py-2 ring-1 ring-brand-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-500">{copy.dueDate}</p>
+                    <p className="mt-1 text-sm font-extrabold text-brand-800">{formatDate(item.due_date)}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-1">
@@ -349,16 +362,12 @@ export function BillingModal({
 }) {
   const { copy } = useBillingCopy()
   const qc = useQueryClient()
-  const [form, setForm] = useState<UpcomingBillingPayload>(() => ({
-    name: editing?.name ?? '',
-    provider: editing?.provider ?? '',
-    amount: editing ? Number(editing.amount) : 0,
-    currency: editing?.currency ?? 'IDR',
-    cycle: editing?.cycle ?? 'monthly',
-    due_date: editing?.due_date ? editing.due_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
-    status: editing?.status ?? 'active',
-    notes: editing?.notes ?? '',
-  }))
+  const [form, setForm] = useState<UpcomingBillingPayload>(() => initialBillingForm(editing))
+
+  useEffect(() => {
+    if (!open) return
+    setForm(initialBillingForm(editing))
+  }, [editing, open])
 
   const saveBilling = useMutation({
     mutationFn: () => {
@@ -379,6 +388,7 @@ export function BillingModal({
       }
       toast.success(editing ? copy.savedUpdate : copy.savedCreate)
       qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
+      if (!editing) setForm(initialBillingForm(null))
       onClose()
     },
     onError: (e) => toast.error(toErrorMessage(e)),

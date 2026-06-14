@@ -96,7 +96,7 @@ export const aiApi = {
   categorize: async (req: CategorizeRequest): Promise<AICategorizeResponse> =>
     unwrap<AICategorizeResponse>(await api.post('/ai/categorize', req)),
   scanReceipt: async (req: ScanReceiptRequest): Promise<AIScanReceiptResponse> =>
-    unwrap<AIScanReceiptResponse>(await api.post('/ai/scan-receipt', req)),
+    unwrap<AIScanReceiptResponse>(await api.post('/ai/scan-receipt', req, { timeout: 90_000 })),
   promoteScanImage: async (image_key: string, log_id?: string): Promise<PromoteScanImageResponse> =>
     unwrap<PromoteScanImageResponse>(await api.post('/ai/scan-receipt/promote-image', { image_key, log_id })),
   insights: async (req: InsightsRequest): Promise<AIInsightsResponse> =>

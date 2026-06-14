@@ -15,7 +15,7 @@ import { Logo } from '@/components/Logo'
 import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
 
-type LegalMode = 'privacy' | 'terms' | 'contact' | 'about'
+type LegalMode = 'privacy' | 'terms' | 'cookies' | 'contact' | 'about'
 
 type LegalSection = {
   title: string
@@ -39,8 +39,10 @@ const SUPPORT_EMAIL = 'hello@ganipedia.com'
 
 const navItems = [
   { to: '/about', label: 'About' },
+  { to: '/blog', label: 'Blog' },
   { to: '/privacy', label: 'Privacy' },
   { to: '/terms', label: 'Terms' },
+  { to: '/cookies', label: 'Cookies' },
   { to: '/contact', label: 'Contact' },
 ]
 
@@ -50,19 +52,19 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
   const content = getContent(mode, isId)
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-[#f6eee8] text-[#17120f]">
+      <header className="sticky top-0 z-40 border-b border-[#17120f]/10 bg-[#fffaf6]/92 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Logo />
-          <nav className="hidden items-center rounded-full border border-slate-200 bg-slate-50 p-1 text-sm font-bold text-slate-600 md:flex">
+          <nav className="hidden items-center rounded-full border border-[#17120f]/10 bg-white/70 p-1 text-sm font-bold text-[#4f4540] md:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-full px-4 py-2 transition duration-200 hover:bg-white hover:text-blue-700 hover:shadow-sm',
-                    isActive && 'bg-white text-blue-700 shadow-sm',
+                    'rounded-full px-4 py-2 transition duration-200 hover:bg-white hover:text-brand-700 hover:shadow-sm',
+                    isActive && 'bg-white text-brand-700 shadow-sm',
                   )
                 }
               >
@@ -73,13 +75,13 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
           <div className="flex items-center gap-2">
             <Link
               to="/login"
-              className="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-blue-700 sm:inline-flex"
+              className="hidden rounded-full px-4 py-2 text-sm font-bold text-[#4f4540] transition hover:bg-white/70 hover:text-brand-700 sm:inline-flex"
             >
               {isId ? 'Masuk' : 'Login'}
             </Link>
             <Link
               to="/register"
-              className="rounded-full bg-blue-600 px-4 py-2 text-sm font-extrabold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md"
+              className="rounded-full border border-[#17120f]/20 bg-brand-300 px-4 py-2 text-sm font-extrabold text-[#17120f] shadow-sm shadow-[#17120f]/10 transition hover:-translate-y-0.5 hover:bg-brand-200 hover:shadow-md"
             >
               {isId ? 'Mulai Gratis' : 'Start Free'}
             </Link>
@@ -88,22 +90,22 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
       </header>
 
       <main>
-        <section className="relative overflow-hidden border-b border-slate-200 bg-white">
+        <section className="relative overflow-hidden border-b border-[#17120f]/10 bg-[#fffaf6]">
           <div className="relative z-10 mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-blue-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#17120f]/12 bg-[#ffe4dc] px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[#17120f]">
                 <HiOutlineShieldCheck className="h-4 w-4" />
                 {content.eyebrow}
               </div>
               <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
                 {content.title}
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">{content.description}</p>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-[#4f4540] sm:text-lg">{content.description}</p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 {mode === 'contact' ? (
                   <a
                     href={`mailto:${SUPPORT_EMAIL}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#17120f]/20 bg-brand-300 px-5 py-3 text-sm font-extrabold text-[#17120f] shadow-sm shadow-[#17120f]/10 transition hover:-translate-y-0.5 hover:bg-brand-200 hover:shadow-md"
                   >
                     {content.primaryCta}
                     <HiOutlineArrowRight className="h-4 w-4" />
@@ -111,7 +113,7 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
                 ) : (
                   <Link
                     to="/register"
-                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#17120f]/20 bg-brand-300 px-5 py-3 text-sm font-extrabold text-[#17120f] shadow-sm shadow-[#17120f]/10 transition hover:-translate-y-0.5 hover:bg-brand-200 hover:shadow-md"
                   >
                     {content.primaryCta}
                     <HiOutlineArrowRight className="h-4 w-4" />
@@ -119,34 +121,34 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
                 )}
                 <Link
                   to="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-extrabold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700 hover:shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#17120f]/15 bg-white px-5 py-3 text-sm font-extrabold text-[#4f4540] transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-700 hover:shadow-sm"
                 >
                   {content.secondaryCta}
                 </Link>
               </div>
-              <p className="mt-5 text-xs font-semibold text-slate-400">
+              <p className="mt-5 text-xs font-semibold text-[#4f4540]/55">
                 {isId ? 'Terakhir diperbarui' : 'Last updated'}: {UPDATED_AT}
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:p-5">
-                <div className="rounded-2xl border border-white bg-white p-5 shadow-sm">
+              <div className="rounded-3xl border border-[#17120f]/12 bg-white/62 p-4 shadow-sm shadow-[#17120f]/5 sm:p-5">
+                <div className="rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] p-5 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/12 bg-[#ecfdf5] text-emerald-700">
                       <HiOutlineLockClosed className="h-6 w-6" />
                     </div>
                     <div>
                       <h2 className="text-base font-black text-slate-950">
                         {isId ? 'Dibangun untuk data finansial pribadi' : 'Built for personal financial data'}
                       </h2>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{content.summary}</p>
+                      <p className="mt-2 text-sm leading-6 text-[#4f4540]">{content.summary}</p>
                     </div>
                   </div>
                   <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                     {getTrustBadges(isId).map((badge) => (
-                      <div key={badge.title} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                        <badge.icon className="h-5 w-5 text-blue-600" />
+                      <div key={badge.title} className="rounded-2xl border border-[#17120f]/8 bg-white/75 p-3">
+                        <badge.icon className="h-5 w-5 text-brand-700" />
                         <p className="mt-2 text-xs font-black leading-5 text-slate-800">{badge.title}</p>
                       </div>
                     ))}
@@ -162,24 +164,25 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
             {content.sections.map((section, index) => (
               <section
                 key={section.title}
-                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-md sm:p-7"
+                id={legalSectionId(section.title)}
+                className="rounded-3xl border border-[#17120f]/12 bg-[#fffaf6]/92 p-5 shadow-sm shadow-[#17120f]/5 transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md sm:p-7"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/10 bg-[#ffe4dc] text-brand-700">
                     <section.icon className="h-6 w-6" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-[#4f4540]/70">
                         {String(index + 1).padStart(2, '0')}
                       </span>
                       <h2 className="text-xl font-black tracking-tight text-slate-950">{section.title}</h2>
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
+                    <p className="mt-3 text-sm leading-7 text-[#4f4540]">{section.body}</p>
                     {section.bullets?.length ? (
                       <ul className="mt-4 grid gap-2">
                         {section.bullets.map((bullet) => (
-                          <li key={bullet} className="flex gap-2 text-sm leading-6 text-slate-600">
+                          <li key={bullet} className="flex gap-2 text-sm leading-6 text-[#4f4540]">
                             <HiOutlineCheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                             <span>{bullet}</span>
                           </li>
@@ -193,33 +196,48 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
           </article>
 
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-3xl border border-blue-100 bg-blue-50 p-5">
-              <HiOutlineEnvelope className="h-6 w-6 text-blue-700" />
-              <h2 className="mt-3 text-sm font-black text-blue-950">
+            <div className="rounded-3xl border border-[#17120f]/12 bg-[#ecfdf5] p-5">
+              <HiOutlineEnvelope className="h-6 w-6 text-emerald-700" />
+              <h2 className="mt-3 text-sm font-black text-[#17120f]">
                 {isId ? 'Kontak resmi SAKU' : 'Official SAKU contact'}
               </h2>
-              <p className="mt-2 text-xs leading-6 text-blue-900/75">
+              <p className="mt-2 text-xs leading-6 text-[#4f4540]">
                 {isId
                   ? 'Gunakan email resmi untuk bantuan akun, pembayaran, keamanan, atau penggunaan aplikasi.'
                   : 'Use the official email for account, payment, security, or product support.'}
               </p>
-              <a className="mt-3 block break-all text-sm font-black text-blue-700 hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>
+              <a className="mt-3 block break-all text-sm font-black text-brand-700 hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>
                 {SUPPORT_EMAIL}
               </a>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-[#17120f]/12 bg-[#fffaf6]/92 p-5 shadow-sm shadow-[#17120f]/5">
               <h2 className="text-sm font-black text-slate-950">
-                {isId ? 'Navigasi publik' : 'Public navigation'}
+                {isId ? 'Isi halaman' : 'On this page'}
               </h2>
               <nav className="mt-3 grid gap-1 text-sm font-bold">
+                {content.sections.map((section) => (
+                  <a
+                    key={section.title}
+                    className="rounded-2xl px-3 py-2 text-[#4f4540] transition hover:bg-white hover:text-brand-700"
+                    href={`#${legalSectionId(section.title)}`}
+                  >
+                    {section.title}
+                  </a>
+                ))}
+              </nav>
+              <div className="mt-4 border-t border-[#17120f]/10 pt-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#4f4540]/60">
+                  {isId ? 'Halaman publik' : 'Public pages'}
+                </p>
+                <nav className="mt-2 grid gap-1 text-sm font-bold">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.to}
                     className={({ isActive }) =>
                       cn(
-                        'rounded-2xl px-3 py-2 text-slate-600 transition hover:bg-slate-50 hover:text-blue-700',
-                        isActive && 'bg-blue-50 text-blue-700',
+                        'rounded-2xl px-3 py-2 text-[#4f4540] transition hover:bg-white hover:text-brand-700',
+                        isActive && 'bg-[#ffe4dc] text-brand-700',
                       )
                     }
                     to={item.to}
@@ -227,17 +245,18 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
                     {item.label}
                   </NavLink>
                 ))}
-              </nav>
+                </nav>
+              </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-[#17120f]/12 bg-[#fffaf6]/92 p-5 shadow-sm shadow-[#17120f]/5">
               <h2 className="text-sm font-black text-slate-950">
                 {isId ? 'Transparansi layanan' : 'Service transparency'}
               </h2>
               <div className="mt-4 space-y-3">
                 {getTransparencyItems(isId).map((item) => (
                   <div key={item.title} className="flex gap-3">
-                    <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                    <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
                     <div>
                       <p className="text-xs font-black text-slate-800">{item.title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">{item.body}</p>
@@ -250,26 +269,26 @@ export function LegalPage({ mode }: { mode: LegalMode }) {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
+      <footer className="border-t border-[#17120f]/10 bg-[#fffaf6]">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <Logo size="sm" />
-            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#4f4540]">
               {isId
                 ? 'SAKU adalah aplikasi personal finance untuk membantu pengguna Indonesia mencatat transaksi, memahami pengeluaran, dan mengelola keuangan dengan lebih percaya diri.'
                 : 'SAKU is a personal finance app that helps Indonesian users track transactions, understand spending, and manage money with more confidence.'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-slate-600">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#4f4540]">
             {navItems.map((item) => (
-              <Link key={item.to} to={item.to} className="transition hover:text-blue-700">
+              <Link key={item.to} to={item.to} className="transition hover:text-brand-700">
                 {item.label}
               </Link>
             ))}
           </div>
-          <div className="text-xs font-semibold text-slate-400 md:col-span-2">
+          <div className="text-xs font-semibold text-[#4f4540]/60 md:col-span-2">
             © {new Date().getFullYear()} SAKU. {isId ? 'Semua hak dilindungi.' : 'All rights reserved.'} ·{' '}
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-blue-700 hover:underline">
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-700 hover:underline">
               {SUPPORT_EMAIL}
             </a>
           </div>
@@ -314,6 +333,13 @@ function getTransparencyItems(isId: boolean) {
       icon: HiOutlineCreditCard,
     },
   ]
+}
+
+function legalSectionId(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 function getContent(mode: LegalMode, isId: boolean): LegalContent {
@@ -421,6 +447,58 @@ function getContent(mode: LegalMode, isId: boolean): LegalContent {
             ? ['Kami berupaya menjaga layanan stabil, aman, dan tersedia.', 'Beberapa fitur dapat berubah seiring peningkatan produk.', 'Pertanyaan layanan dapat dikirim ke email resmi SAKU.']
             : ['We work to keep the service stable, secure, and available.', 'Some features may change as the product improves.', 'Service questions can be sent to the official SAKU email.'],
           icon: HiOutlineShieldCheck,
+        },
+      ],
+    },
+    cookies: {
+      eyebrow: isId ? 'Preferensi privasi' : 'Privacy preferences',
+      title: isId ? 'Cookies Policy SAKU' : 'SAKU Cookies Policy',
+      description: isId
+        ? 'Halaman ini menjelaskan bagaimana SAKU menggunakan cookie, localStorage, analytics, dan preferensi pengguna untuk menjaga pengalaman produk tetap cepat dan relevan.'
+        : 'This page explains how SAKU uses cookies, localStorage, analytics, and user preferences to keep the product experience fast and relevant.',
+      summary: isId
+        ? 'Cookie dan penyimpanan lokal digunakan seperlunya untuk sesi, preferensi, analitik, dan peningkatan pengalaman. Kamu dapat menolak analitik dari banner cookie.'
+        : 'Cookies and local storage are used as needed for sessions, preferences, analytics, and product improvements. You can reject analytics from the cookie banner.',
+      primaryCta: isId ? 'Mulai Kelola Keuangan' : 'Start Managing Money',
+      secondaryCta: isId ? 'Kembali ke Beranda' : 'Back to Home',
+      sections: [
+        {
+          title: isId ? 'Cookie yang diperlukan' : 'Essential cookies',
+          body: isId
+            ? 'Cookie atau penyimpanan lokal tertentu diperlukan agar aplikasi dapat mengingat sesi, status autentikasi, bahasa, preferensi privasi, dan pengaturan dasar yang kamu pilih.'
+            : 'Certain cookies or local storage are required so the app can remember sessions, authentication state, language, privacy preferences, and basic settings you choose.',
+          bullets: isId
+            ? ['Digunakan untuk menjaga pengalaman login tetap konsisten.', 'Tidak digunakan untuk menjual data pribadi.', 'Tidak menyimpan password, OTP, atau token rahasia di analytics.']
+            : ['Used to keep login experience consistent.', 'Not used to sell personal data.', 'Does not store passwords, OTP, or secret tokens in analytics.'],
+          icon: HiOutlineLockClosed,
+        },
+        {
+          title: isId ? 'Analytics dan perilaku website' : 'Analytics and website behavior',
+          body: isId
+            ? 'Jika kamu menerima analitik, SAKU dapat memakai Google Analytics dan Microsoft Clarity untuk memahami performa halaman, sumber traffic, scroll, dan pengalaman pengguna secara umum.'
+            : 'If you accept analytics, SAKU may use Google Analytics and Microsoft Clarity to understand page performance, traffic sources, scroll behavior, and overall user experience.',
+          bullets: isId
+            ? ['Analitik membantu menemukan hambatan UX.', 'Data sensitif seperti password, OTP, token, dan detail kartu tidak dikirim ke analytics.', 'Kamu bisa menolak analitik lewat banner cookie.']
+            : ['Analytics helps find UX friction.', 'Sensitive data such as passwords, OTP, tokens, and card details are not sent to analytics.', 'You can reject analytics through the cookie banner.'],
+          icon: HiOutlineChartBarSquare,
+        },
+        {
+          title: isId ? 'Preferensi yang disimpan' : 'Stored preferences',
+          body: isId
+            ? 'SAKU dapat menyimpan preferensi seperti bahasa, pilihan cookie, state tampilan tertentu, atau informasi UI non-sensitif agar aplikasi terasa lebih nyaman saat dibuka kembali.'
+            : 'SAKU may store preferences such as language, cookie choice, certain UI states, or non-sensitive UI information so the app feels smoother when reopened.',
+          bullets: isId
+            ? ['Preferensi membantu mengurangi pengaturan ulang yang tidak perlu.', 'Pilihan cookie disimpan agar banner tidak muncul berulang.', 'Data finansial tetap dikelola melalui sistem aplikasi, bukan cookie marketing.']
+            : ['Preferences reduce unnecessary setup repetition.', 'Cookie choices are stored so the banner does not repeatedly appear.', 'Financial data is managed through the app system, not marketing cookies.'],
+          icon: HiOutlineShieldCheck,
+        },
+        {
+          title: isId ? 'Kontrol pengguna' : 'User control',
+          body: isId
+            ? 'Kamu dapat menghapus cookie dari pengaturan browser. Jika cookie penting dihapus, beberapa preferensi mungkin perlu diatur ulang saat membuka SAKU.'
+            : 'You can delete cookies from browser settings. If essential cookies are deleted, some preferences may need to be set again when opening SAKU.',
+          bullets: [SUPPORT_EMAIL],
+          icon: HiOutlineEnvelope,
         },
       ],
     },

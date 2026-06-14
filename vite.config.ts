@@ -12,6 +12,7 @@ const vendorChunks: Array<[string, string[]]> = [
   ['vendor-forms', ['react-datepicker', 'react-select', '@floating-ui', '@emotion', 'date-fns']],
   ['vendor-icons-hi2', ['react-icons/hi2']],
   ['vendor-icons-ri', ['react-icons/ri']],
+  ['vendor-monitoring', ['@sentry/']],
 ]
 
 function manualChunks(id: string) {
@@ -21,7 +22,7 @@ function manualChunks(id: string) {
   if (normalized.includes('/node_modules/react-icons/ri/')) return 'vendor-icons-ri'
   const packageName = getPackageName(id)
   const match = vendorChunks.find(([, packages]) => packages.some((pkg) => (
-    packageName === pkg || (pkg.endsWith('-') && packageName.startsWith(pkg))
+    packageName === pkg || ((pkg.endsWith('-') || pkg.endsWith('/')) && packageName.startsWith(pkg))
   )))
   if (match) return match[0]
   return 'vendor-misc'

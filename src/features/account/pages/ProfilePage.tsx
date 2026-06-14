@@ -143,7 +143,6 @@ export function ProfilePage() {
   const plans = useQuery({ queryKey: ['subscriptions', 'plans'], queryFn: subscriptionApi.listPlans })
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [pendingPhotoKey, setPendingPhotoKey] = useState<string | null>(null)
   const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -157,7 +156,6 @@ export function ProfilePage() {
     if (me.data) {
       const timer = window.setTimeout(() => {
         setName(me.data?.name ?? '')
-        setEmail(me.data?.email ?? '')
         setTelegramChatId(me.data?.telegram_chat_id ?? '')
       }, 0)
       return () => window.clearTimeout(timer)
@@ -190,7 +188,6 @@ export function ProfilePage() {
     mutationFn: () =>
       updateProfile({
         name: name.trim() || undefined,
-        email: email.trim() || undefined,
         photo: pendingPhotoKey ?? undefined,
       }),
     onSuccess: (u) => {
@@ -263,8 +260,7 @@ export function ProfilePage() {
 
   const dirty =
     pendingPhotoKey !== null ||
-    name.trim() !== (me.data?.name ?? '') ||
-    email.trim() !== (me.data?.email ?? '')
+    name.trim() !== (me.data?.name ?? '')
 
   const paidPlans = useMemo(
     () => (plans.data ?? []).filter((plan) => plan.price > 0 && plan.is_active),
@@ -279,7 +275,7 @@ export function ProfilePage() {
 
   const handleSubscribe = async (planCode: string, voucherCode?: string, resumePending = false) => {
     try {
-      if (pendingSubscription && !resumePending) {
+      if (pendingSubscription && !resumePending && isBlockingPendingPayment(pendingSubscription)) {
         toast.info(copy.pendingPlanExists)
         return
       }
@@ -383,7 +379,7 @@ export function ProfilePage() {
           <Card className="bg-white/72">
             <div className="flex items-start justify-between gap-4 border-b border-white/60 pb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-100 text-brand-700">
                 <HiOutlineIdentification className="h-5 w-5" />
                 </div>
                 <div>
@@ -417,7 +413,7 @@ export function ProfilePage() {
                 )}
                 {(upload.isPending || save.isPending) ? (
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-                    <Spinner className="h-5 w-5 text-blue-700" />
+                    <Spinner className="h-5 w-5 text-brand-700" />
                   </div>
                 ) : null}
                 {pendingPhotoKey ? (
@@ -527,12 +523,12 @@ export function ProfilePage() {
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                   <HiOutlineEnvelope className="h-3.5 w-3.5" /> Email
                 </label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@domain.com"
-                />
+                <div className="rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/70 px-4 py-3 text-sm font-bold text-[#17120f] shadow-sm shadow-[#17120f]/5">
+                  {me.data?.email ?? '—'}
+                  <p className="mt-1 text-xs font-medium text-[#4f4540]/70">
+                    {locale === 'id' ? 'Ganti email dari halaman Settings.' : 'Change email from Settings.'}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -543,7 +539,6 @@ export function ProfilePage() {
                 className="shadow-slate-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
                 onClick={() => {
                   setName(me.data?.name ?? '')
-                  setEmail(me.data?.email ?? '')
                   setPendingPhotoKey(null)
                   setPendingPhotoPreview(null)
                 }}
@@ -572,7 +567,7 @@ export function ProfilePage() {
               <Card className="bg-white/72">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-200 bg-brand-100 text-brand-700">
                       <HiOutlineChatBubbleLeftRight className="h-5 w-5" />
                     </div>
                     <div>
@@ -586,14 +581,19 @@ export function ProfilePage() {
                 </div>
 
                 {me.data?.telegram_chat_id ? (
-                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
-                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-[#ecfdf5]/80 p-4 shadow-sm shadow-[#17120f]/5">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
                       {copy.telegramConnected}
                     </p>
-                    <p className="mt-1 text-sm font-extrabold text-emerald-950">
-                      {me.data.telegram_chat_id}
+                    <p className="mt-1 text-sm font-black text-[#134e4a]">
+                      {me.data.telegram_username ? `@${me.data.telegram_username}` : me.data.telegram_chat_id}
                     </p>
-                    <p className="mt-2 text-xs leading-5 text-emerald-800/80">{copy.telegramConnectedHint}</p>
+                    {me.data.telegram_username ? (
+                      <p className="mt-1 text-xs font-medium text-[#4f4540]/70">
+                        Chat ID: {me.data.telegram_chat_id}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-xs leading-5 text-[#134e4a]/80">{copy.telegramConnectedHint}</p>
 					<Button
 						type="button"
 						variant="danger"
@@ -616,7 +616,7 @@ export function ProfilePage() {
                       inputMode="numeric"
                     />
                     <p className="mt-2 text-xs leading-5 text-slate-500">{copy.telegramHint}</p>
-                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-5 text-blue-800">
+                    <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-xs leading-5 text-[#4f4540]">
                       <p>{copy.telegramGuide1}</p>
                       <p>{copy.telegramGuide2}</p>
                       <p>{copy.telegramGuide3}</p>
@@ -675,6 +675,13 @@ export function ProfilePage() {
 
 export default ProfilePage
 
+function isBlockingPendingPayment(subscription: { payment_status?: string; expires_at?: string | null }) {
+  if (subscription.payment_status !== 'pending') return false
+  if (!subscription.expires_at) return true
+  const expiresAt = new Date(subscription.expires_at).getTime()
+  return Number.isNaN(expiresAt) || expiresAt > Date.now()
+}
+
 function cnProfilePhoto(isLoading: boolean) {
   return `h-20 w-20 rounded-full object-cover ring-2 ring-white/80 shadow-md transition ${
     isLoading ? 'scale-95 opacity-60' : ''
@@ -682,7 +689,7 @@ function cnProfilePhoto(isLoading: boolean) {
 }
 
 function cnProfileAvatar(isLoading: boolean) {
-  return `flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-2xl font-bold text-white shadow-md transition ${
+  return `flex h-20 w-20 items-center justify-center rounded-full border border-[#17120f]/10 bg-brand-200 text-2xl font-black text-[#17120f] shadow-md transition ${
     isLoading ? 'scale-95 opacity-60' : ''
   }`
 }

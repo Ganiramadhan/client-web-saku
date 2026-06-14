@@ -12,6 +12,7 @@ const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotP
 const LoginPage = lazyRoute(() => import('@/features/auth/pages/LoginPage'), 'LoginPage')
 const RegisterPage = lazyRoute(() => import('@/features/auth/pages/RegisterPage'), 'RegisterPage')
 const LegalPage = lazyRoute(() => import('@/features/legal/pages/LegalPage'), 'LegalPage')
+const BlogPage = lazyRoute(() => import('@/features/legal/pages/BlogPage'), 'BlogPage')
 const AppLayout = lazyRoute(() => import('@/layouts/AppLayout'), 'AppLayout')
 const DashboardPage = lazyRoute(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage')
 const AdminDashboardPage = lazyRoute(() => import('@/features/adminDashboard/pages/AdminDashboardPage'), 'AdminDashboardPage')
@@ -51,8 +52,10 @@ export function AppRoutes() {
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
       <Route path="/privacy" element={<LegalPage mode="privacy" />} />
       <Route path="/terms" element={<LegalPage mode="terms" />} />
+      <Route path="/cookies" element={<LegalPage mode="cookies" />} />
       <Route path="/contact" element={<LegalPage mode="contact" />} />
       <Route path="/about" element={<LegalPage mode="about" />} />
+      <Route path="/blog" element={<BlogPage />} />
       <Route path="/payment/finish" element={<PaymentRedirectPage mode="finish" />} />
       <Route path="/payment/error" element={<PaymentRedirectPage mode="error" />} />
 

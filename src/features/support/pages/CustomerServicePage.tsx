@@ -196,9 +196,9 @@ export function CustomerServicePage() {
       <section className="grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start">
         <aside className="space-y-4 xl:sticky xl:top-6">
           {!isAdmin ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-[#17120f]/12 bg-[#fffaf6]/92 p-5 shadow-sm shadow-[#17120f]/5">
               <div className="mb-4 flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-brand-200 bg-brand-50 text-brand-700">
                   <HiOutlineDocumentText className="h-5 w-5" />
                 </span>
                 <div>
@@ -288,7 +288,7 @@ export function CustomerServicePage() {
                       <PriorityBadge priority={active.priority} />
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {active.id} · {active.user_name || 'User'} · {active.user_email || '-'}
+                      {active.ticket_code ?? active.id} · {active.user_name || 'User'} · {active.user_email || '-'}
                     </p>
                     <p className="mt-2 text-xs text-slate-400">
                       Opened {new Date(active.created_at).toLocaleString('id-ID')} · Updated {new Date(active.updated_at).toLocaleString('id-ID')}
@@ -326,7 +326,7 @@ export function CustomerServicePage() {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scroll-smooth bg-slate-50/70 p-5">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scroll-smooth bg-[#f6eee8]/65 p-5">
                 {active.priority === 'urgent' && active.status !== 'resolved' ? (
                   <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
                     <HiOutlineExclamationTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -336,8 +336,8 @@ export function CustomerServicePage() {
                 {active.messages.map((item) => (
                   <div key={item.id} className={`flex items-end gap-3 ${item.role === 'admin' ? 'justify-start' : 'justify-end'}`}>
                     {item.role === 'admin' ? <ChatAvatar role="admin" name="SAKU Support" /> : null}
-                    <div className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${item.role === 'admin' ? 'rounded-bl-md border border-slate-100 bg-white text-slate-800' : 'rounded-br-md bg-brand-600 text-white'}`}>
-                      <div className={`mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ${item.role === 'admin' ? 'text-brand-600' : 'text-white/70'}`}>
+                    <div className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${item.role === 'admin' ? 'rounded-bl-md border border-[#17120f]/10 bg-[#fffaf6] text-slate-800' : 'rounded-br-md bg-[#17120f] text-white'}`}>
+                      <div className={`mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-wide ${item.role === 'admin' ? 'text-brand-700' : 'text-white/70'}`}>
                         <span>{item.role === 'admin' ? 'SAKU Support' : active.user_name || 'User'}</span>
                       </div>
                       {item.body ? <p className="whitespace-pre-wrap">{item.body}</p> : null}
@@ -507,6 +507,7 @@ function ChatAvatar({ role, name, photoUrl }: { role: 'admin' | 'user'; name?: s
 
 function TicketButton({ ticket, active, onClick }: { ticket: SupportTicket; active: boolean; onClick: () => void }) {
   const lastMessage = ticket.messages.at(-1)
+  const ticketCode = ticket.ticket_code ?? ticket.id
   return (
     <button
       type="button"
@@ -516,7 +517,10 @@ function TicketButton({ ticket, active, onClick }: { ticket: SupportTicket; acti
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="line-clamp-1 text-sm font-bold text-slate-900">{ticket.subject}</p>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-600">{ticketCode}</p>
+          <p className="mt-1 line-clamp-1 text-sm font-bold text-slate-900">{ticket.subject}</p>
+        </div>
         <StatusBadge status={ticket.status} />
       </div>
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
@@ -545,7 +549,7 @@ function PriorityBadge({ priority }: { priority: SupportPriority }) {
 
 function SupportMetric({ label, value, Icon, tone }: { label: string; value: string; Icon: typeof HiOutlineChatBubbleLeftRight; tone: 'blue' | 'amber' | 'emerald' | 'violet' }) {
   const tones = {
-    blue: 'bg-blue-50 text-blue-700',
+    blue: 'bg-brand-50 text-brand-700',
     amber: 'bg-amber-50 text-amber-700',
     emerald: 'bg-emerald-50 text-emerald-700',
     violet: 'bg-violet-50 text-violet-700',

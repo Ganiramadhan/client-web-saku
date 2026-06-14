@@ -150,13 +150,13 @@ export function ForgotPasswordPage() {
               label={t.auth.otpCodeLabel}
               disabled={verifyM.isPending}
             />
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+            <div className="rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-bold text-blue-800">
+                  <p className="text-xs font-bold text-brand-800">
                     {t.auth.otpExpiresPrefix} {formatCountdown(otpRemaining)}
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-5 text-blue-700/80">{t.auth.otpUseLatest}</p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-brand-700/80">{t.auth.otpUseLatest}</p>
                 </div>
                 <button
                   type="button"
@@ -168,7 +168,7 @@ export function ForgotPasswordPage() {
                     }
                     m.mutate(true)
                   }}
-                  className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-brand-100 bg-white px-3 py-2 text-xs font-bold text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
                   {resendRemaining > 0 ? t.auth.resendOtpLabel.replace('{time}', formatCountdown(resendRemaining)) : t.auth.sendOtp}
                 </button>
@@ -202,7 +202,7 @@ export function ForgotPasswordPage() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-xl !bg-blue-600 text-sm font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500 hover:shadow-blue-300/50 focus:ring-blue-500/40"
+          className="h-12 w-full rounded-xl border border-[#17120f]/25 !bg-brand-300 text-sm font-black !text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:-translate-y-px hover:!bg-brand-200 focus:ring-brand-500/30"
           loading={isSubmitting}
           disabled={submitDisabled || (!otpSent && isTurnstileEnabled() && !turnstileToken)}
           rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
@@ -213,7 +213,7 @@ export function ForgotPasswordPage() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         {t.auth.alreadyCanAccessSentence || 'Sudah bisa mengakses akun?'}{' '}
-        <Link to="/login" className="font-semibold text-blue-700 hover:underline">
+        <Link to="/login" className="font-semibold text-brand-700 hover:underline">
           {t.auth.submitLogin}
         </Link>
       </p>
