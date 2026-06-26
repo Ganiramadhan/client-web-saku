@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   HiOutlineBell,
+  HiOutlineCalendarDays,
   HiOutlineChevronRight,
   HiOutlineCog6Tooth,
   HiOutlineEnvelope,
@@ -17,8 +18,9 @@ import {
 import { Button, Card, Input, Modal, PageHeader, RSelect } from '@/components/ui'
 import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
+import { readCashflowStartDay, writeCashflowStartDay } from '@/lib/cashflowPeriod'
 import { useAuthStore } from '@/stores/authStore'
-import { changeEmail, deleteAccount, logout } from '@/features/auth/api'
+import { changeEmail, deleteAccount, logout, updateProfile } from '@/features/auth/api'
 import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
@@ -38,6 +40,7 @@ export function SettingsPage() {
   const [emailOpen, setEmailOpen] = useState(false)
   const [nextEmail, setNextEmail] = useState(user?.email ?? '')
   const [emailPassword, setEmailPassword] = useState('')
+  const [cashflowStartDay, setCashflowStartDay] = useState(() => user?.cashflow_start_day ?? readCashflowStartDay())
   const content = locale === 'id'
     ? {
         title: 'Pengaturan',
@@ -52,6 +55,8 @@ export function SettingsPage() {
         notificationsDesc: 'Pengingat penting dari email, billing, dan Telegram.',
         security: 'Security',
         securityDesc: 'Password, sesi login, dan penghapusan akun.',
+        cashflowCycle: 'Siklus cashflow',
+        cashflowCycleBody: 'Tanggal gajian atau awal periode untuk dashboard.',
       }
     : {
         title: 'Settings',
@@ -66,6 +71,8 @@ export function SettingsPage() {
         notificationsDesc: 'Important reminders from email, billing, and Telegram.',
         security: 'Security',
         securityDesc: 'Password, login sessions, and account deletion.',
+        cashflowCycle: 'Cashflow cycle',
+        cashflowCycleBody: 'Payday or period start date for the dashboard.',
       }
   const languageOptions = [
     {
@@ -77,6 +84,13 @@ export function SettingsPage() {
       label: '🇺🇸 English',
     },
   ] as const
+  const cashflowDayOptions = Array.from({ length: 31 }, (_, index) => {
+    const day = index + 1
+    return {
+      value: String(day),
+      label: locale === 'id' ? `Tanggal ${day}` : `Day ${day}`,
+    }
+  })
 
   const logoutMutation = useMutation({
     mutationFn: logout,
@@ -110,12 +124,30 @@ export function SettingsPage() {
     onError: (error) => toast.error(toErrorMessage(error)),
   })
 
+  const cashflowCycleMutation = useMutation({
+    mutationFn: (day: number) => updateProfile({ cashflow_start_day: day }),
+    onSuccess: (updated) => {
+      setUser(updated)
+      writeCashflowStartDay(updated.cashflow_start_day ?? 1)
+      qc.invalidateQueries({ queryKey: ['me'] })
+    },
+    onError: (error) => toast.error(toErrorMessage(error)),
+  })
+
   useEffect(() => {
     if (!emailOpen) {
       setNextEmail(user?.email ?? '')
       setEmailPassword('')
     }
   }, [emailOpen, user?.email])
+
+  useEffect(() => {
+    const persisted = user?.cashflow_start_day
+    if (persisted) {
+      setCashflowStartDay(persisted)
+      writeCashflowStartDay(persisted)
+    }
+  }, [user?.cashflow_start_day])
 
   const handleDeleteAccount = async () => {
     const ok = await confirm({
@@ -217,6 +249,27 @@ export function SettingsPage() {
                       clearable={false}
                       isSearchable={false}
                       aria-label={locale === 'id' ? 'Pilih bahasa' : 'Choose language'}
+                    />
+                  </div>
+                ),
+              },
+              {
+                label: content.cashflowCycle,
+                body: content.cashflowCycleBody,
+                Icon: HiOutlineCalendarDays,
+                control: (
+                  <div className="w-full sm:w-44">
+                    <RSelect
+                      value={String(cashflowStartDay)}
+                      onChange={(value) => {
+                        const next = writeCashflowStartDay(Number(value || 1))
+                        setCashflowStartDay(next)
+                        cashflowCycleMutation.mutate(next)
+                      }}
+                      options={cashflowDayOptions}
+                      clearable={false}
+                      isSearchable={false}
+                      aria-label={content.cashflowCycle}
                     />
                   </div>
                 ),

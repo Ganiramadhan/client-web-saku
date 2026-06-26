@@ -8,9 +8,15 @@ import { MobileFab } from '@/components/MobileFab'
 import { useLocale, useT } from '@/i18n'
 import type { Wallet, WalletType } from '@/types/api'
 import { formatCurrency } from '@/lib/utils'
+import {
+  CASHFLOW_START_DAY_EVENT,
+  getCashflowPeriod,
+  readCashflowStartDay,
+} from '@/lib/cashflowPeriod'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
+import { useAuthStore } from '@/stores/authStore'
 import {
   WalletsSummaryCard,
   FilterTabs,
@@ -30,6 +36,8 @@ export function WalletsPage() {
   const t = useT()
   const { locale } = useLocale()
   const qc = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const [cashflowStartDay, setCashflowStartDay] = useState(() => user?.cashflow_start_day ?? readCashflowStartDay())
   const copy = locale === 'id'
     ? {
         all: 'Semua',
@@ -77,16 +85,19 @@ export function WalletsPage() {
     queryFn: walletApi.list,
   })
 
-  const since = useMemo(() => {
-    const date = new Date()
-    date.setDate(date.getDate() - 30)
-    date.setHours(0, 0, 0, 0)
-    return date
-  }, [])
+  const cashflowPeriod = useMemo(
+    () => getCashflowPeriod(new Date(), cashflowStartDay),
+    [cashflowStartDay],
+  )
 
   const txnsQ = useQuery({
-    queryKey: ['transactions', 'wallets-30d', since.toISOString()],
-    queryFn: () => transactionApi.list({ from: since.toISOString(), limit: 500 }),
+    queryKey: ['transactions', 'wallets-cashflow-cycle', cashflowPeriod.start.toISOString(), cashflowStartDay],
+    queryFn: () =>
+      transactionApi.list({
+        from: cashflowPeriod.start.toISOString(),
+        to: new Date().toISOString(),
+        limit: 500,
+      }),
   })
   const transferHistoryQ = useQuery({
     queryKey: ['wallet-transfers'],
@@ -155,6 +166,22 @@ export function WalletsPage() {
     if (page > totalPages) setPage(totalPages)
   }, [page, totalPages])
 
+  useEffect(() => {
+    if (user?.cashflow_start_day) {
+      setCashflowStartDay(user.cashflow_start_day)
+    }
+  }, [user?.cashflow_start_day])
+
+  useEffect(() => {
+    const onChange = () => setCashflowStartDay(readCashflowStartDay())
+    window.addEventListener(CASHFLOW_START_DAY_EVENT, onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener(CASHFLOW_START_DAY_EVENT, onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [])
+
   const walletCountByType = useMemo(
     () =>
       WALLET_TYPE_OPTIONS.reduce(
@@ -194,12 +221,12 @@ export function WalletsPage() {
     return map
   }, [txnsQ.data])
 
-  const totalIncome30d = useMemo(
+  const totalIncomeCycle = useMemo(
     () => Array.from(walletStats.values()).reduce((sum, stat) => sum + stat.income, 0),
     [walletStats],
   )
 
-  const totalExpense30d = useMemo(
+  const totalExpenseCycle = useMemo(
     () => Array.from(walletStats.values()).reduce((sum, stat) => sum + stat.expense, 0),
     [walletStats],
   )
@@ -274,8 +301,8 @@ export function WalletsPage() {
       <WalletsSummaryCard
         wallets={wallets}
         totalBalance={totalBalance}
-        totalIncome30d={totalIncome30d}
-        totalExpense30d={totalExpense30d}
+        totalIncomeCycle={totalIncomeCycle}
+        totalExpenseCycle={totalExpenseCycle}
       />
 
       <Card className="bg-white/70">

@@ -14,6 +14,7 @@ import { getErrorStatus, toErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { confirm } from '@/lib/confirm'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { readCashflowStartDay } from '@/lib/cashflowPeriod'
 import {
   CHAT_EXAMPLES,
   CHAT_EXAMPLES_EN,
@@ -677,6 +678,7 @@ export function FreeTextPage() {
         history: prior,
         session_id: active?.id ?? activeId ?? undefined,
         language: detectPreferredLanguage(msg, locale),
+        cashflow_start_day: user?.cashflow_start_day ?? readCashflowStartDay(),
         ...currentAIReference(),
       })
     },

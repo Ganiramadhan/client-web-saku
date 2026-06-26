@@ -18,13 +18,13 @@ export interface WalletStat {
 export function WalletsSummaryCard({
   wallets,
   totalBalance,
-  totalIncome30d,
-  totalExpense30d,
+  totalIncomeCycle,
+  totalExpenseCycle,
 }: {
   wallets: Wallet[]
   totalBalance: number
-  totalIncome30d: number
-  totalExpense30d: number
+  totalIncomeCycle: number
+  totalExpenseCycle: number
   byType?: Record<WalletType, number>
   walletStats?: Map<string, WalletStat>
 }) {
@@ -33,22 +33,22 @@ export function WalletsSummaryCard({
     ? {
         totalBalance: 'Total Saldo',
         activeWallets: (count: number) => `Total saldo dari ${count} dompet aktif.`,
-        net30d: 'Net 30 hari',
-        income30d: 'Pemasukan 30d',
-        expense30d: 'Pengeluaran 30d',
+        netCycle: 'Net siklus',
+        incomeCycle: 'Pemasukan siklus',
+        expenseCycle: 'Pengeluaran siklus',
         savingRate: 'Saving Rate',
       }
     : {
         totalBalance: 'Total Balance',
         activeWallets: (count: number) => `Total balance from ${count} active wallets.`,
-        net30d: '30-day net',
-        income30d: 'Income 30d',
-        expense30d: 'Spending 30d',
+        netCycle: 'Cycle net',
+        incomeCycle: 'Cycle income',
+        expenseCycle: 'Cycle spending',
         savingRate: 'Saving Rate',
       }
-  const net30d = totalIncome30d - totalExpense30d
+  const netCycle = totalIncomeCycle - totalExpenseCycle
   const savingRate =
-    totalIncome30d > 0 ? Math.max(0, Math.min(100, Math.round((net30d / totalIncome30d) * 100))) : 0
+    totalIncomeCycle > 0 ? Math.max(0, Math.min(100, Math.round((netCycle / totalIncomeCycle) * 100))) : 0
 
   return (
     <section className="relative overflow-hidden rounded-[1.75rem] border-[1.5px] border-[#17120f]/55 bg-[#fffaf6] p-5 shadow-[0_20px_55px_rgba(23,18,15,0.1)] sm:p-6">
@@ -77,32 +77,32 @@ export function WalletsSummaryCard({
             <div
               className={[
                 'mt-4 inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black shadow-sm',
-                net30d >= 0
+                netCycle >= 0
                   ? 'border-emerald-200 bg-emerald-50/90 text-emerald-800'
                   : 'border-brand-200 bg-[#fff3ee]/90 text-brand-800',
               ].join(' ')}
             >
-              {net30d >= 0 ? (
+              {netCycle >= 0 ? (
                 <HiOutlineArrowTrendingUp className="h-4 w-4" />
               ) : (
                 <HiOutlineArrowTrendingDown className="h-4 w-4" />
               )}
-              {copy.net30d}: {net30d >= 0 ? '+' : ''}
-              {formatCurrency(net30d)}
+              {copy.netCycle}: {netCycle >= 0 ? '+' : ''}
+              {formatCurrency(netCycle)}
             </div>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3 lg:pb-1">
           <SummaryMetric
-            label={copy.income30d}
-            value={formatCurrency(totalIncome30d)}
+            label={copy.incomeCycle}
+            value={formatCurrency(totalIncomeCycle)}
             tone="emerald"
             Icon={HiOutlineArrowTrendingUp}
           />
           <SummaryMetric
-            label={copy.expense30d}
-            value={formatCurrency(totalExpense30d)}
+            label={copy.expenseCycle}
+            value={formatCurrency(totalExpenseCycle)}
             tone="rose"
             Icon={HiOutlineArrowTrendingDown}
           />

@@ -17,6 +17,12 @@ import { upcomingBillingApi, type UpcomingBilling } from '@/features/billing/api
 import { Card, PageHeader, Shimmer, EmptyState, Button } from '@/components/ui'
 import { useLocale, useT } from '@/i18n'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import {
+  CASHFLOW_START_DAY_EVENT,
+  formatCashflowPeriod,
+  getCashflowPeriod,
+  readCashflowStartDay,
+} from '@/lib/cashflowPeriod'
 import { useAuthStore } from '@/stores/authStore'
 import type { Category, Transaction } from '@/types/api'
 
@@ -74,21 +80,24 @@ const DASHBOARD_COPY = {
     savingRate: 'Saving rate',
     cashflowTitle: 'Briefing cashflow',
     cashflowDesc: 'Ringkasan realtime dari transaksi, saldo wallet, dan tagihan terdekat.',
+    periodIncome: 'Pemasukan Siklus Ini',
+    periodExpense: 'Pengeluaran Siklus Ini',
+    cycleStarted: 'Siklus mulai',
     projectedSpending: 'Proyeksi pengeluaran',
     safeDailySpend: 'Budget fleksibel harian',
     noSafeSpend: 'Belum ada ruang aman',
     categoryProjection: 'Proyeksi per kategori',
-    categoryProjectionHelper: 'Perkiraan komposisi pengeluaran sampai akhir bulan.',
+    categoryProjectionHelper: 'Perkiraan komposisi pengeluaran sampai akhir siklus.',
     categoryProjectionEmpty: 'Belum ada pengeluaran berkategori.',
     otherCategories: 'Kategori lainnya',
     updatedAt: 'Diperbarui',
     aiPriority: 'Prioritas AI',
-    aiPriorityCategory: 'kategori terbesar bulan ini. Cek detailnya sebelum menambah pengeluaran baru.',
+    aiPriorityCategory: 'kategori terbesar siklus ini. Cek detailnya sebelum menambah pengeluaran baru.',
     aiPriorityBills: 'Siapkan dana untuk tagihan terdekat.',
     aiPriorityPositive: 'Cashflow aman. Pertahankan ritme, lalu alokasikan surplus ke target atau dana darurat.',
-    aiPriorityDeficit: 'Pengeluaran sudah melewati pemasukan bulan ini. Review transaksi terbesar dan tahan belanja non-esensial.',
+    aiPriorityDeficit: 'Pengeluaran sudah melewati pemasukan siklus ini. Review transaksi terbesar dan tahan belanja non-esensial.',
     aiPriorityStart: 'Mulai dengan mencatat pemasukan, saldo wallet, atau transaksi pertama agar briefing lebih akurat.',
-    projectedHelper: 'Estimasi hingga akhir bulan dari ritme pengeluaran saat ini.',
+    projectedHelper: 'Estimasi hingga akhir siklus dari ritme pengeluaran saat ini.',
     dailyRoomHelper: 'Batas pengeluaran non-esensial per hari setelah menyisihkan tagihan.',
     reviewNow: 'Review sekarang',
     manageBills: 'Atur tagihan',
@@ -101,8 +110,8 @@ const DASHBOARD_COPY = {
     actionTitle: 'Prioritas hari ini',
     actionDesc: 'Fokus ke keputusan yang paling membantu: kategori terbesar, tagihan terdekat, dan target yang perlu dijaga.',
     categoryTitle: 'Kategori Pengeluaran',
-    categoryDesc: 'Ringkasan kategori terbesar bulan ini dari transaksi yang sudah tercatat.',
-    emptyInsight: 'Belum ada pengeluaran bulan ini. Insight kategori akan muncul setelah ada transaksi.',
+    categoryDesc: 'Ringkasan kategori terbesar siklus ini dari transaksi yang sudah tercatat.',
+    emptyInsight: 'Belum ada pengeluaran siklus ini. Insight kategori akan muncul setelah ada transaksi.',
     reviewTransactions: 'Review transaksi',
     budgetActive: 'Budget sudah aktif',
     activeLimit: 'Aktifkan limit',
@@ -115,11 +124,11 @@ const DASHBOARD_COPY = {
     tab30d: '30 Hari',
     tab6mo: '6 Bulan',
     monthlyInsight: 'Insight Bulan Ini',
-    positiveInsight: 'Bagus, pemasukan kamu masih lebih besar dari pengeluaran bulan ini.',
-    negativeInsight: 'Pengeluaran bulan ini lebih besar dari pemasukan. Coba cek kategori terbesar.',
+    positiveInsight: 'Bagus, pemasukan kamu masih lebih besar dari pengeluaran siklus ini.',
+    negativeInsight: 'Pengeluaran siklus ini lebih besar dari pemasukan. Coba cek kategori terbesar.',
     aiInsight: 'AI Insight',
     categoryAbsorbs: 'menyerap',
-    categorySpendSuffix: 'dari pengeluaran bulan ini.',
+    categorySpendSuffix: 'dari pengeluaran siklus ini.',
     categoryAdvice: 'Cek transaksi di kategori ini sebelum menambah pengeluaran baru. Kamu juga bisa mengubah insight ini jadi batas harian.',
     perDay: 'hari',
     transactionsCount: 'transaksi',
@@ -170,21 +179,24 @@ const DASHBOARD_COPY = {
     savingRate: 'Saving rate',
     cashflowTitle: 'Cashflow briefing',
     cashflowDesc: 'Realtime summary from transactions, wallet balance, and upcoming bills.',
+    periodIncome: 'Income This Cycle',
+    periodExpense: 'Spending This Cycle',
+    cycleStarted: 'Cycle starts',
     projectedSpending: 'Projected spending',
     safeDailySpend: 'Daily flexible budget',
     noSafeSpend: 'No safe room yet',
     categoryProjection: 'Category projection',
-    categoryProjectionHelper: 'Estimated spending composition through month-end.',
+    categoryProjectionHelper: 'Estimated spending composition through cycle-end.',
     categoryProjectionEmpty: 'No categorized spending yet.',
     otherCategories: 'Other categories',
     updatedAt: 'Updated',
     aiPriority: 'AI priority',
-    aiPriorityCategory: 'is the largest category this month. Review it before adding new spending.',
+    aiPriorityCategory: 'is the largest category this cycle. Review it before adding new spending.',
     aiPriorityBills: 'Set aside money for the closest bill.',
     aiPriorityPositive: 'Cashflow is safe. Keep the rhythm, then move surplus into goals or emergency funds.',
-    aiPriorityDeficit: 'Spending is already above income this month. Review the largest transactions and pause non-essential spending.',
+    aiPriorityDeficit: 'Spending is already above income this cycle. Review the largest transactions and pause non-essential spending.',
     aiPriorityStart: 'Start by recording income, wallet balance, or your first transaction so the briefing gets more accurate.',
-    projectedHelper: 'Estimated month-end spending from your current pace.',
+    projectedHelper: 'Estimated cycle-end spending from your current pace.',
     dailyRoomHelper: 'Daily non-essential spending limit after setting bills aside.',
     reviewNow: 'Review now',
     manageBills: 'Manage bills',
@@ -197,8 +209,8 @@ const DASHBOARD_COPY = {
     actionTitle: 'Today priority',
     actionDesc: 'Focus on the most helpful decisions: top category, closest bill, and goals to protect.',
     categoryTitle: 'Spending Categories',
-    categoryDesc: 'Largest spending categories this month based on recorded transactions.',
-    emptyInsight: 'No spending this month yet. Category insights will appear after transactions are recorded.',
+    categoryDesc: 'Largest spending categories this cycle based on recorded transactions.',
+    emptyInsight: 'No spending this cycle yet. Category insights will appear after transactions are recorded.',
     reviewTransactions: 'Review transactions',
     budgetActive: 'Budget already active',
     activeLimit: 'Activate limit',
@@ -211,11 +223,11 @@ const DASHBOARD_COPY = {
     tab30d: '30 Days',
     tab6mo: '6 Months',
     monthlyInsight: 'This Month Insight',
-    positiveInsight: 'Nice, your income is still higher than spending this month.',
-    negativeInsight: 'Spending is higher than income this month. Review the largest category.',
+    positiveInsight: 'Nice, your income is still higher than spending this cycle.',
+    negativeInsight: 'Spending is higher than income this cycle. Review the largest category.',
     aiInsight: 'AI Insight',
     categoryAbsorbs: 'takes',
-    categorySpendSuffix: 'of this month spending.',
+    categorySpendSuffix: 'of this cycle spending.',
     categoryAdvice: 'Review transactions in this category before adding new spending. You can also turn this insight into a daily limit.',
     perDay: 'day',
     transactionsCount: 'transactions',
@@ -274,13 +286,14 @@ export function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
   const [now, setNow] = useState(() => new Date())
+  const [cashflowStartDay, setCashflowStartDay] = useState(readCashflowStartDay)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
   )
 
-  const monthStart = useMemo(
-    () => new Date(now.getFullYear(), now.getMonth(), 1),
-    [now],
+  const cashflowPeriod = useMemo(
+    () => getCashflowPeriod(now, cashflowStartDay),
+    [cashflowStartDay, now],
   )
   const sixMonthStart = useMemo(
     () => new Date(now.getFullYear(), now.getMonth() - 5, 1),
@@ -301,11 +314,11 @@ export function DashboardPage() {
     refetchInterval: 60 * 1000,
   })
 
-  const monthTxns = useQuery({
-    queryKey: ['transactions', 'month'],
+  const cashflowTxns = useQuery({
+    queryKey: ['transactions', 'cashflow-cycle', cashflowPeriod.start.toISOString(), now.toISOString()],
     queryFn: () =>
       transactionApi.list({
-        from: monthStart.toISOString(),
+        from: cashflowPeriod.start.toISOString(),
         to: now.toISOString(),
         limit: 1000,
       }),
@@ -349,7 +362,7 @@ export function DashboardPage() {
   )
 
   const monthSummary = useMemo(() => {
-    const data = monthTxns.data?.data ?? []
+    const data = cashflowTxns.data?.data ?? []
 
     const income = data
       .filter((tx) => tx.type === 'income')
@@ -365,7 +378,7 @@ export function DashboardPage() {
       saved: income - expense,
       savingRate: income > 0 ? Math.max(0, ((income - expense) / income) * 100) : 0,
     }
-  }, [monthTxns.data])
+  }, [cashflowTxns.data])
 
   const trendData = useMemo(() => {
     const txns = longRangeTxns.data?.data ?? []
@@ -373,14 +386,14 @@ export function DashboardPage() {
   }, [trendRange, longRangeTxns.data, now])
 
   const categoryInsights = useMemo(
-    () => buildCategoryInsights(monthTxns.data?.data ?? [], categories.data ?? []),
-    [monthTxns.data, categories.data],
+    () => buildCategoryInsights(cashflowTxns.data?.data ?? [], categories.data ?? []),
+    [cashflowTxns.data, categories.data],
   )
   const cashflowBriefing = useMemo(() => {
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const dayOfMonth = Math.max(1, now.getDate())
-    const remainingDays = Math.max(1, daysInMonth - dayOfMonth + 1)
-    const projectedExpense = dayOfMonth > 0 ? (monthSummary.expense / dayOfMonth) * daysInMonth : monthSummary.expense
+    const remainingDays = cashflowPeriod.remainingDays
+    const projectedExpense = cashflowPeriod.elapsedDays > 0
+      ? (monthSummary.expense / cashflowPeriod.elapsedDays) * cashflowPeriod.cycleDays
+      : monthSummary.expense
     const activeBills = (upcomingBillings.data ?? []).filter((bill) => bill.status !== 'paused')
     const unpaidBills = activeBills
       .reduce((sum, bill) => sum + Number(bill.amount ?? 0), 0)
@@ -446,7 +459,7 @@ export function DashboardPage() {
       priorityActionTo,
       updatedAtLabel: now.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
     }
-  }, [categoryInsights, copy, locale, monthSummary.expense, monthSummary.income, monthSummary.saved, now, totalBalance, upcomingBillings.data])
+  }, [cashflowPeriod.cycleDays, cashflowPeriod.elapsedDays, cashflowPeriod.remainingDays, categoryInsights, copy, locale, monthSummary.expense, monthSummary.income, monthSummary.saved, now, totalBalance, upcomingBillings.data])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -460,6 +473,24 @@ export function DashboardPage() {
     const timer = window.setInterval(() => setNow(new Date()), 60 * 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (user?.cashflow_start_day) {
+      setCashflowStartDay(user.cashflow_start_day)
+    }
+  }, [user?.cashflow_start_day])
+
+  useEffect(() => {
+    const onChange = () => setCashflowStartDay(readCashflowStartDay())
+    window.addEventListener(CASHFLOW_START_DAY_EVENT, onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener(CASHFLOW_START_DAY_EVENT, onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [])
+
+  const periodLabel = formatCashflowPeriod(cashflowPeriod, locale)
 
   return (
     <div className="space-y-6">
@@ -478,16 +509,16 @@ export function DashboardPage() {
         />
 
         <StatCard
-          loading={monthTxns.isLoading}
-          label={t.dashboard.monthIncome}
+          loading={cashflowTxns.isLoading}
+          label={copy.periodIncome}
           value={formatCurrency(monthSummary.income)}
           Icon={HiOutlineArrowTrendingUp}
           tone="emerald"
         />
 
         <StatCard
-          loading={monthTxns.isLoading}
-          label={t.dashboard.monthExpense}
+          loading={cashflowTxns.isLoading}
+          label={copy.periodExpense}
           value={formatCurrency(monthSummary.expense)}
           Icon={HiOutlineArrowTrendingDown}
           tone="rose"
@@ -495,7 +526,7 @@ export function DashboardPage() {
       </section>
 
       <CashflowBriefing
-        loading={monthTxns.isLoading || upcomingBillings.isLoading}
+        loading={cashflowTxns.isLoading || upcomingBillings.isLoading}
         projectedExpense={cashflowBriefing.projectedExpense}
         dailyRoomLabel={cashflowBriefing.dailyRoomLabel}
         dailyRoomHelper={cashflowBriefing.dailyRoomHelper}
@@ -505,6 +536,8 @@ export function DashboardPage() {
         priorityActionLabel={cashflowBriefing.priorityActionLabel}
         priorityActionTo={cashflowBriefing.priorityActionTo}
         updatedAtLabel={cashflowBriefing.updatedAtLabel}
+        periodLabel={periodLabel}
+        startDay={cashflowStartDay}
         copy={copy}
       />
 
@@ -653,6 +686,8 @@ function CashflowBriefing({
   priorityActionLabel,
   priorityActionTo,
   updatedAtLabel,
+  periodLabel,
+  startDay,
   copy,
 }: {
   loading?: boolean
@@ -665,6 +700,8 @@ function CashflowBriefing({
   priorityActionLabel: string
   priorityActionTo: string
   updatedAtLabel: string
+  periodLabel: string
+  startDay: number
   copy: DashboardCopy
 }) {
   return (
@@ -684,6 +721,9 @@ function CashflowBriefing({
             {copy.updatedAt} {updatedAtLabel}
           </p>
         </div>
+        <p className="mt-3 text-xs font-semibold text-[#4f4540]/75">
+          {copy.cycleStarted} {startDay}: {periodLabel}
+        </p>
       </div>
       <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-[0.8fr_0.8fr_1.4fr]">
         <BriefingItem label={copy.projectedSpending} value={formatCurrency(projectedExpense)} helper={copy.projectedHelper} loading={loading} tone="rose" />

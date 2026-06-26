@@ -54,6 +54,7 @@ export interface UpdateProfilePayload {
   name?: string
   email?: string
   photo?: string
+  cashflow_start_day?: number
 }
 
 export async function updateProfile(payload: UpdateProfilePayload): Promise<AuthUser> {

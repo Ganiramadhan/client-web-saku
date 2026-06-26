@@ -34,10 +34,10 @@ export function WalletCard({
         edit: 'Edit',
         delete: 'Hapus',
         balance: 'Saldo',
-        income30d: 'Masuk 30d',
-        expense30d: 'Keluar 30d',
+        incomeCycle: 'Masuk siklus',
+        expenseCycle: 'Keluar siklus',
         net: 'net',
-        tx30d: 'tx 30d',
+        txCycle: 'tx siklus',
         targetPocket: 'Kantong Tujuan',
         until: 's/d',
         noTarget: 'Target nominal belum ditetapkan.',
@@ -48,10 +48,10 @@ export function WalletCard({
         edit: 'Edit',
         delete: 'Delete',
         balance: 'Balance',
-        income30d: 'Income 30d',
-        expense30d: 'Spending 30d',
+        incomeCycle: 'Cycle income',
+        expenseCycle: 'Cycle spending',
         net: 'net',
-        tx30d: 'tx 30d',
+        txCycle: 'cycle tx',
         targetPocket: 'Target Pocket',
         until: 'until',
         noTarget: 'Target amount has not been set.',
@@ -137,8 +137,8 @@ export function WalletCard({
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-          <MiniStat label={copy.income30d} value={formatCurrency(income, wallet.currency)} tone="emerald" />
-          <MiniStat label={copy.expense30d} value={formatCurrency(expense, wallet.currency)} tone="rose" />
+          <MiniStat label={copy.incomeCycle} value={formatCurrency(income, wallet.currency)} tone="emerald" />
+          <MiniStat label={copy.expenseCycle} value={formatCurrency(expense, wallet.currency)} tone="rose" />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#4f4540]/70">
@@ -148,7 +148,7 @@ export function WalletCard({
           </span>
           <span className="inline-flex items-center gap-1">
             <HiOutlineClock className="h-3.5 w-3.5" />
-            {count} {copy.tx30d} · {lastActivity}
+            {count} {copy.txCycle} · {lastActivity}
           </span>
         </div>
       </div>

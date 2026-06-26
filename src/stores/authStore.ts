@@ -14,6 +14,7 @@ export interface AuthUser {
   referral_reward?: number
   telegram_chat_id?: string
   telegram_username?: string
+  cashflow_start_day?: number
   last_login_at?: string | null
 }
 

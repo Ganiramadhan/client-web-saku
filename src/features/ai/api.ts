@@ -90,6 +90,7 @@ export interface ChatRequest {
   language?: 'id' | 'en'
   reference_date?: string
   timezone?: string
+  cashflow_start_day?: number
 }
 
 export const aiApi = {
