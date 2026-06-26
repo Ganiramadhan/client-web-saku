@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -21,21 +21,21 @@ import { formatCurrency } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
 import { useLocale } from '@/i18n'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { clearPendingOrder, invalidateSubscriptionQueries, pendingPaymentOrder } from '../utils/checkoutFlow'
 
 export function ThanksPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const { locale } = useLocale()
   const [params] = useSearchParams()
-  const orderId = params.get('order_id') ?? params.get('order') ?? null
-  const [confirmedSub, setConfirmedSub] = useState<Subscription | null>(null)
-  const [confirmLoading, setConfirmLoading] = useState(Boolean(orderId))
-  const [confirmFinished, setConfirmFinished] = useState(!orderId)
+  const orderId = params.get('order_id') ?? params.get('order') ?? (pendingPaymentOrder() || null)
+  const requestedState = params.get('state')
   const copy = locale === 'id'
     ? {
         title: 'Akses Pro sudah aktif',
-        eyebrow: 'Pembayaran berhasil',
-        subtitle: 'Terima kasih. Paketmu sudah siap dipakai untuk mencatat transaksi lebih cepat, membaca struk dengan AI, dan memahami arus kas dari satu workspace.',
+        syncingTitle: 'Pembayaran sedang diverifikasi',
+        eyebrow: 'Status pembayaran',
+        subtitle: 'Status paket diperbarui langsung dari payment gateway. Halaman ini akan menyegarkan aktivasi secara otomatis.',
         activePlan: 'Paket aktif',
         activeUntil: (date: string) => `Aktif hingga ${date}`,
         activeNow: 'Aktif sekarang',
@@ -57,8 +57,9 @@ export function ThanksPage() {
       }
     : {
         title: 'Your Pro access is active',
-        eyebrow: 'Payment successful',
-        subtitle: 'Thank you. Your plan is ready for faster transaction capture, AI receipt scanning, and clearer cashflow insights in one workspace.',
+        syncingTitle: 'Payment is being verified',
+        eyebrow: 'Payment status',
+        subtitle: 'Your plan status is updated directly from the payment gateway. This page refreshes activation automatically.',
         activePlan: 'Active plan',
         activeUntil: (date: string) => `Active until ${date}`,
         activeNow: 'Active now',
@@ -79,36 +80,23 @@ export function ThanksPage() {
         ],
       }
 
+  const confirmationQ = useQuery({
+    queryKey: ['subscriptions', 'payment-confirmation', orderId],
+    queryFn: () => subscriptionApi.confirm(orderId!),
+    enabled: Boolean(orderId),
+    retry: 3,
+    retryDelay: 1200,
+    refetchInterval: (query) => {
+      const subscription = query.state.data
+      if (!subscription) return 1800
+      return subscription.status === 'pending' && subscription.payment_status === 'pending' ? 1800 : false
+    },
+  })
+
   useEffect(() => {
-    document.title = 'Terima kasih - SAKU'
-    qc.invalidateQueries({ queryKey: ['subscriptions'] })
-    if (orderId) {
-      setConfirmLoading(true)
-      setConfirmFinished(false)
-      subscriptionApi
-        .confirm(orderId)
-        .then((sub) => {
-          setConfirmedSub(sub)
-          trackEvent(analyticsEvents.paymentSuccess, {
-            subscription_plan: sub.plan_code,
-            amount: sub.amount,
-          })
-          if (sub.status === 'active') {
-            trackEvent(analyticsEvents.subscriptionActivated, {
-              subscription_plan: sub.plan_code,
-              amount: sub.amount,
-            })
-          }
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'active'] })
-        })
-        .catch(() => undefined)
-        .finally(() => {
-          setConfirmLoading(false)
-          setConfirmFinished(true)
-        })
-    }
-  }, [qc, orderId])
+    document.title = 'Status pembayaran - SAKU'
+    invalidateSubscriptionQueries(qc)
+  }, [qc])
 
   const activeQ = useQuery({
     queryKey: ['subscriptions', 'active'],
@@ -117,16 +105,26 @@ export function ThanksPage() {
     retryDelay: 1500,
   })
 
-  const active = activeQ.data ?? (confirmedSub?.status === 'active' ? confirmedSub : null)
+  const confirmedSub: Subscription | null = confirmationQ.data ?? null
+  const confirmedActive = confirmedSub?.status === 'active' && confirmedSub.payment_status === 'paid'
+    ? confirmedSub
+    : null
+  const active = confirmedActive ?? (!orderId ? activeQ.data ?? null : null)
   useEffect(() => {
     if (!active) return
+    clearPendingOrder(orderId ?? undefined)
+    trackEvent(analyticsEvents.paymentSuccess, {
+      subscription_plan: active.plan_code,
+      amount: active.amount,
+    })
     trackEvent(analyticsEvents.subscriptionActivated, {
       subscription_plan: active.plan_code,
       amount: active.amount,
     })
-  }, [active?.id])
-  const planIsLoading = !active && (activeQ.isLoading || activeQ.isFetching || confirmLoading)
-  const planIsSyncing = !active && confirmFinished
+    invalidateSubscriptionQueries(qc)
+  }, [active, orderId, qc])
+  const planIsLoading = !active && (activeQ.isLoading || activeQ.isFetching || confirmationQ.isLoading || confirmationQ.isFetching)
+  const planIsSyncing = !active && (requestedState === 'pending' || requestedState === 'syncing' || confirmedSub?.payment_status === 'pending')
   const endsAtLabel = useMemo(() => {
     if (!active?.ends_at) return null
     return new Date(active.ends_at).toLocaleDateString('id-ID', {
@@ -167,7 +165,7 @@ export function ThanksPage() {
               </div>
             </div>
             <h1 className="mx-auto mt-4 max-w-md text-center text-2xl font-extrabold leading-tight text-slate-950 sm:mx-0 sm:mt-5 sm:max-w-2xl sm:text-left sm:text-4xl">
-              {copy.title}
+              {active ? copy.title : copy.syncingTitle}
             </h1>
             <p className="mx-auto mt-3 max-w-md text-center text-sm leading-6 text-slate-600 sm:mx-0 sm:mt-4 sm:max-w-2xl sm:text-left sm:text-base sm:leading-7">
               {copy.subtitle}
@@ -191,7 +189,7 @@ export function ThanksPage() {
                   <p className="mt-3 text-sm font-semibold text-slate-500">{copy.loadingPlan}</p>
                 ) : (
                   <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-                    {planIsSyncing ? copy.syncingPlan : copy.unavailablePlan}
+                    {planIsSyncing || planIsLoading ? copy.syncingPlan : copy.unavailablePlan}
                   </p>
                 )}
                 </div>

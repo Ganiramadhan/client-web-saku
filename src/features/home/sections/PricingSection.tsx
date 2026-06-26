@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -16,8 +16,8 @@ import { Button, Input, Modal } from '@/components/ui'
 import { sanitizeReferralCode } from '@/features/subscription/utils/referral'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
-import { loadSnap } from '@/lib/snap'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { openSubscriptionCheckout } from '@/features/subscription/utils/checkoutFlow'
 import { isActiveSub } from '../components/landingUtils'
 import { SectionHeading } from '../components/SectionHeading'
 
@@ -138,8 +138,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const proLaunchPromoHint =
     locale === 'id' ? 'Harga promo launching' : 'Launch promo price'
 
-  const snapLoadedRef = useRef(false)
-
   const [voucherCode, setVoucherCode] = useState('')
   const [voucherError, setVoucherError] = useState('')
   const [appliedVoucher, setAppliedVoucher] =
@@ -180,81 +178,12 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         sanitizeReferralCode(voucherCode ?? ''),
       )
 
-      trackEvent(analyticsEvents.checkoutStarted, {
-        subscription_plan: planCode,
-        amount: checkout.amount,
-      })
-
-      if (!snapLoadedRef.current) {
-        await loadSnap(checkout.client_key, checkout.is_production)
-        snapLoadedRef.current = true
-      }
-
-      return checkout
-    },
-    onSuccess: (checkout) => {
-      if (!window.snap) {
-        window.location.href = checkout.redirect_url
-        return
-      }
-
-      document.body.classList.add('saku-payment-open')
-
-      window.snap.pay(checkout.snap_token, {
-        onSuccess: async (result) => {
-          document.body.classList.remove('saku-payment-open')
-
-          const orderId =
-            result && typeof result === 'object' && 'order_id' in result
-              ? String((result as { order_id?: unknown }).order_id ?? '')
-              : checkout.order_id
-
-          if (orderId) await subscriptionApi.confirm(orderId)
-
-          trackEvent(analyticsEvents.paymentSuccess, {
-            subscription_plan: checkoutPlanCode ?? undefined,
-            payment_method:
-              result && typeof result === 'object' && 'payment_type' in result
-                ? String(
-                    (result as { payment_type?: unknown }).payment_type ?? '',
-                  )
-                : undefined,
-            amount: checkout.amount,
-          })
-
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-          qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
-
-          navigate(
-            `/app/subscription/thanks${
-              orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''
-            }`,
-          )
-        },
-        onPending: () => {
-          document.body.classList.remove('saku-payment-open')
-          toast.info(
-            locale === 'id'
-              ? 'Pembayaran masih pending.'
-              : 'Payment is still pending.',
-          )
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-        },
-        onError: () => {
-          document.body.classList.remove('saku-payment-open')
-          trackEvent(analyticsEvents.paymentFailed, {
-            subscription_plan: checkoutPlanCode ?? undefined,
-            amount: checkout.amount,
-          })
-          toast.error(locale === 'id' ? 'Pembayaran gagal.' : 'Payment failed.')
-        },
-        onClose: () => {
-          document.body.classList.remove('saku-payment-open')
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-        },
+      return openSubscriptionCheckout({
+        checkout,
+        planCode,
+        locale,
+        navigate,
+        queryClient: qc,
       })
     },
     onError: (error) => {
@@ -306,8 +235,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       badge: null,
       desc:
         locale === 'id'
-          ? 'Fitur dasar untuk mulai mencatat arus kas harian.'
-          : 'Core tools to start tracking daily cashflow.',
+          ? 'Untuk mulai membangun kebiasaan mencatat tanpa komitmen.'
+          : 'For building a tracking habit without commitment.',
       features: planFeatures('free', locale) ?? [],
       cta: t.landing.ctaPrimary,
       tier: 'free',
@@ -332,8 +261,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       promoLabel: period === 'monthly' ? proLaunchPromoLabel : null,
       desc:
         locale === 'id'
-          ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.'
-          : 'AI features and higher capacity for more active finance routines.',
+          ? 'Pilihan terbaik untuk pemakaian harian dengan AI, OCR, wallet, dan insight lebih lega.'
+          : 'Best for daily use with more AI, OCR, wallets, and insights.',
       features: planFeatures('pro', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
       tier: 'pro',
@@ -355,8 +284,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       badge: null,
       desc:
         locale === 'id'
-          ? 'Paket lanjutan untuk kebutuhan laporan yang lebih dalam.'
-          : 'Advanced plan for deeper reports and priority support.',
+          ? 'Untuk pengguna yang butuh laporan lebih dalam, export PDF, dan dukungan prioritas.'
+          : 'For users who need deeper reports, PDF export, and priority support.',
       features: planFeatures('premium', locale) ?? [],
       cta: locale === 'id' ? 'Mulai Premium' : 'Start Premium',
       tier: 'premium',
@@ -370,24 +299,24 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     free: {
       desc:
         locale === 'id'
-          ? 'Fitur dasar untuk mulai mencatat arus kas harian.'
-          : 'Core tools to start tracking daily cashflow.',
+          ? 'Untuk mulai membangun kebiasaan mencatat tanpa komitmen.'
+          : 'For building a tracking habit without commitment.',
       cta: t.landing.ctaPrimary,
       badge: null,
     },
     pro: {
       desc:
         locale === 'id'
-          ? 'Fitur AI dan kapasitas lebih luas untuk rutinitas finansial yang lebih aktif.'
-          : 'AI features and higher capacity for more active finance routines.',
+          ? 'Pilihan terbaik untuk pemakaian harian dengan AI, OCR, wallet, dan insight lebih lega.'
+          : 'Best for daily use with more AI, OCR, wallets, and insights.',
       cta: locale === 'id' ? 'Mulai Pro' : 'Start Pro',
       badge: locale === 'id' ? 'Paling Populer' : 'Most Popular',
     },
     premium: {
       desc:
         locale === 'id'
-          ? 'Paket lanjutan untuk kebutuhan laporan yang lebih dalam.'
-          : 'Advanced plan for deeper reports and priority support.',
+          ? 'Untuk pengguna yang butuh laporan lebih dalam, export PDF, dan dukungan prioritas.'
+          : 'For users who need deeper reports, PDF export, and priority support.',
       cta: locale === 'id' ? 'Mulai Premium' : 'Start Premium',
       badge: null,
     },
@@ -516,11 +445,13 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
     checkoutM.mutate(
       { planCode: checkoutPlanCode, voucherCode: finalVoucherCode },
       {
-        onSuccess: () => {
-          setCheckoutPlanCode(null)
-          setVoucherCode('')
-          setVoucherError('')
-          setAppliedVoucher(null)
+        onSuccess: (outcome) => {
+          if (outcome === 'active' || outcome === 'redirected') {
+            setCheckoutPlanCode(null)
+            setVoucherCode('')
+            setVoucherError('')
+            setAppliedVoucher(null)
+          }
         },
       },
     )
@@ -533,13 +464,13 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           label={t.nav.pricing}
           title={
             locale === 'id'
-              ? 'Pilih paket sesuai ritme keuanganmu.'
-              : 'Choose a plan that fits your money routine.'
+              ? 'Mulai gratis, upgrade saat sudah jadi kebiasaan.'
+              : 'Start free, upgrade when it becomes a habit.'
           }
           description={
             locale === 'id'
-              ? 'Mulai dari Free untuk membangun kebiasaan. Upgrade saat kamu butuh AI, OCR, split bill, dan insight yang lebih lega.'
-              : 'Start with Free to build the habit. Upgrade when you need more AI, OCR, split bill, and deeper insights.'
+              ? 'Coba alurnya dulu tanpa tekanan. Pilih Pro atau Premium ketika kamu butuh kapasitas AI, OCR, wallet, dan insight yang lebih luas.'
+              : 'Try the workflow first without pressure. Choose Pro or Premium when you need more AI, OCR, wallets, and insights.'
           }
         />
 
@@ -704,8 +635,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
 
         <div className="mt-10 flex flex-wrap justify-center gap-3 text-sm">
           {(locale === 'id'
-            ? ['Mulai dari gratis', 'Upgrade kapan saja', 'Akses langsung']
-            : ['Start for free', 'Upgrade anytime', 'Instant access']
+            ? ['Mulai dari Free', 'Voucher opsional', 'Akses langsung setelah aktif']
+            : ['Start from Free', 'Voucher optional', 'Instant access after activation']
           ).map((item) => (
             <span
               key={item}
@@ -724,11 +655,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         description={
           isCheckoutPro
             ? locale === 'id'
-              ? 'Harga Pro sudah memakai promo launching 30%. Masukkan voucher tambahan jika punya, atau lanjutkan tanpa voucher.'
-              : 'Pro already uses the 30% launch promo price. Enter an extra voucher if you have one, or continue without it.'
+              ? 'Harga Pro sudah memakai promo launching. Kalau punya voucher tambahan, masukkan di sini. Kalau tidak, langsung lanjut pembayaran.'
+              : 'Pro already uses the launch promo price. If you have an extra voucher, enter it here. If not, continue to payment.'
             : locale === 'id'
-              ? 'Masukkan kode voucher jika memiliki promo. Kosongkan jika tidak memiliki voucher.'
-              : 'Enter a voucher code if you have a promo. Leave it empty if you do not have a voucher.'
+              ? 'Punya kode voucher? Masukkan di sini. Kalau tidak punya, kosongkan saja dan lanjut pembayaran.'
+              : 'Have a voucher code? Enter it here. If not, leave it empty and continue to payment.'
         }
         onClose={() => {
           if (checkoutM.isPending) return

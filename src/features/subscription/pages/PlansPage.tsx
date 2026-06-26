@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { EmptyState, Input, Skeleton } from '@/components/ui'
 import { subscriptionApi, type Plan } from '../api'
 import { toast } from '@/lib/toast'
-import { loadSnap } from '@/lib/snap'
 import { useLocale } from '@/i18n'
 import { sanitizeReferralCode } from '../utils/referral'
 import type { BillingPeriod } from '../types'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { openSubscriptionCheckout } from '../utils/checkoutFlow'
 import {
   ActiveSubscriptionBanner,
   BillingPeriodToggle,
@@ -16,6 +16,8 @@ import {
   PlansHero,
   SubscriptionTrustSection,
 } from '../components/PlansPanels'
+
+const ALLOWED_PLAN_PREFIXES = ['free', 'pro', 'premium']
 
 export function PlansPage() {
   const qc = useQueryClient()
@@ -54,12 +56,8 @@ export function PlansPage() {
   const [busyCode, setBusyCode] = useState<string | null>(null)
   const [period, setPeriod] = useState<BillingPeriod>('monthly')
   const [voucherCode, setVoucherCode] = useState('')
-  const snapLoadedRef = useRef(false)
-
-
-  const allowedPrefixes = ['free', 'pro', 'premium']
   const allPlans = useMemo(
-    () => (plansQ.data ?? []).filter((p) => allowedPrefixes.some((pref) => p.code === pref || p.code.startsWith(pref + '_'))),
+    () => (plansQ.data ?? []).filter((p) => ALLOWED_PLAN_PREFIXES.some((pref) => p.code === pref || p.code.startsWith(pref + '_'))),
     [plansQ.data],
   )
   const plans = useMemo(() => allPlans.filter((p) => p.period === period), [allPlans, period])
@@ -91,56 +89,12 @@ export function PlansPage() {
       setBusyCode(plan.code)
 
       const checkout = await subscriptionApi.checkout(plan.code, false, undefined, sanitizeReferralCode(voucherCode))
-      trackEvent(analyticsEvents.checkoutStarted, {
-        subscription_plan: plan.code,
-        amount: checkout.amount,
-      })
-
-      if (!snapLoadedRef.current) {
-        await loadSnap(checkout.client_key, checkout.is_production)
-        snapLoadedRef.current = true
-      }
-
-      if (!window.snap) {
-        window.location.href = checkout.redirect_url
-        return
-      }
-
-      document.body.classList.add('saku-payment-open')
-      window.snap.pay(checkout.snap_token, {
-        onSuccess: async (result) => {
-          document.body.classList.remove('saku-payment-open')
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          const orderId =
-            result && typeof result === 'object' && 'order_id' in result
-              ? String((result as { order_id?: unknown }).order_id ?? '')
-              : ''
-          const qs = orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''
-          if (orderId) await subscriptionApi.confirm(orderId)
-          trackEvent(analyticsEvents.paymentSuccess, {
-            subscription_plan: plan.code,
-            payment_method: result && typeof result === 'object' && 'payment_type' in result ? String((result as { payment_type?: unknown }).payment_type ?? '') : undefined,
-            amount: checkout.amount,
-          })
-          navigate(`/app/subscription/thanks${qs}`)
-        },
-        onPending: () => {
-          document.body.classList.remove('saku-payment-open')
-          toast.info(copy.pendingPayment)
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-        },
-        onError: () => {
-          document.body.classList.remove('saku-payment-open')
-          trackEvent(analyticsEvents.paymentFailed, {
-            subscription_plan: plan.code,
-            amount: checkout.amount,
-          })
-          toast.error(copy.paymentFailed)
-        },
-        onClose: () => {
-          document.body.classList.remove('saku-payment-open')
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-        },
+      await openSubscriptionCheckout({
+        checkout,
+        planCode: plan.code,
+        locale,
+        navigate,
+        queryClient: qc,
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : copy.checkoutFailed

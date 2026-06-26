@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
@@ -15,7 +15,7 @@ import {
 } from 'react-icons/hi2'
 import { adminUserApi, type AdminUserPayload } from '@/features/adminUsers/api'
 import {
-  AdminDataTable, Badge, Button, Input, Modal, PageHeader,
+  AdminDataTable, AdminMetricCard, Badge, Button, Input, Modal, PageHeader,
   RSelect,
   type SelectOption,
 } from '@/components/ui'
@@ -130,7 +130,7 @@ export function AdminUsersPage() {
         accessorFn: (u) => u.name,
         cell: ({ row }) => (
           <div className="flex min-w-[220px] items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm ring-2 ring-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-[#17120f] shadow-sm ring-2 ring-[#fffaf6]">
               {row.original.photo_url ? (
                 <img
                   src={row.original.photo_url}
@@ -139,7 +139,7 @@ export function AdminUsersPage() {
                   className="h-full w-full rounded-full object-cover"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                <span className="flex h-full w-full items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-[#17120f]">
                   {(row.original.name?.trim()?.[0] ?? '?').toUpperCase()}
                 </span>
               )}
@@ -168,7 +168,7 @@ export function AdminUsersPage() {
         cell: ({ row }) => (
           <div className="min-w-[170px] text-xs leading-5">
             <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <HiOutlineClock className="h-3.5 w-3.5 text-blue-500" />
+              <HiOutlineClock className="h-3.5 w-3.5 text-brand-600" />
               {lastLoginLabel(row.original.last_login_at)}
             </div>
             <div className="text-slate-400">Joined {formatDate(row.original.created_at)}</div>
@@ -199,7 +199,7 @@ export function AdminUsersPage() {
             </button>
             <button
               onClick={() => { setEditing(row.original); setOpen(true) }}
-              className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-700"
+              className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-100 hover:text-brand-800"
               title="Edit"
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
@@ -235,7 +235,6 @@ export function AdminUsersPage() {
               Refresh
             </Button>
             <Button
-              className="rounded-xl !bg-blue-600 font-bold shadow-lg shadow-blue-200/60 hover:-translate-y-px hover:!bg-blue-500"
               onClick={() => { setEditing(null); setOpen(true) }}
               leftIcon={<HiOutlineUserPlus className="h-4 w-4" />}
             >
@@ -246,10 +245,10 @@ export function AdminUsersPage() {
       />
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <UserStatCard label="Total Users" value={stats.total} Icon={HiOutlineUsers} tone="blue" />
-        <UserStatCard label="Active" value={stats.active} Icon={HiOutlineCheckCircle} tone="emerald" />
-        <UserStatCard label="Pending Verify" value={stats.pending} Icon={HiOutlineNoSymbol} tone="amber" />
-        <UserStatCard label="Admin" value={stats.admin} Icon={HiOutlineShieldCheck} tone="violet" />
+        <AdminMetricCard label="Total Users" value={stats.total} helper="Accounts managed by admin" Icon={HiOutlineUsers} tone="brand" loading={q.isLoading} />
+        <AdminMetricCard label="Active" value={stats.active} helper="Can access their workspace" Icon={HiOutlineCheckCircle} tone="emerald" loading={q.isLoading} />
+        <AdminMetricCard label="Pending Verify" value={stats.pending} helper="Waiting for email verification" Icon={HiOutlineNoSymbol} tone="amber" loading={q.isLoading} />
+        <AdminMetricCard label="Admin" value={stats.admin} helper="Admin and super admin access" Icon={HiOutlineShieldCheck} tone="violet" loading={q.isLoading} />
       </section>
 
       <AdminDataTable
@@ -311,39 +310,6 @@ export function AdminUsersPage() {
   )
 }
 
-function UserStatCard({
-  label,
-  value,
-  Icon,
-  tone,
-}: {
-  label: string
-  value: number
-  Icon: ComponentType<{ className?: string }>
-  tone: 'blue' | 'emerald' | 'rose' | 'violet' | 'amber'
-}) {
-  const styles = {
-    blue: 'border-blue-100 bg-blue-50/55 text-blue-700',
-    emerald: 'border-emerald-100 bg-emerald-50/55 text-emerald-700',
-    rose: 'border-rose-100 bg-rose-50/55 text-rose-700',
-    violet: 'border-violet-100 bg-violet-50/55 text-violet-700',
-    amber: 'border-amber-100 bg-amber-50/55 text-amber-700',
-  }
-  return (
-    <div className="group rounded-2xl border border-white/80 bg-white/68 p-4 shadow-lg shadow-slate-200/30 backdrop-blur-2xl transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-extrabold text-slate-950">{value}</p>
-        </div>
-        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl border transition group-hover:scale-105', styles[tone])}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function UserModal({
   open, onClose, editing,
 }: { open: boolean; onClose: () => void; editing: AdminUser | null }) {
@@ -393,8 +359,8 @@ function UserModal({
       }
     >
       <div className="space-y-5">
-        <div className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white shadow-sm">
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-100/70 p-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-lg font-semibold text-[#17120f] shadow-sm">
             {(form.name?.trim()?.[0] ?? '?').toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -405,7 +371,7 @@ function UserModal({
               {form.email || 'email@company.com'}
             </div>
             {editing ? (
-              <div className="mt-1 text-[11px] text-blue-700">
+              <div className="mt-1 text-[11px] text-brand-800">
                 Last login: {lastLoginLabel(editing.last_login_at)}
               </div>
             ) : null}
@@ -451,7 +417,7 @@ function UserModal({
           </div>
           <button
             type="button"
-            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-100"
+            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-100 px-3 py-2 text-xs font-bold text-brand-800 transition hover:-translate-y-0.5 hover:bg-brand-200"
             onClick={() => setForm({ ...form, password: '12345678' })}
           >
             <HiOutlineKey className="h-4 w-4" />
@@ -484,7 +450,7 @@ function UserModal({
           </div>
         </div>
 
-        <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-700">
+        <div className="flex items-start gap-2 rounded-xl border border-brand-200 bg-brand-100/70 p-3 text-xs text-brand-800">
           <HiOutlineShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {editing

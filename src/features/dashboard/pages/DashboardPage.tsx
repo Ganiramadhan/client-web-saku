@@ -1,31 +1,24 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   HiOutlineArrowRight,
   HiOutlineArrowTrendingDown,
   HiOutlineArrowTrendingUp,
   HiOutlineBanknotes,
   HiOutlineCalendarDays,
-  HiOutlineLightBulb,
   HiOutlineSparkles,
-  HiOutlineWallet,
 } from 'react-icons/hi2'
 import { walletApi } from '@/features/wallets/api'
 import { transactionApi } from '@/features/transactions/api'
 import { categoryApi } from '@/features/categories/api'
 import { subscriptionApi, type Subscription } from '@/features/subscription/api'
 import { upcomingBillingApi, type UpcomingBilling } from '@/features/billing/api'
-import { budgetApi } from '@/features/budgets/api'
-import { savingsGoalApi } from '@/features/targets/api'
 import { Card, PageHeader, Shimmer, EmptyState, Button } from '@/components/ui'
 import { useLocale, useT } from '@/i18n'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { toast } from '@/lib/toast'
-import { toErrorMessage } from '@/lib/api'
-import { analyticsEvents, trackEvent } from '@/lib/analytics'
-import type { Budget, Category, SavingsGoal, Transaction, Wallet } from '@/types/api'
+import type { Category, Transaction } from '@/types/api'
 
 type TrendRange = 'today' | '7d' | '30d' | '6mo'
 
@@ -38,15 +31,6 @@ interface CategoryInsight {
   name: string
   amount: number
   count: number
-}
-
-interface DashboardGoal {
-  id: string
-  name: string
-  target_amount: number
-  current_amount: number
-  remaining: number
-  days_left?: number | null
 }
 
 const TONE = {
@@ -86,13 +70,17 @@ const TONE = {
 
 const DASHBOARD_COPY = {
   id: {
-    subtitle: 'Dashboard ini fokus ke keputusan harian: sisa ruang belanja, proyeksi akhir bulan, tagihan dekat, dan prioritas AI.',
+    subtitle: 'Lihat kondisi keuangan hari ini, keputusan terpenting, dan aktivitas terbaru.',
     savingRate: 'Saving rate',
     cashflowTitle: 'Briefing cashflow',
     cashflowDesc: 'Ringkasan realtime dari transaksi, saldo wallet, dan tagihan terdekat.',
     projectedSpending: 'Proyeksi pengeluaran',
-    safeDailySpend: 'Ruang belanja harian',
-    noSafeSpend: 'Tahan belanja dulu',
+    safeDailySpend: 'Budget fleksibel harian',
+    noSafeSpend: 'Belum ada ruang aman',
+    categoryProjection: 'Proyeksi per kategori',
+    categoryProjectionHelper: 'Perkiraan komposisi pengeluaran sampai akhir bulan.',
+    categoryProjectionEmpty: 'Belum ada pengeluaran berkategori.',
+    otherCategories: 'Kategori lainnya',
     updatedAt: 'Diperbarui',
     aiPriority: 'Prioritas AI',
     aiPriorityCategory: 'kategori terbesar bulan ini. Cek detailnya sebelum menambah pengeluaran baru.',
@@ -100,6 +88,12 @@ const DASHBOARD_COPY = {
     aiPriorityPositive: 'Cashflow aman. Pertahankan ritme, lalu alokasikan surplus ke target atau dana darurat.',
     aiPriorityDeficit: 'Pengeluaran sudah melewati pemasukan bulan ini. Review transaksi terbesar dan tahan belanja non-esensial.',
     aiPriorityStart: 'Mulai dengan mencatat pemasukan, saldo wallet, atau transaksi pertama agar briefing lebih akurat.',
+    projectedHelper: 'Estimasi hingga akhir bulan dari ritme pengeluaran saat ini.',
+    dailyRoomHelper: 'Batas pengeluaran non-esensial per hari setelah menyisihkan tagihan.',
+    reviewNow: 'Review sekarang',
+    manageBills: 'Atur tagihan',
+    recordTransaction: 'Catat transaksi',
+    protectGoal: 'Lihat target',
     trendDescription: 'Perbandingan pemasukan dan pengeluaran berdasarkan periode.',
     income: 'Pemasukan',
     expense: 'Pengeluaran',
@@ -172,13 +166,17 @@ const DASHBOARD_COPY = {
     startAiDesc: 'Gunakan chat untuk bertanya pola pengeluaran atau mencatat transaksi dengan bahasa natural.',
   },
   en: {
-    subtitle: 'This dashboard focuses on daily decisions: spending room, month-end projection, upcoming bills, and AI priorities.',
+    subtitle: 'See today’s financial position, your most important decision, and recent activity.',
     savingRate: 'Saving rate',
     cashflowTitle: 'Cashflow briefing',
     cashflowDesc: 'Realtime summary from transactions, wallet balance, and upcoming bills.',
     projectedSpending: 'Projected spending',
-    safeDailySpend: 'Daily spending room',
-    noSafeSpend: 'Pause spending',
+    safeDailySpend: 'Daily flexible budget',
+    noSafeSpend: 'No safe room yet',
+    categoryProjection: 'Category projection',
+    categoryProjectionHelper: 'Estimated spending composition through month-end.',
+    categoryProjectionEmpty: 'No categorized spending yet.',
+    otherCategories: 'Other categories',
     updatedAt: 'Updated',
     aiPriority: 'AI priority',
     aiPriorityCategory: 'is the largest category this month. Review it before adding new spending.',
@@ -186,6 +184,12 @@ const DASHBOARD_COPY = {
     aiPriorityPositive: 'Cashflow is safe. Keep the rhythm, then move surplus into goals or emergency funds.',
     aiPriorityDeficit: 'Spending is already above income this month. Review the largest transactions and pause non-essential spending.',
     aiPriorityStart: 'Start by recording income, wallet balance, or your first transaction so the briefing gets more accurate.',
+    projectedHelper: 'Estimated month-end spending from your current pace.',
+    dailyRoomHelper: 'Daily non-essential spending limit after setting bills aside.',
+    reviewNow: 'Review now',
+    manageBills: 'Manage bills',
+    recordTransaction: 'Record transaction',
+    protectGoal: 'View goals',
     trendDescription: 'Income and spending comparison by selected period.',
     income: 'Income',
     expense: 'Spending',
@@ -267,7 +271,6 @@ export function DashboardPage() {
   const t = useT()
   const { locale } = useLocale()
   const copy = DASHBOARD_COPY[locale]
-  const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const [trendRange, setTrendRange] = useState<TrendRange>('7d')
   const [now, setNow] = useState(() => new Date())
@@ -340,31 +343,6 @@ export function DashboardPage() {
     refetchInterval: 60 * 1000,
   })
 
-  const budgets = useQuery({
-    queryKey: ['budgets'],
-    queryFn: budgetApi.list,
-    staleTime: 60 * 1000,
-  })
-
-  const goals = useQuery({
-    queryKey: ['savings-goals'],
-    queryFn: savingsGoalApi.list,
-    staleTime: 60 * 1000,
-  })
-
-  const createBudget = useMutation({
-    mutationFn: budgetApi.create,
-    onSuccess: (_budget, payload) => {
-      trackEvent(analyticsEvents.budgetCreated, {
-        feature_name: 'budget',
-        amount: payload.limit_amount,
-      })
-      toast.success(copy.dailyBudgetCreated)
-      qc.invalidateQueries({ queryKey: ['budgets'] })
-    },
-    onError: (error) => toast.error(toErrorMessage(error)),
-  })
-
   const totalBalance = useMemo(
     () => (wallets.data ?? []).reduce((sum, wallet) => sum + Number(wallet.balance ?? 0), 0),
     [wallets.data],
@@ -398,11 +376,6 @@ export function DashboardPage() {
     () => buildCategoryInsights(monthTxns.data?.data ?? [], categories.data ?? []),
     [monthTxns.data, categories.data],
   )
-  const dashboardGoals = useMemo(
-    () => buildDashboardGoals(goals.data ?? [], wallets.data ?? [], now),
-    [goals.data, wallets.data, now],
-  )
-
   const cashflowBriefing = useMemo(() => {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     const dayOfMonth = Math.max(1, now.getDate())
@@ -413,30 +386,64 @@ export function DashboardPage() {
       .reduce((sum, bill) => sum + Number(bill.amount ?? 0), 0)
     const availableCashflow = monthSummary.income > 0
       ? monthSummary.income - monthSummary.expense
-      : totalBalance - monthSummary.expense
+      : totalBalance
     const rawDailyRoom = (availableCashflow - unpaidBills) / remainingDays
     const dailyRoom = Math.max(0, rawDailyRoom)
+    const dailyRoomHelper = rawDailyRoom > 0
+      ? copy.dailyRoomHelper
+      : monthSummary.income > 0 && monthSummary.saved < 0
+        ? locale === 'id'
+          ? `Belum aman karena pengeluaran melampaui pemasukan sebesar ${formatCurrency(Math.abs(monthSummary.saved))}.`
+          : `Not safe yet because spending exceeds income by ${formatCurrency(Math.abs(monthSummary.saved))}.`
+        : unpaidBills > availableCashflow
+          ? locale === 'id'
+            ? `Dana tersedia belum menutup ${formatCurrency(unpaidBills)} tagihan aktif.`
+            : `Available funds do not yet cover ${formatCurrency(unpaidBills)} in active bills.`
+          : locale === 'id'
+            ? 'Catat pemasukan agar batas harian dapat dihitung lebih akurat.'
+            : 'Record income so the daily limit can be calculated more accurately.'
     const topCategory = categoryInsights[0]
     const nextBill = [...activeBills]
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]
     const hasAnySignal = totalBalance > 0 || monthSummary.income > 0 || monthSummary.expense > 0 || activeBills.length > 0
     const deficit = Math.abs(monthSummary.saved)
-    const priority =
-      !hasAnySignal
-        ? copy.aiPriorityStart
-        : monthSummary.income > 0 && monthSummary.saved < 0
-          ? `${copy.aiPriorityDeficit} ${locale === 'id' ? 'Gap bulan ini' : 'Current gap'}: ${formatCurrency(deficit)}${topCategory ? ` · ${topCategory.name} ${locale === 'id' ? 'paling besar' : 'is the largest'}.` : '.'}`
-          : nextBill
-            ? `${copy.aiPriorityBills} ${nextBill.name}: ${formatCurrency(Number(nextBill.amount ?? 0), nextBill.currency || 'IDR')} (${formatDate(nextBill.due_date)}).`
-            : topCategory && topCategory.amount > 0 && monthSummary.expense > 0
-              ? `${topCategory.name} ${copy.aiPriorityCategory} (${formatCurrency(topCategory.amount)}).`
-              : copy.aiPriorityPositive
+    let priorityTitle: string = locale === 'id' ? 'Cashflow masih aman' : 'Cashflow is on track'
+    let priorityDescription: string = copy.aiPriorityPositive
+    let priorityActionLabel: string = copy.protectGoal
+    let priorityActionTo: string = '/app/targets'
+    if (!hasAnySignal) {
+      priorityTitle = locale === 'id' ? 'Bangun data pertama' : 'Build your first data'
+      priorityDescription = copy.aiPriorityStart
+      priorityActionLabel = copy.recordTransaction
+      priorityActionTo = '/app/transactions/add'
+    } else if (monthSummary.income > 0 && monthSummary.saved < 0) {
+      priorityTitle = locale === 'id'
+        ? `Kurangi gap ${formatCurrency(deficit)}`
+        : `Reduce the ${formatCurrency(deficit)} gap`
+      priorityDescription = `${copy.aiPriorityDeficit}${topCategory ? ` ${topCategory.name} ${locale === 'id' ? `menyerap ${formatCurrency(topCategory.amount)}` : `accounts for ${formatCurrency(topCategory.amount)}`}.` : ''}`
+      priorityActionLabel = copy.reviewNow
+      priorityActionTo = '/app/transactions'
+    } else if (nextBill) {
+      priorityTitle = locale === 'id' ? `Siapkan ${nextBill.name}` : `Prepare for ${nextBill.name}`
+      priorityDescription = `${copy.aiPriorityBills} ${formatCurrency(Number(nextBill.amount ?? 0), nextBill.currency || 'IDR')} ${locale === 'id' ? 'jatuh tempo' : 'is due'} ${formatDate(nextBill.due_date)}.`
+      priorityActionLabel = copy.manageBills
+      priorityActionTo = '/app/upcoming-billings'
+    } else if (topCategory && topCategory.amount > 0 && monthSummary.expense > 0) {
+      priorityTitle = `${topCategory.name} · ${Math.round((topCategory.amount / monthSummary.expense) * 100)}%`
+      priorityDescription = `${topCategory.name} ${copy.aiPriorityCategory} (${formatCurrency(topCategory.amount)}).`
+      priorityActionLabel = copy.reviewNow
+      priorityActionTo = '/app/transactions'
+    }
 
     return {
       projectedExpense,
       dailyRoom,
       dailyRoomLabel: rawDailyRoom <= 0 ? copy.noSafeSpend : formatCurrency(dailyRoom),
-      priority,
+      dailyRoomHelper,
+      priorityTitle,
+      priorityDescription,
+      priorityActionLabel,
+      priorityActionTo,
       updatedAtLabel: now.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
     }
   }, [categoryInsights, copy, locale, monthSummary.expense, monthSummary.income, monthSummary.saved, now, totalBalance, upcomingBillings.data])
@@ -461,21 +468,13 @@ export function DashboardPage() {
         subtitle={copy.subtitle}
       />
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard
           loading={wallets.isLoading}
           label={t.dashboard.totalBalance}
           value={formatCurrency(totalBalance)}
           Icon={HiOutlineBanknotes}
           tone="brand"
-        />
-
-        <StatCard
-          loading={monthTxns.isLoading}
-          label={copy.savingRate}
-          value={`${monthSummary.savingRate.toFixed(0)}%`}
-          Icon={HiOutlineLightBulb}
-          tone={monthSummary.savingRate >= 20 ? 'emerald' : 'slate'}
         />
 
         <StatCard
@@ -499,49 +498,18 @@ export function DashboardPage() {
         loading={monthTxns.isLoading || upcomingBillings.isLoading}
         projectedExpense={cashflowBriefing.projectedExpense}
         dailyRoomLabel={cashflowBriefing.dailyRoomLabel}
-        priority={cashflowBriefing.priority}
+        dailyRoomHelper={cashflowBriefing.dailyRoomHelper}
+        categoryInsights={categoryInsights}
+        priorityTitle={cashflowBriefing.priorityTitle}
+        priorityDescription={cashflowBriefing.priorityDescription}
+        priorityActionLabel={cashflowBriefing.priorityActionLabel}
+        priorityActionTo={cashflowBriefing.priorityActionTo}
         updatedAtLabel={cashflowBriefing.updatedAtLabel}
         copy={copy}
       />
 
-      <section className="grid gap-6 xl:grid-cols-3">
-        <AiCategoryInsight
-          loading={monthTxns.isLoading || categories.isLoading}
-          insights={categoryInsights}
-          expense={monthSummary.expense}
-          budgets={budgets.data ?? []}
-          walletId={(wallets.data ?? []).find((wallet) => wallet.is_default)?.id ?? wallets.data?.[0]?.id ?? ''}
-          onCreateDailyBudget={(categoryId, limitAmount) =>
-            createBudget.mutate({
-              wallet_id: (wallets.data ?? []).find((wallet) => wallet.is_default)?.id ?? wallets.data?.[0]?.id ?? '',
-              category_id: categoryId,
-              limit_amount: limitAmount,
-              period: 'daily',
-            })
-          }
-          creatingBudget={createBudget.isPending}
-          copy={copy}
-        />
-
-        <UpcomingBillingCard
-          loading={activeSubscription.isLoading || upcomingBillings.isLoading}
-          subscription={activeSubscription.data ?? null}
-          billings={upcomingBillings.data ?? []}
-          copy={copy}
-        />
-      </section>
-
-      <FinancialActionEngine
-        loading={monthTxns.isLoading || upcomingBillings.isLoading || goals.isLoading}
-        insights={categoryInsights}
-        expense={monthSummary.expense}
-        billings={upcomingBillings.data ?? []}
-        goals={dashboardGoals}
-        copy={copy}
-      />
-
-      <section className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
+        <Card>
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-slate-950">
@@ -571,18 +539,16 @@ export function DashboardPage() {
           )}
         </Card>
 
-        <MonthlyInsight
-          income={monthSummary.income}
-          expense={monthSummary.expense}
-          saved={monthSummary.saved}
-          savingRate={monthSummary.savingRate}
-          loading={monthTxns.isLoading}
+        <UpcomingBillingCard
+          loading={activeSubscription.isLoading || upcomingBillings.isLoading}
+          subscription={activeSubscription.data ?? null}
+          billings={upcomingBillings.data ?? []}
           copy={copy}
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <section>
+        <Card>
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-bold text-slate-950">
@@ -605,7 +571,7 @@ export function DashboardPage() {
           <div className="mt-5">
             {recentTxns.isLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, index) => (
+                {Array.from({ length: 4 }).map((_, index) => (
                   <Shimmer key={index} className="h-14 rounded-xl" />
                 ))}
               </div>
@@ -621,7 +587,7 @@ export function DashboardPage() {
               />
             ) : (
               <ul className="space-y-1">
-                {recentTxns.data!.data.map((tx) => (
+                {recentTxns.data!.data.slice(0, 5).map((tx) => (
                   <li
                     key={tx.id}
                     className="group flex items-center justify-between gap-4 rounded-2xl border border-transparent px-3 py-2.5 transition-all duration-300 hover:bg-white/40 hover:border-white/50 hover:shadow-sm"
@@ -671,15 +637,6 @@ export function DashboardPage() {
             )}
           </div>
         </Card>
-
-        <WalletList
-          loading={wallets.isLoading}
-          wallets={wallets.data ?? []}
-          title={t.nav.wallets}
-          seeAllLabel={t.dashboard.seeAll}
-          emptyLabel={t.common.empty}
-          description={copy.walletDesc}
-        />
       </section>
     </div>
   )
@@ -689,21 +646,31 @@ function CashflowBriefing({
   loading,
   projectedExpense,
   dailyRoomLabel,
-  priority,
+  dailyRoomHelper,
+  categoryInsights,
+  priorityTitle,
+  priorityDescription,
+  priorityActionLabel,
+  priorityActionTo,
   updatedAtLabel,
   copy,
 }: {
   loading?: boolean
   projectedExpense: number
   dailyRoomLabel: string
-  priority: string
+  dailyRoomHelper: string
+  categoryInsights: CategoryInsight[]
+  priorityTitle: string
+  priorityDescription: string
+  priorityActionLabel: string
+  priorityActionTo: string
   updatedAtLabel: string
   copy: DashboardCopy
 }) {
   return (
     <section className="overflow-hidden rounded-[1.75rem] border border-[#17120f]/14 bg-[#fffaf6]/92 shadow-[0_18px_45px_rgba(23,18,15,0.08)]">
-      <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-stretch lg:justify-between">
-        <div className="flex min-w-0 flex-col justify-between">
+      <div className="border-b border-[#17120f]/10 bg-brand-100/45 p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl border border-[#17120f]/14 bg-brand-200 text-[#17120f] shadow-sm shadow-[#17120f]/8">
               <HiOutlineSparkles className="h-5 w-5" />
@@ -717,28 +684,139 @@ function CashflowBriefing({
             {copy.updatedAt} {updatedAtLabel}
           </p>
         </div>
-        <div className="grid gap-3 lg:w-[68%] lg:grid-cols-3">
-          <BriefingItem label={copy.projectedSpending} value={formatCurrency(projectedExpense)} loading={loading} tone="rose" />
-          <BriefingItem label={copy.safeDailySpend} value={dailyRoomLabel} loading={loading} tone="emerald" />
-          <BriefingItem label={copy.aiPriority} value={priority} loading={loading} tone="blue" compact />
+      </div>
+      <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-[0.8fr_0.8fr_1.4fr]">
+        <BriefingItem label={copy.projectedSpending} value={formatCurrency(projectedExpense)} helper={copy.projectedHelper} loading={loading} tone="rose" />
+        <BriefingItem label={copy.safeDailySpend} value={dailyRoomLabel} helper={dailyRoomHelper} loading={loading} tone="emerald" />
+        <div className="flex min-h-[170px] flex-col rounded-2xl border border-brand-200 bg-brand-100/70 p-4 shadow-sm shadow-[#17120f]/5">
+          <p className="text-[11px] font-black uppercase tracking-wide text-brand-800">{copy.aiPriority}</p>
+          {loading ? (
+            <div className="mt-3 space-y-2">
+              <Shimmer className="h-6 w-3/4 rounded-xl bg-white/60" />
+              <Shimmer className="h-12 rounded-xl bg-white/60" />
+            </div>
+          ) : (
+            <>
+              <h3 className="mt-2 text-lg font-black text-[#17120f]">{priorityTitle}</h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-[#4f4540]">{priorityDescription}</p>
+              <Link
+                to={priorityActionTo}
+                className="mt-4 inline-flex items-center justify-between rounded-xl border border-[#17120f]/14 bg-[#fffaf6] px-3 py-2 text-xs font-black text-[#17120f] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#fddf82]/70"
+              >
+                {priorityActionLabel}
+                <HiOutlineArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
+        </div>
+        <div className="md:col-span-2 xl:col-span-3">
+          <CategoryProjectionDonut
+            loading={loading}
+            insights={categoryInsights}
+            projectedExpense={projectedExpense}
+            copy={copy}
+          />
         </div>
       </div>
     </section>
   )
 }
 
+const CATEGORY_CHART_COLORS = ['#ec5b4f', '#f4b942', '#34a886', '#8b7cf6']
+
+function CategoryProjectionDonut({
+  loading,
+  insights,
+  projectedExpense,
+  copy,
+}: {
+  loading?: boolean
+  insights: CategoryInsight[]
+  projectedExpense: number
+  copy: DashboardCopy
+}) {
+  const total = insights.reduce((sum, item) => sum + item.amount, 0)
+  const visible = insights.slice(0, 3)
+  const otherAmount = insights.slice(3).reduce((sum, item) => sum + item.amount, 0)
+  const rows = [
+    ...visible,
+    ...(otherAmount > 0
+      ? [{ id: 'other', name: copy.otherCategories, amount: otherAmount, count: 0 }]
+      : []),
+  ]
+  let offset = 0
+  const gradient = rows.length > 0 && total > 0
+    ? `conic-gradient(${rows.map((row, index) => {
+        const start = offset
+        offset += (row.amount / total) * 100
+        return `${CATEGORY_CHART_COLORS[index]} ${start}% ${offset}%`
+      }).join(', ')})`
+    : 'conic-gradient(#e7e0db 0 100%)'
+  const topShare = total > 0 ? Math.round((rows[0]?.amount ?? 0) / total * 100) : 0
+
+  return (
+    <div className="rounded-2xl border border-[#17120f]/12 bg-[#fffaf6] p-4 shadow-sm shadow-[#17120f]/5">
+      <div>
+        <p className="text-[11px] font-black uppercase tracking-wide text-[#4f4540]/70">{copy.categoryProjection}</p>
+        <p className="mt-1 text-xs leading-5 text-[#4f4540]/65">{copy.categoryProjectionHelper}</p>
+      </div>
+      {loading ? (
+        <div className="mt-4 flex items-center gap-4">
+          <Shimmer className="h-24 w-24 shrink-0 rounded-full" />
+          <div className="w-full space-y-2">
+            <Shimmer className="h-4 w-full rounded-lg" />
+            <Shimmer className="h-4 w-4/5 rounded-lg" />
+            <Shimmer className="h-4 w-3/5 rounded-lg" />
+          </div>
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="mt-4 text-xs leading-5 text-[#4f4540]/75">{copy.categoryProjectionEmpty}</p>
+      ) : (
+        <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-center">
+          <div
+            className="relative grid h-28 w-28 shrink-0 place-items-center self-center rounded-full"
+            style={{ background: gradient }}
+            role="img"
+            aria-label={`${copy.categoryProjection}: ${rows[0].name} ${topShare}%`}
+          >
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-[#fffaf6] text-center shadow-inner">
+              <span className="text-base font-black text-[#17120f]">{topShare}%</span>
+            </div>
+          </div>
+          <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {rows.map((row, index) => {
+              const share = Math.round((row.amount / total) * 100)
+              const projectedAmount = projectedExpense * (row.amount / total)
+              return (
+                <div key={row.id} className="rounded-xl border border-[#17120f]/8 bg-white/55 p-3">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CATEGORY_CHART_COLORS[index] }} />
+                    <span className="min-w-0 flex-1 truncate font-bold text-[#4f4540]">{row.name}</span>
+                    <span className="shrink-0 font-black text-[#17120f]">{share}%</span>
+                  </div>
+                  <p className="mt-2 text-xs font-black text-[#17120f]">{formatCurrency(projectedAmount)}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BriefingItem({
   label,
   value,
+  helper,
   loading,
   tone,
-  compact,
 }: {
   label: string
   value: string
+  helper: string
   loading?: boolean
   tone: 'blue' | 'emerald' | 'rose'
-  compact?: boolean
 }) {
   const toneClass = {
     blue: 'bg-[#ffe4dc]/70 text-[#17120f] border-brand-200',
@@ -746,14 +824,15 @@ function BriefingItem({
     rose: 'bg-[#ffe4dc]/80 text-[#7f2d23] border-brand-100',
   }[tone]
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm shadow-[#17120f]/5 ${toneClass}`}>
+    <div className={`flex min-h-[170px] flex-col rounded-2xl border p-4 shadow-sm shadow-[#17120f]/5 ${toneClass}`}>
       <p className="text-[11px] font-black uppercase tracking-wide opacity-70">{label}</p>
       {loading ? (
         <Shimmer className="mt-3 h-6 w-28 rounded-xl bg-white/60" />
       ) : (
-        <p className={`${compact ? 'mt-2 line-clamp-2 text-sm leading-5' : 'mt-2 text-xl'} font-black`}>
-          {value}
-        </p>
+        <>
+          <p className="mt-2 text-xl font-black">{value}</p>
+          <p className="mt-3 text-xs leading-5 opacity-75">{helper}</p>
+        </>
       )}
     </div>
   )
@@ -852,368 +931,6 @@ function MobileTrendSummary({ data, copy }: { data: ReturnType<typeof buildTrend
   )
 }
 
-function MonthlyInsight({
-  income,
-  expense,
-  saved,
-  savingRate,
-  loading,
-  copy,
-}: {
-  income: number
-  expense: number
-  saved: number
-  savingRate: number
-  loading?: boolean
-  copy: DashboardCopy
-}) {
-  const isPositive = saved >= 0
-
-  return (
-    <div
-      className="rounded-2xl p-6 text-[#17120f] transition-all duration-300"
-      style={{
-        background: 'rgba(255, 250, 246, 0.92)',
-        backdropFilter: 'blur(32px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-        border: '1px solid rgba(23, 18, 15, 0.14)',
-        boxShadow: '0 18px 45px rgba(23, 18, 15, 0.08)',
-      }}
-    >
-      <p className="text-xs font-black uppercase tracking-wide text-brand-700">
-        {copy.monthlyInsight}
-      </p>
-
-      {loading ? (
-        <div className="mt-5 space-y-3">
-          <Shimmer className="h-8 w-40 bg-brand-100" />
-          <Shimmer className="h-4 w-full bg-brand-50" />
-          <Shimmer className="h-4 w-2/3 bg-brand-50" />
-        </div>
-      ) : (
-        <>
-          <h3 className="mt-3 text-3xl font-black tracking-tight text-[#17120f]">
-            {formatCurrency(saved)}
-          </h3>
-
-          <p className="mt-3 text-sm leading-6 text-[#4f4540]">
-            {isPositive
-              ? copy.positiveInsight
-              : copy.negativeInsight}
-          </p>
-
-          <div className="mt-6 space-y-3">
-            <InsightRow label={copy.income} value={formatCurrency(income)} />
-            <InsightRow label={copy.expense} value={formatCurrency(expense)} />
-            <InsightRow label={copy.savingRate} value={`${savingRate.toFixed(0)}%`} />
-          </div>
-
-          <div className="mt-6 h-2 overflow-hidden rounded-full bg-[#17120f]/8">
-            <div
-              className={cn('h-full rounded-full', isPositive ? 'bg-[#7ddfc0]' : 'bg-[#ff9d8d]')}
-              style={{ width: `${Math.min(100, savingRate).toFixed(0)}%` }}
-            />
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function InsightRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-[#4f4540]/70">{label}</span>
-      <span className="font-semibold text-[#17120f]">{value}</span>
-    </div>
-  )
-}
-
-function FinancialActionEngine({
-  loading,
-  insights,
-  expense,
-  billings,
-  goals,
-  copy,
-}: {
-  loading?: boolean
-  insights: CategoryInsight[]
-  expense: number
-  billings: UpcomingBilling[]
-  goals: DashboardGoal[]
-  copy: DashboardCopy
-}) {
-  const top = insights[0]
-  const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
-  const activeBills = billings
-    .filter((item) => item.status === 'active')
-    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-  const nextBill = activeBills[0]
-  const monthlyBills = activeBills.reduce((sum, item) => sum + Number(item.amount || 0), 0)
-  const activeGoal = goals
-    .filter((goal) => Number(goal.remaining ?? 0) > 0)
-    .sort((a, b) => Number(a.days_left ?? 9999) - Number(b.days_left ?? 9999))[0]
-  const dailyCut = 20_000
-  const monthlyExtra = dailyCut * 30
-  const daysAdvanced = activeGoal ? Math.max(7, Math.round(monthlyExtra / Math.max(1, Number(activeGoal.remaining)) * Number(activeGoal.days_left ?? 180))) : 0
-
-  return (
-    <section className="grid gap-4 xl:grid-cols-3">
-      <Card className="xl:col-span-2">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-brand-700">
-              AI Focus
-            </p>
-            <h2 className="mt-1 text-base font-black text-[#17120f]">
-              {copy.actionTitle}
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-[#4f4540]">
-              {copy.actionDesc}
-            </p>
-          </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/14 bg-brand-200 text-[#17120f] shadow-sm shadow-[#17120f]/8">
-            <HiOutlineSparkles className="h-5 w-5" />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Shimmer key={index} className="h-32 rounded-2xl" />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <ActionCard
-              tone="blue"
-              title={top ? `${top.name} ${copy.categoryAbsorbs} ${topPct}%` : copy.activeLimit}
-              description={
-                top
-                  ? `${copy.categoryAdvice}`
-                  : copy.emptyInsight
-              }
-              actionLabel={top ? copy.reviewTransactions : copy.activeLimit}
-              to="/app/transactions"
-              copy={copy}
-            />
-            <ActionCard
-              tone="yellow"
-              title={nextBill ? nextBill.name : copy.recurringTitle}
-              description={
-                nextBill
-                  ? `${formatCurrency(Number(nextBill.amount || 0))} ${copy.dueOn} ${formatDate(nextBill.due_date)}. ${copy.setAsideEarly}`
-                  : copy.monthlyBillsEmpty
-              }
-              actionLabel={copy.setupBilling}
-              to="/app/upcoming-billings"
-              copy={copy}
-            />
-            <ActionCard
-              tone="emerald"
-              title={copy.nextMonthBills}
-              description={
-                monthlyBills > 0
-                  ? `${copy.monthlyBillsEstimate} ${formatCurrency(monthlyBills)}. ${copy.setAsideEarly}`
-                  : copy.monthlyBillsEmpty
-              }
-              actionLabel={copy.monitorBilling}
-              to="/app/upcoming-billings"
-              copy={copy}
-            />
-          </div>
-        )}
-      </Card>
-
-      <Card className="border-brand-100/80 bg-[#fffaf6]/88">
-        <p className="text-xs font-black uppercase tracking-wide text-brand-700">
-          {copy.goalRecommendation}
-        </p>
-        {loading ? (
-          <div className="mt-5 space-y-3">
-            <Shimmer className="h-8 w-36 rounded-xl" />
-            <Shimmer className="h-20 rounded-2xl" />
-          </div>
-        ) : activeGoal ? (
-          <>
-            <h2 className="mt-2 text-base font-black text-[#17120f]">{activeGoal.name}</h2>
-            <p className="mt-2 text-sm font-medium leading-6 text-[#4f4540]">
-              {copy.reduceDaily} {formatCurrency(dailyCut)}/{copy.perDay}, {copy.youCanAdd} {formatCurrency(monthlyExtra)}/{copy.monthUnit} {copy.monthlyAndAdvance} {daysAdvanced} {copy.days}.
-            </p>
-            <div className="mt-4 rounded-2xl border border-[#17120f]/10 bg-[#fddf82]/42 p-3">
-              <p className="text-xs font-black text-[#6f5a16]">{copy.remainingTarget}</p>
-              <p className="mt-1 text-xl font-black text-[#17120f]">
-                {formatCurrency(Number(activeGoal.remaining ?? 0))}
-              </p>
-            </div>
-            <Link
-              to="/app/targets"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-[#17120f]/14 bg-brand-500 px-4 py-2 text-sm font-black text-[#17120f] shadow-sm shadow-brand-200/60 transition hover:-translate-y-0.5 hover:bg-brand-300"
-            >
-              {copy.viewTarget}
-            </Link>
-          </>
-        ) : (
-          <>
-            <h2 className="mt-2 text-base font-black text-[#17120f]">{copy.noActiveGoal}</h2>
-            <p className="mt-2 text-sm font-medium leading-6 text-[#4f4540]">
-              {copy.noActiveGoalDesc}
-            </p>
-            <Link
-              to="/app/targets"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-[#17120f]/14 bg-brand-500 px-4 py-2 text-sm font-black text-[#17120f] shadow-sm shadow-brand-200/60 transition hover:-translate-y-0.5 hover:bg-brand-300"
-            >
-              {copy.createTarget}
-            </Link>
-          </>
-        )}
-      </Card>
-    </section>
-  )
-}
-
-function ActionCard({
-  title,
-  description,
-  actionLabel,
-  to,
-  tone,
-  copy,
-}: {
-  title: string
-  description: string
-  actionLabel: string
-  to: string
-  tone: 'blue' | 'yellow' | 'emerald'
-  copy: DashboardCopy
-}) {
-  const toneClass =
-    tone === 'emerald'
-      ? 'border-emerald-200 bg-emerald-50/70 text-emerald-800'
-      : tone === 'yellow'
-        ? 'border-[#17120f]/14 bg-[#fddf82]/75 text-[#17120f]'
-        : 'border-brand-200 bg-brand-100 text-[#17120f]'
-
-  return (
-    <div className="rounded-2xl border border-[#17120f]/14 bg-[#fffaf6] p-4 shadow-sm shadow-[#17120f]/6">
-      <div className={cn('mb-3 inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider', toneClass)}>
-        {copy.actionBadge}
-      </div>
-      <h3 className="text-sm font-black text-[#17120f]">{title}</h3>
-      <p className="mt-2 min-h-16 text-xs leading-5 text-[#4f4540]">{description}</p>
-      <Link
-        to={to}
-        className="mt-3 inline-flex items-center gap-1 text-xs font-black text-brand-700 hover:underline"
-      >
-        {actionLabel}
-        <HiOutlineArrowRight className="h-3.5 w-3.5" />
-      </Link>
-    </div>
-  )
-}
-
-function AiCategoryInsight({
-  loading,
-  insights,
-  expense,
-  budgets,
-  walletId,
-  onCreateDailyBudget,
-  creatingBudget,
-  copy,
-}: {
-  loading?: boolean
-  insights: CategoryInsight[]
-  expense: number
-  budgets: Budget[]
-  walletId: string
-  onCreateDailyBudget: (categoryId: string, limitAmount: number) => void
-  creatingBudget?: boolean
-  copy: DashboardCopy
-}) {
-  const top = insights[0]
-  const topPct = top && expense > 0 ? Math.round((top.amount / expense) * 100) : 0
-  const hasDailyBudget = top ? budgets.some((budget) => budget.category_id === top.id && budget.period === 'daily') : false
-  const suggestedDailyLimit = top ? Math.max(50_000, Math.ceil((top.amount / 30) / 10_000) * 10_000) : 50_000
-
-  return (
-    <Card className="xl:col-span-2">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-brand-700">
-            {copy.aiInsight}
-          </p>
-          <h2 className="mt-1 text-base font-black text-[#17120f]">
-            {copy.categoryTitle}
-          </h2>
-          <p className="mt-1 text-xs text-[#4f4540]">
-            {copy.categoryDesc}
-          </p>
-        </div>
-
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#17120f]/14 bg-[#fddf82]/75 text-[#17120f] shadow-sm shadow-[#17120f]/8">
-          <HiOutlineLightBulb className="h-5 w-5" />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Shimmer key={index} className="h-24 rounded-2xl" />
-          ))}
-        </div>
-      ) : !top ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
-          {copy.emptyInsight}
-        </div>
-      ) : (
-        <>
-          <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-100/70 p-4 shadow-sm shadow-[#17120f]/6">
-            <p className="text-sm font-black text-[#17120f]">
-              {top.name} {copy.categoryAbsorbs} {topPct}% {copy.categorySpendSuffix}
-            </p>
-            <p className="mt-1 text-sm leading-6 text-[#4f4540]">
-              {copy.categoryAdvice}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                disabled={!walletId || hasDailyBudget}
-                loading={creatingBudget}
-                onClick={() => top && onCreateDailyBudget(top.id, suggestedDailyLimit)}
-              >
-                {hasDailyBudget ? copy.budgetActive : `${copy.activeLimit} ${formatCurrency(suggestedDailyLimit)}/${copy.perDay}`}
-              </Button>
-              <Link
-                to="/app/transactions"
-                className="inline-flex rounded-xl border border-[#17120f]/14 bg-white px-3 py-1.5 text-xs font-black text-[#17120f] shadow-sm shadow-[#17120f]/5 transition hover:-translate-y-0.5 hover:bg-[#fddf82]/70"
-              >
-                {copy.reviewTransactions}
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {insights.slice(0, 3).map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-white/70 bg-white/55 p-4 shadow-sm"
-              >
-                <p className="truncate text-sm font-semibold text-slate-950">{item.name}</p>
-                <p className="mt-2 text-lg font-extrabold text-slate-950">
-                  {formatCurrency(item.amount)}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">{item.count} {copy.transactionsCount}</p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </Card>
-  )
-}
-
 function UpcomingBillingCard({
   loading,
   subscription,
@@ -1276,28 +993,24 @@ function UpcomingBillingCard({
           >
             {urgentCount > 0 ? `${urgentCount} ${copy.billsNeedReview}` : copy.billsSafe}
           </span>
-          <div className="mt-4 space-y-2">
-            {rows.slice(0, 4).map((row) => (
-              <div
-                key={row.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/55 px-3 py-2.5 shadow-sm"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-950">{row.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
-                    {row.provider} · {row.daysLeft <= 0 ? copy.todayLower : `${row.daysLeft} ${copy.daysLeft}`}
-                  </p>
-                </div>
-                <p className="shrink-0 text-sm font-extrabold text-slate-950">
-                  {formatCurrency(row.amount, row.currency)}
-                </p>
-              </div>
-            ))}
-          </div>
+          <Link
+            to="/app/upcoming-billings"
+            className="mt-5 flex items-center justify-between rounded-xl border border-[#17120f]/14 bg-[#fffaf6] px-3 py-2.5 text-xs font-black text-[#17120f] shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-100"
+          >
+            {copy.monitorBilling}
+            <HiOutlineArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       ) : (
-        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6 text-sm text-slate-500">
-          {copy.emptyBilling}
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6">
+          <p className="text-sm text-slate-500">{copy.emptyBilling}</p>
+          <Link
+            to="/app/upcoming-billings"
+            className="mt-4 inline-flex items-center gap-1 text-xs font-black text-brand-700 hover:underline"
+          >
+            {copy.manageBills}
+            <HiOutlineArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       )}
     </Card>
@@ -1362,70 +1075,6 @@ function daysUntil(dateLike: string, startOfToday: Date): number {
   if (Number.isNaN(due.getTime())) return 9999
   due.setHours(0, 0, 0, 0)
   return Math.ceil((due.getTime() - startOfToday.getTime()) / 86_400_000)
-}
-
-function WalletList({
-  loading,
-  wallets,
-  title,
-  seeAllLabel,
-  emptyLabel,
-  description,
-}: {
-  loading?: boolean
-  wallets: { id: string; name: string; balance?: number | string | null; currency?: string }[]
-  title: string
-  seeAllLabel: string
-  emptyLabel: string
-  description: string
-}) {
-  return (
-    <Card>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-950">{title}</h2>
-          <p className="mt-1 text-xs text-slate-500">{description}</p>
-        </div>
-
-        <Link to="/app/wallets" className="text-xs font-semibold text-brand-700 hover:underline">
-          {seeAllLabel}
-        </Link>
-      </div>
-
-      <div className="mt-5 space-y-2">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, index) => (
-            <Shimmer key={index} className="h-14 rounded-xl" />
-          ))
-        ) : wallets.length === 0 ? (
-          <p className="rounded-2xl bg-white/40 px-4 py-5 text-center text-sm text-slate-500 border border-white/50">
-            {emptyLabel}
-          </p>
-        ) : (
-          wallets.slice(0, 5).map((wallet) => (
-            <div
-              key={wallet.id}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-transparent bg-white/40 px-4 py-3 transition-all duration-300 hover:bg-white/70 hover:border-white/60 hover:shadow-sm"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-700 border border-slate-100">
-                  <HiOutlineWallet className="h-5 w-5" />
-                </div>
-
-                <p className="truncate text-sm font-semibold text-slate-950">
-                  {wallet.name}
-                </p>
-              </div>
-
-              <p className="shrink-0 text-sm font-bold text-slate-950">
-                {formatCurrency(Number(wallet.balance ?? 0), wallet.currency)}
-              </p>
-            </div>
-          ))
-        )}
-      </div>
-    </Card>
-  )
 }
 
 function RangeTabs({
@@ -1594,41 +1243,6 @@ function buildCategoryInsights(txns: Transaction[], categories: Category[]): Cat
   }
 
   return Array.from(totals.values()).sort((a, b) => b.amount - a.amount)
-}
-
-function buildDashboardGoals(goals: SavingsGoal[], wallets: Wallet[], now: Date): DashboardGoal[] {
-  const savedGoalWalletIds = new Set(goals.map((goal) => goal.wallet_id).filter(Boolean))
-  const walletGoals = wallets
-    .filter((wallet) => Number(wallet.target_amount ?? 0) > 0 && !savedGoalWalletIds.has(wallet.id))
-    .map((wallet) => {
-      const targetAmount = Number(wallet.target_amount ?? 0)
-      const currentAmount = Number(wallet.balance ?? 0)
-      const deadline = wallet.target_deadline ? new Date(wallet.target_deadline) : null
-      const daysLeft = deadline && Number.isFinite(deadline.getTime())
-        ? Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / 86_400_000))
-        : null
-
-      return {
-        id: `wallet-${wallet.id}`,
-        name: wallet.target_name || wallet.name,
-        target_amount: targetAmount,
-        current_amount: currentAmount,
-        remaining: Math.max(0, targetAmount - currentAmount),
-        days_left: daysLeft,
-      }
-    })
-
-  return [
-    ...goals.map((goal) => ({
-      id: goal.id,
-      name: goal.name,
-      target_amount: Number(goal.target_amount ?? 0),
-      current_amount: Number(goal.current_amount ?? 0),
-      remaining: Number(goal.remaining ?? 0),
-      days_left: goal.days_left,
-    })),
-    ...walletGoals,
-  ]
 }
 
 export default DashboardPage

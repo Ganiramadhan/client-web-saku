@@ -9,6 +9,7 @@ import {
   HiOutlineSparkles,
   HiOutlineUsers,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineArrowRight,
   HiOutlineUser,
   HiOutlineCog6Tooth,
   HiOutlineChevronDown,
@@ -589,6 +590,7 @@ function GlobalNavSearch({
   sections: NavSection[]
   onNavigate: (to: string) => void
 }) {
+  const { locale } = useLocale()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -627,8 +629,8 @@ function GlobalNavSearch({
 
   return (
     <div ref={ref} className="relative hidden min-w-0 flex-1 justify-center md:flex">
-      <div className="relative w-full max-w-md">
-        <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <div className="relative w-full max-w-xl">
+        <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-700" />
         <input
           value={query}
           onFocus={() => setOpen(true)}
@@ -636,17 +638,42 @@ function GlobalNavSearch({
             setQuery(e.target.value)
             setOpen(true)
           }}
-          placeholder="Search menu..."
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-16 text-sm font-medium text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/15"
+          placeholder={locale === 'id' ? 'Cari menu dan fitur SAKU...' : 'Search SAKU menus and features...'}
+          className="h-11 w-full rounded-2xl border border-[#17120f]/12 bg-[#fffaf6]/88 pl-11 pr-20 text-sm font-bold text-[#17120f] shadow-[0_8px_24px_rgba(23,18,15,0.06)] outline-none transition placeholder:font-medium placeholder:text-[#6f625b]/60 hover:border-[#17120f]/20 hover:bg-white focus:border-brand-300 focus:bg-white focus:ring-2 focus:ring-brand-500/15"
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-[#17120f]/10 bg-[#f6eee8] px-2 py-1 text-[10px] font-black text-[#6f625b]">
           ⌘K
         </span>
 
         {open ? (
-          <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-xl shadow-[#17120f]/10">
+          <div className="absolute left-0 right-0 top-full z-40 mt-3 overflow-hidden rounded-[1.35rem] border border-[#17120f]/14 bg-[#fffaf6]/98 p-2 shadow-[0_24px_60px_rgba(23,18,15,0.16)] backdrop-blur-2xl">
+            <div className="flex items-center justify-between px-3 pb-2 pt-1">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-700">
+                  {locale === 'id' ? 'Navigasi cepat' : 'Quick navigation'}
+                </p>
+                <p className="mt-0.5 text-xs text-[#6f625b]">
+                  {query.trim()
+                    ? locale === 'id' ? `${results.length} hasil ditemukan` : `${results.length} results found`
+                    : locale === 'id' ? 'Menu yang sering digunakan' : 'Frequently used menus'}
+                </p>
+              </div>
+              <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[10px] font-black text-brand-800">
+                SAKU
+              </span>
+            </div>
             {results.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm font-medium text-slate-400">No menu found</div>
+              <div className="rounded-2xl border border-dashed border-[#17120f]/14 bg-[#f6eee8]/60 px-4 py-7 text-center">
+                <HiOutlineMagnifyingGlass className="mx-auto h-6 w-6 text-[#6f625b]/35" />
+                <p className="mt-2 text-sm font-bold text-[#6f625b]">
+                  {locale === 'id' ? 'Menu tidak ditemukan' : 'No menu found'}
+                </p>
+                <p className="mt-1 text-xs text-[#6f625b]/65">
+                  {locale === 'id'
+                    ? 'Coba kata seperti transaksi, dompet, target, atau tagihan.'
+                    : 'Try words such as transactions, wallets, goals, or bills.'}
+                </p>
+              </div>
             ) : (
               <div className="space-y-1">
                 {results.map(({ to, label, icon: Icon, section }) => (
@@ -658,15 +685,16 @@ function GlobalNavSearch({
                       setQuery('')
                       onNavigate(to)
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-brand-50"
+                    className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-left transition hover:border-brand-200 hover:bg-brand-100/70"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-100 text-brand-800 transition group-hover:-rotate-3 group-hover:scale-105">
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-slate-800">{label}</span>
-                      <span className="block text-[11px] font-medium text-slate-400">{section}</span>
+                      <span className="block truncate text-sm font-black text-[#17120f]">{label}</span>
+                      <span className="block text-[11px] font-semibold text-[#6f625b]/70">{section}</span>
                     </span>
+                    <HiOutlineArrowRight className="h-4 w-4 text-[#6f625b]/30 transition group-hover:translate-x-0.5 group-hover:text-brand-700" />
                   </button>
                 ))}
               </div>

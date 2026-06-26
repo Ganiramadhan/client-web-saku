@@ -18,22 +18,22 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
     ? [
         {
           Icon: RiLockLine,
-          title: 'Data finansial tetap privat',
-          desc: 'Akses data mengikuti akun pengguna dan koneksi aman.',
+          title: 'Data finansial tetap milikmu',
+          desc: 'SAKU tidak meminta password rekening bank dan akses mengikuti akun pengguna.',
           bg: '#ffe4dc',
           color: 'text-brand-700',
         },
         {
           Icon: RiUserSettingsLine,
-          title: 'Kontrol tetap di kamu',
-          desc: 'Hasil AI bisa ditinjau, diedit, atau dibatalkan sebelum disimpan.',
+          title: 'AI tidak menyimpan sepihak',
+          desc: 'Preview transaksi selalu bisa dicek, diedit, atau dibatalkan dulu.',
           bg: '#fddf82',
           color: 'text-[#17120f]',
         },
         {
           Icon: RiBankCardLine,
-          title: 'Checkout resmi',
-          desc: 'Pembayaran diproses melalui Midtrans dengan QRIS, GoPay, kartu, dan VA.',
+          title: 'Pembayaran lewat Midtrans',
+          desc: 'Checkout mendukung QRIS, GoPay, kartu, virtual account, dan channel tersedia.',
           bg: '#ecfdf5',
           color: 'text-emerald-700',
         },
@@ -41,22 +41,22 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
     : [
         {
           Icon: RiLockLine,
-          title: 'Financial data stays private',
-          desc: 'Data access follows user accounts and secure connections.',
+          title: 'Financial data stays yours',
+          desc: 'SAKU does not ask for bank passwords and access follows user accounts.',
           bg: '#ffe4dc',
           color: 'text-brand-700',
         },
         {
           Icon: RiUserSettingsLine,
-          title: 'You stay in control',
-          desc: 'AI output can be reviewed, edited, or cancelled before saving.',
+          title: 'AI does not force-save',
+          desc: 'Transaction previews can be reviewed, edited, or cancelled first.',
           bg: '#fddf82',
           color: 'text-[#17120f]',
         },
         {
           Icon: RiBankCardLine,
-          title: 'Official checkout',
-          desc: 'Payments are processed through Midtrans with QRIS, GoPay, cards, and VA.',
+          title: 'Midtrans checkout',
+          desc: 'Checkout supports QRIS, GoPay, cards, virtual accounts, and available channels.',
           bg: '#ecfdf5',
           color: 'text-emerald-700',
         },
@@ -78,14 +78,14 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
 
               <h2 className="mt-5 max-w-xl text-3xl font-black leading-tight tracking-tight text-[#17120f] sm:text-4xl">
                 {isId
-                  ? 'Tenang dipakai untuk data finansial pribadi.'
-                  : 'A calmer way to handle personal financial data.'}
+                  ? 'Dibuat untuk data uang pribadi, bukan sekadar angka.'
+                  : 'Built for personal money data, not just numbers.'}
               </h2>
 
               <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-[#4f4540] sm:text-base">
                 {isId
-                  ? 'SAKU membantu mencatat dan menganalisis uang tanpa mengambil alih kontrol pengguna.'
-                  : 'SAKU helps track and analyze money without taking control away from users.'}
+                  ? 'Kamu tetap memegang keputusan. SAKU membantu membaca pola, menyiapkan preview, dan menjaga proses checkout tetap jelas.'
+                  : 'You stay in control. SAKU helps read patterns, prepare previews, and keep checkout clear.'}
               </p>
             </div>
 
@@ -129,14 +129,14 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
 
               <h2 className="mt-4 text-2xl font-black tracking-tight text-[#17120f] sm:text-3xl">
                 {isId
-                  ? 'Mulai dari satu transaksi hari ini.'
-                  : 'Start with one transaction today.'}
+                  ? 'Mulai pelan-pelan, tetap terasa manfaatnya.'
+                  : 'Start small and still feel the value.'}
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#4f4540]">
                 {isId
-                  ? 'Tidak perlu langsung sempurna. SAKU membantu kebiasaan kecil menjadi gambaran uang yang lebih jelas.'
-                  : 'No need to be perfect from day one. SAKU helps small habits become a clearer money picture.'}
+                  ? 'Catat satu transaksi hari ini. Setelah beberapa hari, pola pengeluaranmu mulai lebih mudah dibaca.'
+                  : 'Record one transaction today. After a few days, your spending pattern becomes easier to read.'}
               </p>
             </div>
 

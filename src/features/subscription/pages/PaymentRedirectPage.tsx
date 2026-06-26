@@ -16,6 +16,8 @@ import { subscriptionApi } from '@/features/subscription/api'
 import { useLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { toast } from '@/lib/toast'
+import { invalidateSubscriptionQueries, paymentReturnPath, pendingPaymentOrder } from '../utils/checkoutFlow'
 
 export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   const { locale } = useLocale()
@@ -23,7 +25,7 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const token = useAuthStore((s) => s.token)
-  const orderId = params.get('order_id') ?? ''
+  const orderId = params.get('order_id') ?? pendingPaymentOrder()
   const status = (params.get('transaction_status') ?? params.get('status') ?? '').toLowerCase()
   const expired = status === 'expire' || status === 'expired'
   const cancelled = status === 'cancel' || status === 'cancelled'
@@ -69,17 +71,35 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
 
   const confirm = useMutation({
     mutationFn: () => subscriptionApi.confirm(orderId),
+    onSuccess: (subscription) => {
+      if (subscription.status === 'active' && subscription.payment_status === 'paid') {
+        navigate(`/app/subscription/thanks?order_id=${encodeURIComponent(orderId)}&state=active`, { replace: true })
+        return
+      }
+      if (subscription.payment_status === 'pending') {
+        toast.info(locale === 'id'
+          ? 'Pembayaran masih pending. Snap dapat dibuka kembali dari halaman sebelumnya.'
+          : 'Payment is still pending. Snap can be reopened from the previous page.')
+        navigate(paymentReturnPath(), { replace: true })
+        return
+      }
+      navigate(`/payment/error?order_id=${encodeURIComponent(orderId)}&transaction_status=${encodeURIComponent(subscription.payment_status || 'failed')}`, { replace: true })
+    },
+    onError: () => {
+      toast.info(locale === 'id'
+        ? 'Status pembayaran belum dapat dipastikan. Kamu dikembalikan agar bisa membuka Snap lagi.'
+        : 'Payment status could not be confirmed yet. You were returned so Snap can be reopened.')
+      navigate(paymentReturnPath(), { replace: true })
+    },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['subscriptions'] })
-      qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-      qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
+      invalidateSubscriptionQueries(qc)
     },
   })
 
   useEffect(() => {
-    if (success) trackEvent(analyticsEvents.paymentSuccess, { order_id: orderId })
+    if (success && token && orderId) confirm.mutate()
     if (failed || expired || cancelled) trackEvent(analyticsEvents.paymentFailed, { order_id: orderId, payment_status: status || mode })
-    if (token && orderId && success) confirm.mutate()
+    if (success && (!token || !orderId)) navigate(token ? paymentReturnPath() : '/login', { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, orderId, success])
 

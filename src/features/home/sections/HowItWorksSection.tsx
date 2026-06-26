@@ -9,30 +9,30 @@ export function HowItWorksSection() {
     {
       Icon: RiChatSmile3Line,
       number: '01',
-      title: isId ? 'Chat atau scan struk' : 'Chat or scan a receipt',
+      title: isId ? 'Masukkan transaksi' : 'Add a transaction',
       desc: isId
-        ? 'Tulis transaksi seperti chat biasa, atau foto struk belanja yang ingin dicatat.'
-        : 'Type a transaction naturally, or upload a receipt you want to record.',
+        ? 'Ketik seperti chat biasa, input manual, atau upload struk belanja.'
+        : 'Type naturally, add manually, or upload a receipt photo.',
       bg: 'bg-brand-100',
       visual: <StepChatVisual isId={isId} />,
     },
     {
       Icon: RiReceiptLine,
       number: '02',
-      title: isId ? 'AI mencatat otomatis' : 'AI records it automatically',
+      title: isId ? 'Review hasil AI' : 'Review the AI result',
       desc: isId
-        ? 'SAKU membaca nominal, wallet, kategori, merchant, dan tanggal menjadi preview siap cek.'
-        : 'SAKU reads amount, wallet, category, merchant, and date into a review-ready preview.',
+        ? 'SAKU menyiapkan preview berisi nominal, wallet, kategori, merchant, dan tanggal.'
+        : 'SAKU prepares a preview with amount, wallet, category, merchant, and date.',
       bg: 'bg-[#fffaf6]',
       visual: <StepAiVisual />,
     },
     {
       Icon: RiBrainLine,
       number: '03',
-      title: isId ? 'Dapatkan insight harian' : 'Get daily insight',
+      title: isId ? 'Pantau dan putuskan' : 'Track and decide',
       desc: isId
-        ? 'Lihat pola pengeluaran, budget yang menipis, dan saran sederhana untuk keputusan hari ini.'
-        : 'See spending patterns, tight budgets, and simple guidance for today’s decisions.',
+        ? 'Dashboard membantu melihat cashflow, kategori terbesar, budget, tagihan, dan target.'
+        : 'The dashboard helps you see cashflow, top categories, budgets, bills, and goals.',
       bg: 'bg-[#fddf82]',
       visual: <StepInsightVisual />,
     },
@@ -43,8 +43,8 @@ export function HowItWorksSection() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={isId ? 'Cara Kerja' : 'How It Works'}
-          title={isId ? '3 langkah mudah kelola uang harianmu.' : '3 simple steps to manage daily money.'}
-          description={isId ? 'Alurnya dibuat singkat: input cepat, AI bantu susun, lalu kamu dapat insight yang mudah ditindaklanjuti.' : 'The flow stays short: quick input, AI organizes it, then you get actionable insight.'}
+          title={isId ? 'Dari catatan kecil jadi keputusan harian.' : 'From small records to daily decisions.'}
+          description={isId ? 'SAKU tidak memaksa kamu rapi dari awal. Mulai dari transaksi kecil, lalu biarkan datanya membentuk gambaran.' : 'SAKU does not force perfect tracking from day one. Start small, then let the data build the picture.'}
         />
 
         <div className="mt-14 grid gap-6 lg:grid-cols-3">

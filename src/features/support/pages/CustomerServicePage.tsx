@@ -15,7 +15,7 @@ import {
   HiOutlineXMark,
   HiOutlineUserCircle,
 } from 'react-icons/hi2'
-import { Badge, Button, Input, PageHeader, RSelect, Shimmer, Textarea, type SelectOption } from '@/components/ui'
+import { AdminMetricCard, Badge, Button, Input, PageHeader, RSelect, Shimmer, Textarea, type SelectOption } from '@/components/ui'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import type { SupportPriority, SupportTicket, SupportTicketStatus } from '@/types/api'
@@ -70,16 +70,11 @@ export function CustomerServicePage() {
     queryFn: () => supportApi.list({ admin: isAdmin, status: statusFilter }),
   })
 
-  const tickets = ticketsQ.data ?? []
+  const tickets = useMemo(() => ticketsQ.data ?? [], [ticketsQ.data])
   const active = tickets.find((ticket) => ticket.id === activeId) ?? tickets[0] ?? null
   const openCount = tickets.filter((ticket) => ticket.status === 'open').length
   const waitingCount = tickets.filter((ticket) => ticket.status === 'waiting_user').length
   const resolvedCount = tickets.filter((ticket) => ticket.status === 'resolved').length
-
-  useEffect(() => {
-    if (!activeId && tickets[0]) setActiveId(tickets[0].id)
-    if (activeId && !tickets.some((ticket) => ticket.id === activeId)) setActiveId(tickets[0]?.id ?? null)
-  }, [activeId, tickets])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
@@ -187,10 +182,10 @@ export function CustomerServicePage() {
       <PageHeader title="Customer Service" subtitle={headline} />
 
       <section className="grid gap-3 md:grid-cols-4">
-        <SupportMetric label="Open" value={String(openCount)} Icon={HiOutlineChatBubbleLeftRight} tone="blue" />
-        <SupportMetric label="Waiting User" value={String(waitingCount)} Icon={HiOutlineClock} tone="amber" />
-        <SupportMetric label="Resolved" value={String(resolvedCount)} Icon={HiOutlineCheckCircle} tone="emerald" />
-        <SupportMetric label="Target SLA" value="24h" Icon={HiOutlineSparkles} tone="violet" />
+        <AdminMetricCard label="Open" value={openCount} helper="Tickets requiring review" Icon={HiOutlineChatBubbleLeftRight} tone="brand" loading={ticketsQ.isLoading} />
+        <AdminMetricCard label="Waiting User" value={waitingCount} helper="Awaiting customer response" Icon={HiOutlineClock} tone="amber" loading={ticketsQ.isLoading} />
+        <AdminMetricCard label="Resolved" value={resolvedCount} helper="Issues marked as solved" Icon={HiOutlineCheckCircle} tone="emerald" loading={ticketsQ.isLoading} />
+        <AdminMetricCard label="Target SLA" value="24h" helper="First response objective" Icon={HiOutlineSparkles} tone="violet" />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)] xl:items-start">
@@ -238,7 +233,7 @@ export function CustomerServicePage() {
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-[1.5rem] border border-[#17120f]/14 bg-[#fffaf6]/92 p-4 shadow-[0_18px_45px_rgba(23,18,15,0.08)]">
             <div className="mb-3 flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-extrabold text-slate-950">{isAdmin ? 'Support Inbox' : 'My Reports'}</h2>
@@ -276,10 +271,10 @@ export function CustomerServicePage() {
           </div>
         </aside>
 
-        <main className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <main className="overflow-hidden rounded-[1.5rem] border border-[#17120f]/14 bg-[#fffaf6]/92 shadow-[0_18px_45px_rgba(23,18,15,0.08)]">
           {active ? (
             <div className="flex h-[min(780px,calc(100dvh-180px))] min-h-[640px] flex-col max-xl:h-auto max-xl:min-h-[660px]">
-              <div className="shrink-0 border-b border-slate-100 bg-white/95 p-5 backdrop-blur">
+              <div className="shrink-0 border-b border-[#17120f]/10 bg-[#fffaf6]/95 p-5 backdrop-blur">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -326,7 +321,7 @@ export function CustomerServicePage() {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scroll-smooth bg-[#f6eee8]/65 p-5">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scroll-smooth bg-[#f6eee8]/72 p-5">
                 {active.priority === 'urgent' && active.status !== 'resolved' ? (
                   <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
                     <HiOutlineExclamationTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -361,7 +356,7 @@ export function CustomerServicePage() {
               </div>
 
               {active.status !== 'resolved' ? (
-                <div className="shrink-0 border-t border-slate-100 bg-white/95 p-4 backdrop-blur">
+                <div className="shrink-0 border-t border-[#17120f]/10 bg-[#fffaf6]/95 p-4 backdrop-blur">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="min-w-0 flex-1 space-y-2">
                       <Textarea
@@ -545,26 +540,6 @@ function StatusBadge({ status }: { status: SupportTicketStatus }) {
 
 function PriorityBadge({ priority }: { priority: SupportPriority }) {
   return <Badge tone={priority === 'urgent' ? 'red' : priority === 'high' ? 'amber' : 'gray'}>{priority}</Badge>
-}
-
-function SupportMetric({ label, value, Icon, tone }: { label: string; value: string; Icon: typeof HiOutlineChatBubbleLeftRight; tone: 'blue' | 'amber' | 'emerald' | 'violet' }) {
-  const tones = {
-    blue: 'bg-brand-50 text-brand-700',
-    amber: 'bg-amber-50 text-amber-700',
-    emerald: 'bg-emerald-50 text-emerald-700',
-    violet: 'bg-violet-50 text-violet-700',
-  }[tone]
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-        <span className={`grid h-10 w-10 place-items-center rounded-xl ${tones}`}>
-          <Icon className="h-5 w-5" />
-        </span>
-      </div>
-      <p className="mt-5 text-3xl font-black text-slate-950">{value}</p>
-    </div>
-  )
 }
 
 export default CustomerServicePage

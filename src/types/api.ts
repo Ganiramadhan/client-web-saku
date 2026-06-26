@@ -149,6 +149,9 @@ export interface AICategorizeResponse {
   date?: string
   transaction_date?: string
   needs_review: boolean
+  needs_clarification?: boolean
+  clarification_question?: string
+  missing_fields?: string[]
   raw_response?: Record<string, unknown>
   transactions?: AICategorizeItem[]
 }

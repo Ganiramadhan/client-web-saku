@@ -268,7 +268,11 @@ export function ScanReceiptPage() {
 
   const scanMutation = useMutation({
     mutationFn: async ({ base64 }: { base64: string; requestId: number }) =>
-      aiApi.scanReceipt({ image_base64: base64, media_type: 'image/webp' }),
+      aiApi.scanReceipt({
+        image_base64: base64,
+        media_type: 'image/webp',
+        user_categories: Array.from(new Set((categories.data ?? []).map((category) => category.name))),
+      }),
     onSuccess: (data, vars) => {
       if (vars.requestId !== scanRequestRef.current) return
       trackEvent(analyticsEvents.receiptScanUsed, {

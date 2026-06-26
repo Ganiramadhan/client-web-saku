@@ -33,9 +33,9 @@ import { isAdminUser, useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
-import { loadSnap } from '@/lib/snap'
 import { sanitizeReferralCode } from '../utils/billing'
 import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { openSubscriptionCheckout } from '@/features/subscription/utils/checkoutFlow'
 import {
   SubscriptionCard,
 } from '../components/ProfilePanels'
@@ -149,7 +149,6 @@ export function ProfilePage() {
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const [busyResume, setBusyResume] = useState(false)
   const [telegramChatId, setTelegramChatId] = useState('')
-  const snapLoadedRef = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -287,58 +286,12 @@ export function ProfilePage() {
       const checkout = resumePending && pendingSubscription?.id
         ? await subscriptionApi.renewInvoice(pendingSubscription.id)
         : await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
-      trackEvent(analyticsEvents.checkoutStarted, {
-        subscription_plan: planCode,
-        amount: checkout.amount,
-      })
-      if (!snapLoadedRef.current) {
-        await loadSnap(checkout.client_key, checkout.is_production)
-        snapLoadedRef.current = true
-      }
-      if (!window.snap) {
-        window.location.href = checkout.redirect_url
-        return
-      }
-      document.body.classList.add('saku-payment-open')
-      window.snap.pay(checkout.snap_token, {
-        onSuccess: async (result) => {
-          document.body.classList.remove('saku-payment-open')
-          const orderId =
-            result && typeof result === 'object' && 'order_id' in result
-              ? String((result as { order_id?: unknown }).order_id ?? '')
-              : ''
-          if (orderId) await subscriptionApi.confirm(orderId)
-          trackEvent(analyticsEvents.paymentSuccess, {
-            subscription_plan: planCode,
-            payment_method: result && typeof result === 'object' && 'payment_type' in result ? String((result as { payment_type?: unknown }).payment_type ?? '') : undefined,
-            amount: checkout.amount,
-          })
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-          qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
-          navigate(`/app/subscription/thanks${orderId ? `?order_id=${encodeURIComponent(orderId)}` : ''}`)
-        },
-        onPending: () => {
-          document.body.classList.remove('saku-payment-open')
-          toast.info(copy.paymentPending)
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-        },
-        onError: () => {
-          document.body.classList.remove('saku-payment-open')
-          trackEvent(analyticsEvents.paymentFailed, {
-            subscription_plan: planCode,
-            amount: checkout.amount,
-          })
-          toast.error(copy.paymentFailed)
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-        },
-        onClose: () => {
-          document.body.classList.remove('saku-payment-open')
-          qc.invalidateQueries({ queryKey: ['subscriptions'] })
-          qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
-        },
+      await openSubscriptionCheckout({
+        checkout,
+        planCode,
+        locale,
+        navigate,
+        queryClient: qc,
       })
     } catch (e) {
       const message = toErrorMessage(e)

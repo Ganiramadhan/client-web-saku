@@ -11,47 +11,47 @@ export function FeaturesSection() {
         {
           Icon: RiChatSmile3Line,
           title: 'AI Transaction Assistant',
-          desc: 'Catat transaksi dengan bahasa sehari-hari. SAKU mengubahnya menjadi preview yang siap kamu cek.',
+          desc: 'Tulis transaksi seperti ngobrol. SAKU menyiapkan preview yang bisa kamu cek sebelum disimpan.',
           example: '“beli nasi padang 35rb pakai cash”',
         },
         {
           Icon: RiScanLine,
           title: 'OCR Receipt Scanner',
-          desc: 'Foto struk, lalu cek merchant, tanggal, kategori, dan nominal tanpa mengetik ulang semuanya.',
-          example: 'Cocok untuk belanja, makan, dan kebutuhan kerja.',
+          desc: 'Foto struk belanja, lalu biarkan SAKU membaca nominal, merchant, tanggal, dan kategori.',
+          example: 'Lebih cepat untuk belanja, makan, dan kebutuhan kerja.',
         },
         {
           Icon: RiBrainLine,
           title: 'Financial Insight',
-          desc: 'Lihat kategori yang paling boros, sisa ruang belanja, budget yang menipis, dan rekomendasi sederhana.',
-          example: 'Bukan angka mentah, tapi arahan yang bisa dipakai.',
+          desc: 'Pahami uang paling banyak habis di mana, budget mana yang menipis, dan apa yang perlu dijaga.',
+          example: 'Bukan sekadar angka, tapi arahan harian.',
         },
       ]
     : [
         {
           Icon: RiChatSmile3Line,
           title: 'AI Transaction Assistant',
-          desc: 'Record transactions in natural language. SAKU turns them into review-ready previews.',
+          desc: 'Type transactions like a normal chat. SAKU prepares a preview you can review before saving.',
           example: '“lunch 35k with cash”',
         },
         {
           Icon: RiScanLine,
           title: 'OCR Receipt Scanner',
-          desc: 'Scan receipts, then check merchant, date, category, and amount without retyping everything.',
-          example: 'Useful for food, shopping, and work expenses.',
+          desc: 'Take a receipt photo and let SAKU read the amount, merchant, date, and category.',
+          example: 'Faster for meals, shopping, and work expenses.',
         },
         {
           Icon: RiBrainLine,
           title: 'Financial Insight',
-          desc: 'See top spending categories, safe spending room, tight budgets, and simple recommendations.',
-          example: 'Not raw numbers, but guidance you can use.',
+          desc: 'Understand where money goes, which budgets are getting tight, and what to watch next.',
+          example: 'Not just numbers, but daily guidance.',
         },
       ]
   const cards = [
     {
       Icon: RiChatSmile3Line,
       title: isId ? 'Chat with AI' : 'Chat with AI',
-      desc: isId ? 'Ketik transaksi seperti ngobrol. AI menyiapkan detailnya untuk kamu cek.' : 'Type transactions naturally. AI prepares details for review.',
+      desc: isId ? 'Cukup tulis transaksi. AI bantu susun nominal, wallet, kategori, dan tanggal.' : 'Write a transaction. AI helps organize amount, wallet, category, and date.',
       bg: 'bg-brand-100',
       className: 'lg:col-span-2 lg:min-h-[300px]',
       visual: <ChatMiniMockup isId={isId} />,
@@ -59,7 +59,7 @@ export function FeaturesSection() {
     {
       Icon: RiScanLine,
       title: isId ? 'Scan Struk (OCR)' : 'Receipt Scanner',
-      desc: isId ? 'Foto struk belanja, lalu nominal, merchant, dan kategori terbaca otomatis.' : 'Snap receipts and extract amount, merchant, and category.',
+      desc: isId ? 'Upload foto struk, cek hasilnya, lalu simpan kalau sudah sesuai.' : 'Upload a receipt photo, review the result, then save when it looks right.',
       bg: 'bg-emerald-100',
       className: 'lg:min-h-[300px]',
       visual: <ReceiptDoodle />,
@@ -67,7 +67,7 @@ export function FeaturesSection() {
     {
       Icon: RiWallet3Line,
       title: 'Multi Wallet',
-      desc: isId ? 'Pisahkan cash, bank, e-wallet, tabungan, dan dana tujuan.' : 'Separate cash, bank, e-wallet, savings, and goals.',
+      desc: isId ? 'Pisahkan cash, rekening, e-wallet, tabungan, dan dana tujuan.' : 'Separate cash, bank accounts, e-wallets, savings, and goal funds.',
       bg: 'bg-[#fffaf6]',
       className: 'lg:min-h-[240px]',
       visual: <WalletDoodle />,
@@ -75,7 +75,7 @@ export function FeaturesSection() {
     {
       Icon: RiPieChart2Line,
       title: 'Budget Tracker',
-      desc: isId ? 'Pantau batas pengeluaran sebelum kebablasan.' : 'Track spending limits before they go too far.',
+      desc: isId ? 'Jaga batas belanja bulanan sebelum terasa telat.' : 'Keep monthly spending limits visible before it is too late.',
       bg: 'bg-[#fddf82]',
       className: 'lg:min-h-[240px]',
       visual: <BudgetMiniChart />,
@@ -83,7 +83,7 @@ export function FeaturesSection() {
     {
       Icon: RiBrainLine,
       title: isId ? 'Insight Harian' : 'Daily Insight',
-      desc: isId ? 'AI membaca pola pengeluaran dan kasih saran yang bisa dilakukan.' : 'AI reads spending patterns and gives practical guidance.',
+      desc: isId ? 'Lihat sinyal penting: kategori boros, ruang belanja, dan budget yang mulai menipis.' : 'See useful signals: top categories, spending room, and budgets getting tight.',
       bg: 'bg-brand-100',
       className: 'lg:min-h-[220px]',
       visual: <InsightMiniMockup isId={isId} />,
@@ -91,7 +91,7 @@ export function FeaturesSection() {
     {
       Icon: RiShieldCheckLine,
       title: isId ? 'Aman & Privat' : 'Safe & Private',
-      desc: isId ? 'Data keuanganmu tetap milikmu. AI membantu tanpa mengambil keputusan sepihak.' : 'Your financial data stays yours. AI helps without taking over decisions.',
+      desc: isId ? 'Kamu tetap pegang kendali. Hasil AI bisa dicek dan diedit dulu.' : 'You stay in control. AI results can be reviewed and edited first.',
       bg: 'bg-[#fffaf6]',
       className: 'lg:min-h-[220px]',
       visual: <SecurityDoodle />,
@@ -103,8 +103,8 @@ export function FeaturesSection() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={t.nav.features}
-          title={isId ? 'Semua yang kamu butuhkan, dalam satu aplikasi.' : 'Everything you need, in one app.'}
-          description={isId ? 'SAKU dibuat untuk rutinitas uang harian: catat cepat, review aman, dan pahami pola tanpa spreadsheet.' : 'SAKU is built for daily money routines: fast input, safe review, and clear patterns without spreadsheets.'}
+          title={isId ? 'Fitur inti untuk uang harian yang lebih rapi.' : 'Core features for cleaner daily money habits.'}
+          description={isId ? 'Fokus pada hal yang paling sering dipakai: catat cepat, scan struk, pisahkan wallet, dan pahami pola belanja.' : 'Focused on what you use most: quick tracking, receipt scan, separate wallets, and clearer spending patterns.'}
         />
 
         <div className="mt-14 grid auto-rows-[minmax(210px,auto)] gap-6 lg:grid-cols-3">

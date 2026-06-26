@@ -13,6 +13,7 @@ import { formatRupiah, parseRupiah } from '@/lib/utils'
 
 export { DataTable, type DataTableProps, type DataTableLabels } from './DataTable'
 export { AdminDataTable } from './AdminDataTable'
+export { AdminMetricCard, AdminPanel, type AdminMetricTone } from './AdminSurface'
 export { DataListPagination } from './DataListPagination'
 export { RSelect, type SelectOption } from './RSelect'
 export { DateInput, type DateInputProps } from './DateInput'

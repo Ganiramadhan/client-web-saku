@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/stores/authStore'
 
-const NON_REMEMBER_IDLE_TIMEOUT_MS = 60 * 60 * 1000
+const NON_REMEMBER_IDLE_TIMEOUT_MS = 30 * 60 * 1000
 const ACTIVITY_THROTTLE_MS = 30 * 1000
 const ACTIVITY_EVENTS = ['click', 'keydown', 'pointerdown', 'scroll', 'touchstart', 'visibilitychange']
 
@@ -23,15 +23,19 @@ export function initSessionActivity() {
     }
     if (Date.now() - lastActivityAt >= NON_REMEMBER_IDLE_TIMEOUT_MS) {
       clear()
-      if (window.location.pathname.startsWith('/app') || window.location.pathname.startsWith('/admin')) {
+      if (
+        window.location.pathname.startsWith('/app') ||
+        window.location.pathname.startsWith('/admin') ||
+        window.location.pathname.startsWith('/super-admin')
+      ) {
         window.location.assign('/login')
       }
     }
   }
 
+  checkIdle()
   ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, touch, { passive: true }))
   const timer = window.setInterval(checkIdle, 60 * 1000)
-  touch()
 
   return () => {
     ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, touch))

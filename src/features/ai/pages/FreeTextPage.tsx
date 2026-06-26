@@ -88,7 +88,7 @@ export function FreeTextPage() {
           '3. Jawaban memakai data transaksi yang tersedia di akunmu dan ditulis tanpa format markdown.',
           '4. Kalau bingung, ketik "help" kapan saja untuk melihat panduan ini.',
         ].join('\n'),
-        parseFailed: 'Saya belum berhasil menangkap detail transaksinya. Coba tulis lebih spesifik, misalnya: "beli bubur ayam 14rb". Kalau butuh panduan, ketik "help".',
+        parseFailed: 'Detail transaksinya masih belum lengkap. Bagian mana yang ingin kamu tambahkan?',
         errorPrefix: 'Maaf, AI sedang belum bisa memproses pesan itu.',
         singleIntro: 'Silakan cek dan konfirmasi detailnya di bawah:',
         batchIntro: (count: number) => `Saya menangkap ${count} transaksi. Pilih yang ingin disimpan, lalu klik "Simpan terpilih".`,
@@ -115,7 +115,7 @@ export function FreeTextPage() {
           '3. Answers use your available transaction data and stay clean without markdown styling.',
           '4. Type "help" anytime to see this guide.',
         ].join('\n'),
-        parseFailed: 'I could not detect the transaction details yet. Try something more specific, for example: "chicken porridge 14k". Type "help" if you need guidance.',
+        parseFailed: 'The transaction details are still incomplete. What would you like to add?',
         errorPrefix: 'Sorry, SAKU AI could not process that message right now.',
         singleIntro: 'Please review and confirm the details below:',
         batchIntro: (count: number) => `I found ${count} transactions. Select the ones to save, then click "Save selected".`,
@@ -274,6 +274,16 @@ export function FreeTextPage() {
     },
     [activeId],
   )
+
+  const setPendingNLPContext = useCallback((value?: string) => {
+    setSessions((prev) =>
+      prev.map((session) =>
+        session.id === activeId
+          ? { ...session, pendingNLPContext: value, updatedAt: Date.now() }
+          : session,
+      ),
+    )
+  }, [activeId])
 
   const showHelp = useCallback(() => {
     const guide = mode === 'nlp' ? aiCopy.nlpGuide : aiCopy.chatGuide
@@ -521,13 +531,13 @@ export function FreeTextPage() {
 
   /* ─── Mutations ─── */
   const categorizeMutation = useMutation({
-    mutationFn: (inputText: string) => aiApi.categorize({
+    mutationFn: ({ inputText }: { inputText: string; displayText: string }) => aiApi.categorize({
       text: inputText,
       session_id: active?.id ?? activeId ?? undefined,
       language: detectPreferredLanguage(inputText, locale),
       ...currentAIReference(),
     }),
-    onSuccess: (data, inputText) => {
+    onSuccess: (data, { inputText }) => {
       trackEvent(analyticsEvents.aiChatUsed, {
         feature_name: 'ai_transaction_assistant',
         transaction_type: 'nlp',
@@ -555,17 +565,18 @@ export function FreeTextPage() {
       const usableItems = items.filter((item) => Number(item.amount || 0) > 0)
 
       if (usableItems.length === 0) {
+        setPendingNLPContext(inputText)
         updateActive((prev) => [
           ...prev,
           {
             id: uid(),
             role: 'assistant',
-            content:
-              aiCopy.parseFailed,
+            content: data.clarification_question || aiCopy.parseFailed,
           },
         ])
         return
       }
+      setPendingNLPContext(undefined)
 
       const isBatch = usableItems.length > 1
       const batchId = isBatch ? uid() : undefined
@@ -897,6 +908,20 @@ export function FreeTextPage() {
       return
     }
     if (mode === 'nlp') {
+      if (active?.pendingNLPContext && /^(batal|batalkan|cancel|never mind)$/i.test(trimmed)) {
+        setPendingNLPContext(undefined)
+        updateActive((prev) => [
+          ...prev,
+          {
+            id: uid(),
+            role: 'assistant',
+            content: locale === 'id'
+              ? 'Siap, transaksi yang belum lengkap dibatalkan. Kamu bisa mulai transaksi baru.'
+              : 'Okay, the incomplete transaction was cancelled. You can start a new transaction.',
+          },
+        ])
+        return
+      }
       const corrected = buildCorrectedReviews(trimmed, active?.messages ?? [], {
         locale,
         resolveWalletIdFromText,
@@ -904,6 +929,7 @@ export function FreeTextPage() {
         defaultWalletId,
       })
       if (corrected.length > 0) {
+        setPendingNLPContext(undefined)
         const correctedBatchId = corrected.length > 1 ? corrected[0]?.batchId : undefined
         updateActive((prev) => [
           ...removeOpenReviewMessages(prev),
@@ -927,7 +953,10 @@ export function FreeTextPage() {
         ])
         return
       }
-      categorizeMutation.mutate(trimmed)
+      const inputText = active?.pendingNLPContext
+        ? `${active.pendingNLPContext}\n${locale === 'id' ? 'Informasi lanjutan dari pengguna' : 'Additional detail from the user'}: ${trimmed}`
+        : trimmed
+      categorizeMutation.mutate({ inputText, displayText: trimmed })
     } else chatMutation.mutate(trimmed)
   }
 

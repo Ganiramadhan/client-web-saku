@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { HiOutlineCalendarDays, HiOutlineCheckCircle, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineXMark, HiPlus } from 'react-icons/hi2'
 import { Badge, Button, Card, CurrencyInput, DateInput, Input, Modal, RSelect, type SelectOption } from '@/components/ui'
@@ -162,9 +162,11 @@ export function UpcomingBillingManager({
         due_date: nextBillingDate(item).toISOString(),
         status: 'active',
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       toast.success(copy.paid)
-      qc.invalidateQueries({ queryKey: ['upcoming-billings'] })
+      qc.setQueryData<UpcomingBilling[]>(['upcoming-billings'], (current = []) =>
+        current.map((item) => item.id === updated.id ? updated : item),
+      )
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -319,8 +321,8 @@ export function UpcomingBillingManager({
                     className="!bg-emerald-600 shadow-emerald-200/60 hover:!bg-emerald-700 focus:ring-emerald-500/40"
                     leftIcon={<HiOutlineCheckCircle className="h-4 w-4" />}
                     onClick={() => onMarkPaid(item)}
-                    loading={markPaid.isPending}
-                    disabled={item.status !== 'active'}
+                    loading={markPaid.isPending && markPaid.variables?.id === item.id}
+                    disabled={item.status !== 'active' || (markPaid.isPending && markPaid.variables?.id === item.id)}
                   >
                     {copy.paidConfirm}
                   </Button>
@@ -363,11 +365,6 @@ export function BillingModal({
   const { copy } = useBillingCopy()
   const qc = useQueryClient()
   const [form, setForm] = useState<UpcomingBillingPayload>(() => initialBillingForm(editing))
-
-  useEffect(() => {
-    if (!open) return
-    setForm(initialBillingForm(editing))
-  }, [editing, open])
 
   const saveBilling = useMutation({
     mutationFn: () => {

@@ -7,30 +7,39 @@ import { SectionHeading } from '../components/SectionHeading'
 export function FAQSection() {
   const t = useT()
   const { locale } = useLocale()
+  const isId = locale === 'id'
   const items = [
     {
-      q: t.landing.faq4q,
-      a: t.landing.faq4a,
+      q: isId ? 'SAKU cocok untuk siapa?' : 'Who is SAKU for?',
+      a: isId
+        ? 'SAKU cocok untuk mahasiswa, karyawan, freelancer, dan siapa pun yang ingin memahami uang harian tanpa spreadsheet. Mulai dari transaksi kecil, lalu dashboard membantu membaca polanya.'
+        : 'SAKU is built for students, employees, freelancers, and anyone who wants to understand daily money without spreadsheets. Start with small transactions, then the dashboard helps read the pattern.',
     },
     {
-      q: t.landing.faq2q,
-      a: t.landing.faq2a,
+      q: isId ? 'Apakah transaksi langsung disimpan oleh AI?' : 'Does AI save transactions automatically?',
+      a: isId
+        ? 'Tidak dipaksa langsung. AI menyiapkan pratinjau transaksi terlebih dahulu, lalu kamu bisa cek nominal, wallet, kategori, tanggal, dan catatan sebelum menyimpan.'
+        : 'Not forcefully. AI prepares a transaction preview first, so you can review the amount, wallet, category, date, and notes before saving.',
     },
     {
-      q: t.landing.faq1q,
-      a: t.landing.faq1a,
+      q: isId ? 'Apa bedanya Free dan Pro?' : 'What is different between Free and Pro?',
+      a: isId
+        ? 'Free cukup untuk mulai mencatat dan mencoba AI/OCR dengan batas bulanan. Pro cocok kalau SAKU sudah dipakai harian: wallet lebih lega, AI dan OCR lebih banyak, split bill, recurring transaction, export, dan insight lebih lengkap.'
+        : 'Free is enough to start tracking and try AI/OCR with monthly limits. Pro fits daily use: more wallets, more AI and OCR usage, split bill, recurring transactions, export, and richer insights.',
     },
     {
-      q: t.landing.faq3q,
-      a: t.landing.faq3a,
+      q: isId ? 'Apakah data keuangan saya aman?' : 'Is my financial data safe?',
+      a: isId
+        ? 'SAKU tidak meminta password rekening bank. Akses mengikuti akun pengguna, hasil AI bisa direview, dan pembayaran diproses melalui Midtrans. Detail lengkap tersedia di Privacy Policy.'
+        : 'SAKU does not ask for bank account passwords. Access follows user accounts, AI results can be reviewed, and payments are processed through Midtrans. Full details are available in the Privacy Policy.',
     },
     {
-      q: locale === 'id' ? 'Bagaimana cara kerja split bill?' : 'How do split bills work?',
-      a: locale === 'id' ? 'Masukkan pengeluaran bersama, lalu SAKU membantu membagi nominal dan melacak status pembayaran setiap peserta.' : 'Add shared expenses, let SAKU calculate who owes what, and track each settlement clearly.',
+      q: isId ? 'Bagaimana cara kerja split bill?' : 'How do split bills work?',
+      a: isId ? 'Masukkan pengeluaran bersama, tentukan peserta, lalu SAKU membantu membagi nominal dan memantau siapa yang sudah bayar.' : 'Add a shared expense, set participants, then SAKU helps split the amount and track who has paid.',
     },
     {
-      q: locale === 'id' ? 'Apakah bisa upgrade kapan saja?' : 'Can I upgrade anytime?',
-      a: locale === 'id' ? 'Bisa. Kamu dapat memakai Free dulu, lalu upgrade ke Pro saat membutuhkan fitur AI dan kapasitas tambahan.' : 'Yes. You can stay on Free first, then upgrade to Pro when you need AI features and extra capacity.',
+      q: isId ? 'Apakah bisa upgrade kapan saja?' : 'Can I upgrade anytime?',
+      a: isId ? 'Bisa. Kamu bisa mulai dari Free, lalu upgrade ketika butuh kapasitas AI, OCR, wallet, dan fitur produktivitas yang lebih luas.' : 'Yes. You can start on Free, then upgrade when you need more AI, OCR, wallets, and productivity features.',
     },
   ]
 
@@ -41,8 +50,8 @@ export function FAQSection() {
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={t.nav.faq}
-          title={locale === 'id' ? 'Pertanyaan sebelum mulai pakai SAKU.' : 'Questions before starting with SAKU.'}
-          description={locale === 'id' ? 'Jawaban singkat untuk hal yang biasanya bikin ragu sebelum mulai mencatat uang dengan AI.' : 'Short answers to common doubts before tracking money with AI.'}
+          title={isId ? 'Yang biasanya ditanyakan sebelum mulai.' : 'Common questions before getting started.'}
+          description={isId ? 'Jawaban singkat untuk membantu kamu memutuskan apakah SAKU cocok dengan cara kamu mengatur uang.' : 'Short answers to help you decide whether SAKU fits the way you manage money.'}
         />
 
         <div className="mt-12 space-y-5">

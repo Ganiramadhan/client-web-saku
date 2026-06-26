@@ -54,9 +54,12 @@ export function SubscriptionCard({
         expiredTitle: 'Waktu pembayaran habis',
         expiredDesc: 'Invoice pembayaran telah kedaluwarsa. Buat invoice baru untuk melanjutkan aktivasi langganan.',
         payBefore: 'Bayar sebelum',
+        paymentMethod: 'Metode',
+        snapWindow: 'Belum memilih metode · invoice tersedia 24 jam',
         expiresIn: 'Sisa waktu',
         expired: 'Kedaluwarsa',
         continuePay: 'Lanjutkan Pembayaran',
+        continueHint: 'Buka kembali pembayaran. Jika metode sebelumnya sudah dipilih, kamu dapat memilih ulang metode di Snap.',
         createInvoice: 'Buat Invoice Baru',
         cancelPayment: 'Batalkan Pembayaran',
         freeDesc: 'Akun masih berada di paket Free. Pilih paket untuk membuka fitur AI, laporan lanjutan, dan workflow finansial yang lebih lengkap.',
@@ -108,9 +111,12 @@ export function SubscriptionCard({
         expiredTitle: 'Payment time has run out',
         expiredDesc: 'The payment invoice has expired. Create a new invoice to continue activating your subscription.',
         payBefore: 'Pay before',
+        paymentMethod: 'Method',
+        snapWindow: 'No method selected · invoice available for 24 hours',
         expiresIn: 'Time left',
         expired: 'Expired',
         continuePay: 'Continue Payment',
+        continueHint: 'Reopen payment. If a method was already selected, you can choose another method in Snap.',
         createInvoice: 'Create New Invoice',
         cancelPayment: 'Cancel Payment',
         freeDesc: 'Your account is still on the Free plan. Choose a plan to unlock AI features, advanced reports, and richer financial workflows.',
@@ -164,7 +170,8 @@ export function SubscriptionCard({
   const monthlyPlans = new Map(plans.filter((plan) => plan.period === 'monthly').map((plan) => [basePlanCode(plan.code), plan]))
   const hasMonthly = plans.some((plan) => plan.period === 'monthly')
   const hasYearly = plans.some((plan) => plan.period === 'yearly')
-  const visiblePlans = plans.filter((plan) => plan.period === period)
+  const selectedPeriod = !hasMonthly && hasYearly ? 'yearly' : hasMonthly && !hasYearly ? 'monthly' : period
+  const visiblePlans = plans.filter((plan) => plan.period === selectedPeriod)
 
   const openVoucherModal = (plan: Plan) => {
     setVoucherCode('')
@@ -220,11 +227,6 @@ export function SubscriptionCard({
     setVoucherError('')
     setAppliedVoucher(null)
   }
-
-  useEffect(() => {
-    if (!hasMonthly && hasYearly) setPeriod('yearly')
-    else if (hasMonthly && !hasYearly) setPeriod('monthly')
-  }, [hasMonthly, hasYearly])
 
   useEffect(() => {
     if (!pendingSub?.expires_at) return
@@ -299,6 +301,11 @@ export function SubscriptionCard({
                 <p className="mt-3 w-full text-xs leading-5 text-slate-500">
                   {copy.pendingDesc}
                 </p>
+                <p className="mt-2 text-xs font-semibold text-slate-600">
+                  {pendingSub.payment_type
+                    ? `${copy.paymentMethod}: ${formatPaymentType(pendingSub.payment_type)}`
+                    : copy.snapWindow}
+                </p>
                 {Number(pendingSub.discount_amount ?? 0) > 0 ? (
                   <p className="mt-2 text-xs font-semibold text-emerald-700">
                     {pendingDiscountLabel}: -{formatCurrency(Number(pendingSub.discount_amount), pendingSub.currency)}
@@ -323,11 +330,13 @@ export function SubscriptionCard({
                   </div>
                 ) : null}
               </div>
+              <p className="text-xs leading-5 text-slate-500">{copy.continueHint}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button
                   size="sm"
                   className="min-h-9 w-full whitespace-nowrap transition hover:-translate-y-0.5 hover:shadow-md"
                   loading={resumeLoading}
+                  disabled={cancelLoading}
                   onClick={() => onSubscribe(pendingSub.plan_code, cleanVoucherCode, true)}
                 >
                   {copy.continuePay}
@@ -337,6 +346,7 @@ export function SubscriptionCard({
                   variant="outline"
                   className="w-full border-rose-200 bg-rose-50/80 text-rose-700 transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-100 hover:shadow-md"
                   loading={cancelLoading}
+                  disabled={resumeLoading}
                   onClick={() => onCancel(pendingSub.id)}
                 >
                   {copy.cancelPayment}
@@ -368,14 +378,14 @@ export function SubscriptionCard({
                 type="button"
                 onClick={() => setPeriod(value)}
                 className={`rounded-xl px-3 py-2 text-xs font-extrabold transition ${
-                  period === value
+                  selectedPeriod === value
                     ? 'bg-brand-600 text-white shadow-md shadow-brand-100'
                     : 'text-slate-500 hover:bg-white hover:text-brand-700'
                 }`}
               >
                 {label}
                 {value === 'yearly' ? (
-                  <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] ${period === value ? 'bg-white/15 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
+                  <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] ${selectedPeriod === value ? 'bg-white/15 text-white' : 'bg-emerald-50 text-emerald-700'}`}>
                     {copy.yearlyDiscount}
                   </span>
                 ) : null}
@@ -494,7 +504,7 @@ export function SubscriptionCard({
   const trialEnd = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null
   const periodEnd = sub.ends_at ? new Date(sub.ends_at) : null
   const warningDate = isTrial ? trialEnd : periodEnd
-  const daysLeft = warningDate ? Math.ceil((warningDate.getTime() - Date.now()) / 86_400_000) : null
+  const daysLeft = warningDate ? Math.ceil((warningDate.getTime() - nowMs) / 86_400_000) : null
   const tone: 'green' | 'amber' | 'red' =
     sub.status === 'active' ? 'green' : isTrial ? 'amber' : 'red'
   return (
@@ -695,6 +705,18 @@ function formatPaymentRemaining(ms: number, locale: 'id' | 'en') {
   return locale === 'id'
     ? `${minutes}m ${seconds}d`
     : `${minutes}m ${seconds}s`
+}
+
+function formatPaymentType(value: string) {
+  const normalized = value.trim().toLowerCase()
+  const labels: Record<string, string> = {
+    qris: 'QRIS · 15 menit',
+    gopay: 'GoPay · 15 menit',
+    bank_transfer: 'Virtual Account · 24 jam',
+    echannel: 'Mandiri Bill · 24 jam',
+    permata: 'Permata VA · 24 jam',
+  }
+  return labels[normalized] ?? value.replaceAll('_', ' ')
 }
 
 function translatePlanFeature(

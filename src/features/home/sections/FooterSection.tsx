@@ -36,10 +36,12 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
             <Logo />
 
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-500">
-              {t.landing.footerTagline}
+              {locale === 'id'
+                ? 'SAKU membantu mencatat transaksi harian, mengelola wallet, dan memahami pola pengeluaran dengan bantuan AI.'
+                : 'SAKU helps track daily transactions, manage wallets, and understand spending patterns with AI.'}
             </p>
             <p className="mt-3 max-w-md text-xs font-semibold uppercase tracking-wider text-brand-700">
-              {locale === 'id' ? 'AI finance assistant untuk keputusan harian' : 'AI finance assistant for daily decisions'}
+              {locale === 'id' ? 'Asisten uang harian untuk keputusan kecil yang lebih jelas' : 'Daily money assistant for clearer small decisions'}
             </p>
           </div>
 
@@ -106,12 +108,12 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
                   {locale === 'id' ? 'Checkout aman' : 'Secure checkout'}
                 </div>
                 <h3 className="mt-3 text-lg font-black tracking-tight sm:text-xl">
-                  {locale === 'id' ? 'Banyak metode bayar, tetap dalam satu checkout.' : 'More ways to pay, one secure checkout.'}
+                  {locale === 'id' ? 'Pembayaran resmi, pilihan metode tetap fleksibel.' : 'Official payments with flexible methods.'}
                 </h3>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-brand-50/80">
                   {locale === 'id'
-                    ? 'SAKU mendukung QRIS, GoPay, kartu debit/kredit, virtual account bank, retail payment, dan paylater melalui Midtrans.'
-                    : 'SAKU supports QRIS, GoPay, debit/credit cards, bank virtual accounts, retail payment, and paylater through Midtrans.'}
+                    ? 'Checkout diproses melalui Midtrans dan mendukung channel yang tersedia seperti QRIS, GoPay, kartu, virtual account, retail payment, dan paylater.'
+                    : 'Checkout is processed through Midtrans and supports available channels such as QRIS, GoPay, cards, virtual accounts, retail payment, and paylater.'}
                 </p>
               </div>
 
@@ -127,14 +129,14 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
           </div>
           <p className="mt-3 text-xs font-semibold leading-5 text-slate-400">
                 {locale === 'id'
-                  ? 'Metode pembayaran mengikuti ketersediaan channel Midtrans di checkout.'
-                  : 'Payment methods follow available Midtrans channels at checkout.'}
+                  ? 'Metode pembayaran mengikuti channel yang tersedia di halaman checkout Midtrans.'
+                  : 'Payment methods follow the channels available on the Midtrans checkout page.'}
           </p>
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-4 border-t border-slate-200/70 pt-6 text-xs text-slate-400 md:flex-row">
           <p>© {new Date().getFullYear()} SAKU Finance. All rights reserved.</p>
-          <p>{locale === 'id' ? 'Website resmi SAKU untuk pengelolaan keuangan pribadi.' : 'Official SAKU website for personal finance management.'}</p>
+          <p>{locale === 'id' ? 'Website resmi SAKU untuk catatan dan insight keuangan pribadi.' : 'Official SAKU website for personal finance tracking and insights.'}</p>
         </div>
         </div>
       </div>

@@ -8,19 +8,19 @@ export function SocialProofSection() {
   const testimonials = isId
     ? [
         {
-          quote: 'SAKU bikin catatan harian jauh lebih ringan. Tinggal chat transaksi, lalu review sebelum simpan.',
+          quote: 'Yang paling kerasa: nggak perlu buka spreadsheet lagi. Tinggal chat transaksi, cek preview, selesai.',
           name: 'Raka Pratama',
           role: 'Freelancer',
           avatar: 'R',
         },
         {
-          quote: 'Multi wallet-nya membantu banget buat pisahin cash, rekening utama, dan dana darurat.',
+          quote: 'Aku jadi lebih paham uang ada di mana saja. Cash, rekening utama, dan dana darurat nggak campur lagi.',
           name: 'Nadia Putri',
           role: 'Karyawan',
           avatar: 'N',
         },
         {
-          quote: 'Scan struk dan insight AI-nya bikin pengeluaran bulanan lebih cepat kebaca.',
+          quote: 'Scan struknya kepakai setelah belanja. Insight bulanannya bikin lebih cepat sadar kategori yang bocor.',
           name: 'Dimas Arya',
           role: 'Owner UMKM',
           avatar: 'D',
@@ -28,19 +28,19 @@ export function SocialProofSection() {
       ]
     : [
         {
-          quote: 'SAKU makes daily tracking lighter. I can chat a transaction, then review it before saving.',
+          quote: 'The biggest win: no more spreadsheets. I chat a transaction, review the preview, and move on.',
           name: 'Raka Pratama',
           role: 'Freelancer',
           avatar: 'R',
         },
         {
-          quote: 'The multi-wallet flow helps me separate cash, my main bank account, and emergency funds.',
+          quote: 'I finally understand where my money sits. Cash, main bank, and emergency funds no longer blend together.',
           name: 'Nadia Putri',
           role: 'Employee',
           avatar: 'N',
         },
         {
-          quote: 'Receipt scanning and AI insights make monthly spending patterns easier to understand.',
+          quote: 'Receipt scan is useful after shopping. Monthly insights make spending leaks easier to notice.',
           name: 'Dimas Arya',
           role: 'Small Business Owner',
           avatar: 'D',
@@ -52,8 +52,8 @@ export function SocialProofSection() {
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           label={isId ? 'Apa Kata Mereka' : 'User Reviews'}
-          title={isId ? 'Dipercaya untuk rutinitas uang harian.' : 'Trusted for daily money routines.'}
-          description={isId ? 'Review singkat dari pengguna yang ingin mencatat uang tanpa spreadsheet dan tanpa ribet.' : 'Short reviews from users who want to track money without spreadsheets or friction.'}
+          title={isId ? 'Dibuat untuk rutinitas uang yang nyata.' : 'Built for real money routines.'}
+          description={isId ? 'Cerita singkat dari orang yang ingin uang hariannya lebih kebaca tanpa proses yang berat.' : 'Short notes from people who want clearer daily money without a heavy process.'}
         />
 
         <div className="mt-10 grid auto-rows-fr gap-4 lg:grid-cols-3">

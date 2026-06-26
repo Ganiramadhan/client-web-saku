@@ -27,8 +27,9 @@ export default function App() {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   useEffect(() => {
-    initSessionActivity()
+    const stopSessionActivity = initSessionActivity()
     initAnalytics()
+    return stopSessionActivity
   }, [])
   const match = PAGE_SEO.find((item) => item.pattern.test(location.pathname)) ?? PAGE_SEO[0]
   useSEO({

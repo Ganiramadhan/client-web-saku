@@ -15,11 +15,10 @@ import {
   HiOutlineUsers,
 } from 'react-icons/hi2'
 
-import { AdminDataTable, Badge, Button, Modal, PageHeader } from '@/components/ui'
+import { AdminDataTable, AdminMetricCard, Badge, Button, Modal, PageHeader } from '@/components/ui'
 import { RSelect } from '@/components/ui/RSelect'
 import { subscriptionApi, type AdminSubscription } from '@/features/subscription/api'
 import { useT } from '@/i18n'
-import { SubStatCard } from '../components/SubStatCard'
 
 type StatusFilter = 'all' | AdminSubscription['status']
 type PlanFilter = 'all' | string
@@ -82,7 +81,7 @@ export function SubscribersPage() {
     queryFn: () => subscriptionApi.listAllAdmin({ page: 1, limit: 200 }),
   })
 
-  const rows = q.data ?? []
+  const rows = useMemo(() => q.data ?? [], [q.data])
   const stats = useMemo(() => ({
     total: rows.length,
     active: rows.filter((row) => row.status === 'active' || row.status === 'trialing').length,
@@ -134,7 +133,7 @@ export function SubscribersPage() {
                   className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm"
                 />
               ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white ring-2 ring-white shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-[#17120f] ring-2 ring-[#fffaf6] shadow-sm">
                   {initial}
                 </div>
               )}
@@ -237,10 +236,10 @@ export function SubscribersPage() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SubStatCard label="Total Subscribers" value={String(stats.total)} Icon={HiOutlineUsers} tone="blue" />
-        <SubStatCard label="Active / Trial" value={String(stats.active)} Icon={HiOutlineCheckCircle} tone="emerald" />
-        <SubStatCard label="Pending Payments" value={String(stats.pending)} Icon={HiOutlineClock} tone="amber" />
-        <SubStatCard label="Active Revenue" value={fmtIDR(stats.revenue)} Icon={HiOutlineBanknotes} tone="violet" />
+        <AdminMetricCard label="Total Subscribers" value={stats.total} helper="All subscription records" Icon={HiOutlineUsers} tone="brand" loading={q.isLoading} />
+        <AdminMetricCard label="Active / Trial" value={stats.active} helper="Currently receiving plan access" Icon={HiOutlineCheckCircle} tone="emerald" loading={q.isLoading} />
+        <AdminMetricCard label="Pending Payments" value={stats.pending} helper="Checkout awaiting confirmation" Icon={HiOutlineClock} tone="amber" loading={q.isLoading} />
+        <AdminMetricCard label="Active Revenue" value={fmtIDR(stats.revenue)} helper="Active and trial subscriptions" Icon={HiOutlineBanknotes} tone="violet" loading={q.isLoading} />
       </section>
 
       <AdminDataTable

@@ -47,6 +47,7 @@ export interface ChatSession {
   updatedAt: number
   pinned?: boolean
   logIds?: string[]
+  pendingNLPContext?: string
 }
 
 export const NLP_EXAMPLES = [

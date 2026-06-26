@@ -41,6 +41,14 @@ export interface DataTableProps<T> {
   emptyAction?: ReactNode
   getRowId?: (row: T, index: number) => string
   disablePagination?: boolean
+  serverPagination?: {
+    page: number
+    pageSize: number
+    totalPages: number
+    totalRows: number
+    onPageChange: (page: number) => void
+    onPageSizeChange?: (pageSize: number) => void
+  }
   initialPageSize?: number
   onRowClick?: (row: T) => void
   labels?: DataTableLabels
@@ -57,6 +65,7 @@ export function DataTable<T>({
   emptyAction,
   getRowId,
   disablePagination,
+  serverPagination,
   initialPageSize = 10,
   onRowClick,
   labels,
@@ -83,16 +92,21 @@ export function DataTable<T>({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: disablePagination ? undefined : getPaginationRowModel(),
+    getPaginationRowModel: disablePagination || serverPagination ? undefined : getPaginationRowModel(),
     getRowId,
     initialState: { pagination: { pageSize: initialPageSize } },
   })
 
-  const totalRows = table.getFilteredRowModel().rows.length
+  const filteredRows = table.getFilteredRowModel().rows.length
+  const totalRows = serverPagination?.totalRows ?? filteredRows
   const pageIndex = table.getState().pagination.pageIndex
   const pageSize = table.getState().pagination.pageSize
-  const start = totalRows === 0 ? 0 : pageIndex * pageSize + 1
-  const end = Math.min(totalRows, (pageIndex + 1) * pageSize)
+  const activePage = serverPagination?.page ?? pageIndex + 1
+  const activePageSize = serverPagination?.pageSize ?? pageSize
+  const start = totalRows === 0 ? 0 : (activePage - 1) * activePageSize + 1
+  const end = serverPagination
+    ? Math.min(totalRows, start + filteredRows - 1)
+    : Math.min(totalRows, activePage * activePageSize)
 
   const admin = variant === 'admin'
 
@@ -217,7 +231,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      {!disablePagination && totalRows > 0 ? (
+      {(!disablePagination || serverPagination) && totalRows > 0 ? (
         <div className={cn(
           'flex flex-col gap-3 px-4 py-3 text-xs text-[#4f4540] sm:flex-row sm:items-center sm:justify-between',
           admin ? 'border-t border-[#17120f]/10 bg-[#fffaf6]/64' : 'border-t border-[#17120f]/8 bg-[#fffaf6]/48',
@@ -226,8 +240,16 @@ export function DataTable<T>({
             <label className="flex items-center gap-1.5 rounded-2xl border border-[#17120f]/8 bg-white/48 px-2.5 py-1.5 text-xs font-semibold text-[#4f4540] shadow-sm shadow-[#17120f]/4">
               <span>{labels?.show ?? 'Tampilkan'}</span>
               <select
-                value={pageSize}
-                onChange={(e) => table.setPageSize(Number(e.target.value))}
+                value={activePageSize}
+                onChange={(e) => {
+                  const nextSize = Number(e.target.value)
+                  if (serverPagination?.onPageSizeChange) {
+                    serverPagination.onPageSizeChange(nextSize)
+                  } else {
+                    table.setPageSize(nextSize)
+                  }
+                }}
+                disabled={Boolean(serverPagination && !serverPagination.onPageSizeChange)}
                 className="rounded-xl border border-[#17120f]/10 bg-[#fffaf6] px-2 py-1.5 text-xs font-black text-[#17120f] shadow-sm focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               >
                 {[5, 10, 25, 50, 100].map((s) => (
@@ -244,11 +266,11 @@ export function DataTable<T>({
             </span>
           </div>
           <NumberedPagination
-            page={pageIndex + 1}
-            totalPages={table.getPageCount() || 1}
-            onChange={(p) => table.setPageIndex(p - 1)}
-            canPrev={table.getCanPreviousPage()}
-            canNext={table.getCanNextPage()}
+            page={activePage}
+            totalPages={serverPagination?.totalPages ?? (table.getPageCount() || 1)}
+            onChange={(p) => serverPagination ? serverPagination.onPageChange(p) : table.setPageIndex(p - 1)}
+            canPrev={serverPagination ? activePage > 1 : table.getCanPreviousPage()}
+            canNext={serverPagination ? activePage < serverPagination.totalPages : table.getCanNextPage()}
             labels={labels}
           />
         </div>

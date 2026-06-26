@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { HiOutlinePlus, HiOutlinePencilSquare, HiOutlineReceiptPercent, HiOutlineTrash } from 'react-icons/hi2'
-import { Badge, Button, Card, CurrencyInput, DateInput, Input, Modal, PageHeader, Spinner } from '@/components/ui'
+import type { ColumnDef } from '@tanstack/react-table'
+import {
+  HiOutlineArrowPath,
+  HiOutlineCheckCircle,
+  HiOutlineClock,
+  HiOutlinePlus,
+  HiOutlinePencilSquare,
+  HiOutlineReceiptPercent,
+  HiOutlineTag,
+  HiOutlineTrash,
+} from 'react-icons/hi2'
+import { AdminDataTable, AdminMetricCard, Badge, Button, CurrencyInput, DateInput, Input, Modal, PageHeader } from '@/components/ui'
 import { subscriptionApi, type Voucher, type VoucherPayload } from '@/features/subscription/api'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
@@ -33,6 +43,8 @@ const emptyForm: FormState = {
   is_active: true,
 }
 
+const VOUCHER_SNAPSHOT_AT = Date.now()
+
 export function VouchersPage() {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<Voucher | null>(null)
@@ -42,7 +54,15 @@ export function VouchersPage() {
     queryKey: ['admin-vouchers'],
     queryFn: () => subscriptionApi.listVouchersAdmin({ page: 1, limit: 100 }),
   })
-  const vouchers = vouchersQ.data ?? []
+  const vouchers = useMemo(() => vouchersQ.data ?? [], [vouchersQ.data])
+  const voucherStats = useMemo(() => {
+    return {
+      total: vouchers.length,
+      active: vouchers.filter((voucher) => voucher.is_active).length,
+      scheduled: vouchers.filter((voucher) => voucher.starts_at && new Date(voucher.starts_at).getTime() > VOUCHER_SNAPSHOT_AT).length,
+      redemptions: vouchers.reduce((sum, voucher) => sum + Number(voucher.used_count || 0), 0),
+    }
+  }, [vouchers])
 
   const payload = useMemo<VoucherPayload>(() => ({
     code: form.code.trim().toUpperCase(),
@@ -103,79 +123,105 @@ export function VouchersPage() {
     setModalOpen(true)
   }
 
+  const columns = useMemo<ColumnDef<Voucher>[]>(() => [
+    {
+      id: 'code',
+      header: 'Voucher',
+      accessorFn: (voucher) => `${voucher.code} ${voucher.name}`,
+      cell: ({ row }) => (
+        <div className="min-w-[190px]">
+          <p className="font-mono text-sm font-black tracking-wide text-[#17120f]">{row.original.code}</p>
+          <p className="mt-1 text-xs text-slate-500">{row.original.name}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'discount',
+      header: 'Discount',
+      accessorFn: (voucher) => voucher.discount_value,
+      cell: ({ row }) => (
+        <div className="min-w-[150px]">
+          <p className="text-sm font-black text-[#17120f]">
+            {row.original.discount_type === 'percent' ? `${row.original.discount_value}%` : formatCurrency(row.original.discount_value)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {row.original.max_discount > 0 ? `Max ${formatCurrency(row.original.max_discount)}` : 'No discount cap'}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'usage',
+      header: 'Usage',
+      accessorFn: (voucher) => voucher.used_count,
+      cell: ({ row }) => (
+        <div className="min-w-[120px]">
+          <p className="text-sm font-black tabular-nums text-[#17120f]">
+            {row.original.used_count}/{row.original.max_redemptions || '∞'}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">redemptions</p>
+        </div>
+      ),
+    },
+    {
+      id: 'validity',
+      header: 'Validity',
+      accessorFn: (voucher) => `${voucher.starts_at ?? ''} ${voucher.ends_at ?? ''}`,
+      cell: ({ row }) => (
+        <div className="min-w-[180px] text-xs text-slate-600">
+          <p>{formatDate(row.original.starts_at)} – {formatDate(row.original.ends_at)}</p>
+          <div className="mt-2">
+            <Badge tone={row.original.is_active ? 'green' : 'gray'}>{row.original.is_active ? 'Active' : 'Inactive'}</Badge>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="block text-right">Action</span>,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1">
+          <button type="button" onClick={() => startEdit(row.original)} className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-brand-100 hover:text-brand-800" title="Edit">
+            <HiOutlinePencilSquare className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => remove.mutate(row.original.id)} disabled={remove.isPending} className="rounded-lg p-2 text-slate-500 transition hover:-translate-y-0.5 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50" title="Delete">
+            <HiOutlineTrash className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ], [remove])
+
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="space-y-6">
       <PageHeader
         title="Voucher Management"
         subtitle="Create discount codes for subscription checkout and monitor redemption usage."
-      />
-      <div className="grid gap-5">
-        <Card className="bg-white/72">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <HiOutlineReceiptPercent className="h-5 w-5 text-brand-600" />
-              <div>
-                <h2 className="text-sm font-extrabold text-slate-950">Voucher Codes</h2>
-                <p className="text-xs text-slate-500">Manage discount codes used during subscription payment.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge tone="blue">{vouchers.length} codes</Badge>
-              <Button size="sm" leftIcon={<HiOutlinePlus className="h-4 w-4" />} onClick={startCreate}>Add Voucher</Button>
-            </div>
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" loading={vouchersQ.isFetching} onClick={() => vouchersQ.refetch()} leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}>Refresh</Button>
+            <Button onClick={startCreate} leftIcon={<HiOutlinePlus className="h-4 w-4" />}>Add Voucher</Button>
           </div>
-          {vouchersQ.isLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
-          ) : vouchers.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/55 p-8 text-center text-sm text-slate-500">
-              No voucher codes yet.
-            </div>
-          ) : (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/72">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="border-r border-slate-100 px-4 py-3">Code</th>
-                      <th className="border-r border-slate-100 px-4 py-3">Discount</th>
-                      <th className="border-r border-slate-100 px-4 py-3">Usage</th>
-                      <th className="border-r border-slate-100 px-4 py-3">Validity</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200/80">
-                    {vouchers.map((voucher) => (
-                      <tr key={voucher.id} className="transition hover:bg-white">
-                        <td className="border-r border-slate-100 px-4 py-3">
-                          <p className="font-mono text-sm font-extrabold text-slate-950">{voucher.code}</p>
-                          <p className="text-xs text-slate-500">{voucher.name}</p>
-                        </td>
-                        <td className="border-r border-slate-100 px-4 py-3 text-xs font-semibold text-slate-700">
-                          {voucher.discount_type === 'percent' ? `${voucher.discount_value}%` : formatCurrency(voucher.discount_value)}
-                          {voucher.max_discount > 0 ? <span className="ml-1 text-slate-400">max {formatCurrency(voucher.max_discount)}</span> : null}
-                        </td>
-                        <td className="border-r border-slate-100 px-4 py-3 text-xs text-slate-600">
-                          {voucher.used_count}/{voucher.max_redemptions || '∞'}
-                        </td>
-                        <td className="border-r border-slate-100 px-4 py-3 text-xs text-slate-600">
-                          {formatDate(voucher.starts_at)} - {formatDate(voucher.ends_at)}
-                          <div className="mt-1"><Badge tone={voucher.is_active ? 'green' : 'gray'}>{voucher.is_active ? 'Active' : 'Inactive'}</Badge></div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />} onClick={() => startEdit(voucher)}>Edit</Button>
-                            <Button size="sm" variant="danger" leftIcon={<HiOutlineTrash className="h-4 w-4" />} loading={remove.isPending} onClick={() => remove.mutate(voucher.id)}>Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
+        }
+      />
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminMetricCard label="Voucher Codes" value={voucherStats.total} helper="Created promotional codes" Icon={HiOutlineReceiptPercent} tone="brand" loading={vouchersQ.isLoading} />
+        <AdminMetricCard label="Active" value={voucherStats.active} helper="Available during checkout" Icon={HiOutlineCheckCircle} tone="emerald" loading={vouchersQ.isLoading} />
+        <AdminMetricCard label="Scheduled" value={voucherStats.scheduled} helper="Starts at a future date" Icon={HiOutlineClock} tone="amber" loading={vouchersQ.isLoading} />
+        <AdminMetricCard label="Redemptions" value={voucherStats.redemptions} helper="Total successful uses" Icon={HiOutlineTag} tone="violet" loading={vouchersQ.isLoading} />
+      </section>
+
+      <AdminDataTable
+        data={vouchers}
+        columns={columns}
+        loading={vouchersQ.isLoading}
+        searchPlaceholder="Search voucher code or name..."
+        emptyTitle="No voucher codes yet"
+        emptyAction={<Button onClick={startCreate} leftIcon={<HiOutlinePlus className="h-4 w-4" />}>Add Voucher</Button>}
+        getRowId={(voucher) => voucher.id}
+      />
 
       <Modal
         open={modalOpen}

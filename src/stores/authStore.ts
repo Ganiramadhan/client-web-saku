@@ -29,15 +29,27 @@ interface AuthState {
 }
 
 const AUTH_STORAGE_KEY = 'saku-admin-auth'
+const NON_REMEMBER_IDLE_TIMEOUT_MS = 30 * 60 * 1000
 
 const authStorage: StateStorage = {
-  getItem: (name) => localStorage.getItem(name) ?? sessionStorage.getItem(name),
+  getItem: (name) => {
+    const persisted = localStorage.getItem(name)
+    const legacy = sessionStorage.getItem(name)
+    if (!persisted && legacy) {
+      localStorage.setItem(name, legacy)
+      sessionStorage.removeItem(name)
+    }
+    const value = persisted ?? legacy
+    if (value && isExpiredNonRememberSession(value)) {
+      localStorage.removeItem(name)
+      sessionStorage.removeItem(name)
+      return null
+    }
+    return value
+  },
   setItem: (name, value) => {
-    const remember = shouldPersistSession(value)
-    const target = remember ? localStorage : sessionStorage
-    const stale = remember ? sessionStorage : localStorage
-    target.setItem(name, value)
-    stale.removeItem(name)
+    localStorage.setItem(name, value)
+    sessionStorage.removeItem(name)
   },
   removeItem: (name) => {
     localStorage.removeItem(name)
@@ -45,12 +57,14 @@ const authStorage: StateStorage = {
   },
 }
 
-function shouldPersistSession(value: string): boolean {
+function isExpiredNonRememberSession(value: string): boolean {
   try {
-    const parsed = JSON.parse(value) as { state?: { remember?: boolean } }
-    return parsed.state?.remember === true
+    const parsed = JSON.parse(value) as { state?: { remember?: boolean; lastActivityAt?: number | null } }
+    if (parsed.state?.remember !== false) return false
+    const lastActivityAt = Number(parsed.state.lastActivityAt || 0)
+    return lastActivityAt <= 0 || Date.now() - lastActivityAt >= NON_REMEMBER_IDLE_TIMEOUT_MS
   } catch {
-    return false
+    return true
   }
 }
 

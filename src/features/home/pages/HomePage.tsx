@@ -190,7 +190,7 @@ export function HomePage() {
       />
 
       {cookieConsentChoice ? (
-        <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+        <div className="fixed bottom-5 right-4 z-[70] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
           <LandingSupportChat locale={locale} />
 
           {scrolled && !isMobile ? (
@@ -236,13 +236,14 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const chatBodyRef = useRef<HTMLDivElement | null>(null)
   const [messages, setMessages] = useState<LandingChatMessage[]>(() => [
     {
       id: 'welcome',
       role: 'assistant',
       text: isId
-        ? 'Halo! Aku bisa bantu jawab soal fitur SAKU, harga paket, keamanan data, pembayaran, AI, scan struk, Telegram, dan cara mulai.'
-        : 'Hi! I can help with SAKU features, pricing, data security, payments, AI, receipt scan, Telegram, and getting started.',
+        ? 'Halo, aku SAKU Assistant. Mau tanya apa? Aku bisa bantu jelasin fitur, harga paket, keamanan data, pembayaran, atau cara mulai pakai SAKU.'
+        : 'Hi, I am SAKU Assistant. What would you like to ask? I can help explain features, pricing, data security, payments, or how to get started with SAKU.',
     },
   ])
 
@@ -254,16 +255,25 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
           id: 'welcome',
           role: 'assistant',
           text: isId
-            ? 'Halo! Aku bisa bantu jawab soal fitur SAKU, harga paket, keamanan data, pembayaran, AI, scan struk, Telegram, dan cara mulai.'
-            : 'Hi! I can help with SAKU features, pricing, data security, payments, AI, receipt scan, Telegram, and getting started.',
+            ? 'Halo, aku SAKU Assistant. Mau tanya apa? Aku bisa bantu jelasin fitur, harga paket, keamanan data, pembayaran, atau cara mulai pakai SAKU.'
+            : 'Hi, I am SAKU Assistant. What would you like to ask? I can help explain features, pricing, data security, payments, or how to get started with SAKU.',
         },
       ]
     })
   }, [isId])
 
   const quickPrompts = isId
-    ? ['Apa itu SAKU?', 'Bedanya Free dan Pro?', 'Apakah data aman?', 'Cara scan struk?']
-    : ['What is SAKU?', 'Free vs Pro?', 'Is my data safe?', 'How receipt scan works?']
+    ? ['SAKU cocok buat aku?', 'Fitur unggulan', 'Free vs Pro', 'Data aman?']
+    : ['Is SAKU for me?', 'Top features', 'Free vs Pro', 'Is my data safe?']
+
+  useEffect(() => {
+    if (!open) return
+    const frame = window.requestAnimationFrame(() => {
+      const el = chatBodyRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [messages, open, isTyping])
 
   const submitMessage = (value = input) => {
     const trimmed = value.trim()
@@ -295,8 +305,9 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
   return (
     <>
       {open ? (
-        <div className="fixed inset-x-3 bottom-20 z-50 overflow-hidden rounded-[1.4rem] border border-[#17120f]/14 bg-[#fffaf6] shadow-[0_18px_54px_rgba(23,18,15,0.16)] sm:inset-x-auto sm:bottom-24 sm:right-6 sm:w-[380px]">
-          <div className="relative border-b border-[#17120f]/10 bg-[#fff3ee] px-4 py-3">
+        <div className="fixed inset-x-3 bottom-20 top-[7rem] z-[80] flex overflow-hidden rounded-[1.4rem] border border-[#17120f]/14 bg-[#fffaf6] shadow-[0_18px_54px_rgba(23,18,15,0.16)] sm:inset-x-auto sm:bottom-24 sm:right-6 sm:top-auto sm:max-h-[min(68vh,540px)] sm:w-[390px]">
+          <div className="flex min-h-0 w-full flex-col">
+          <div className="relative shrink-0 border-b border-[#17120f]/10 bg-[#fff3ee] px-4 py-3">
             <div className="pointer-events-none absolute -right-7 -top-7 h-20 w-20 rounded-[44%_56%_50%_50%] border border-[#17120f]/14 bg-[#fddf82]/70" />
             <div className="relative flex items-center gap-3">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-[#17120f]/18 bg-brand-500 text-[#17120f] shadow-[0_8px_20px_rgba(255,111,97,0.18)]">
@@ -319,7 +330,7 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
             </div>
           </div>
 
-          <div className="max-h-[min(46vh,340px)] space-y-3 overflow-y-auto bg-[#fffaf6] px-4 py-4 sm:max-h-[390px]">
+          <div ref={chatBodyRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#fffaf6] px-4 py-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -351,7 +362,7 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
             ) : null}
           </div>
 
-          <div className="border-t border-[#17120f]/10 bg-[#fff3ee]/70 px-4 py-3">
+          <div className="shrink-0 border-t border-[#17120f]/10 bg-[#fff3ee]/70 px-4 py-3">
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {quickPrompts.map((prompt) => (
                 <button
@@ -401,6 +412,7 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
               </button>
             </div>
           </div>
+          </div>
         </div>
       ) : null}
 
@@ -429,69 +441,108 @@ function buildSakuSupportReply(message: string, locale: 'id' | 'en') {
   const hasSakuContext = SAKU_CONTEXT_KEYWORDS.some((keyword) => normalized.includes(keyword))
   const isOffTopic = OFF_TOPIC_KEYWORDS.some((keyword) => normalized.includes(keyword))
 
-  if (isOffTopic && !hasSakuContext) {
+  if (isGreetingOnly(normalized)) {
     return isId
-      ? 'Aku khusus bantu soal SAKU. Aku belum bisa bantu topik di luar SAKU seperti resep, coding, atau tugas umum. Kamu bisa tanya tentang fitur, harga, keamanan data, pembayaran, scan struk, AI, atau Telegram.'
-      : 'I only help with SAKU. I cannot help with topics outside SAKU such as recipes, coding, or general tasks. You can ask about features, pricing, data security, payments, receipt scan, AI, or Telegram.'
+      ? 'Halo! Senang kamu mampir. Mau tanya soal apa dulu: SAKU cocok buat kebutuhanmu, fitur unggulan, harga paket, atau keamanan data?'
+      : 'Hi! Glad you are here. What would you like to ask first: whether SAKU fits your needs, top features, pricing, or data security?'
   }
 
-  if (containsAny(normalized, ['harga', 'paket', 'pricing', 'price', 'free', 'gratis', 'pro', 'premium', 'langganan', 'subscription'])) {
+  if (isAskingToAsk(normalized)) {
     return isId
-      ? 'SAKU bisa mulai gratis. Paket Pro cocok kalau kamu ingin AI lebih banyak, scan struk lebih lega, wallet tanpa batas, split bill, recurring transaction, dan insight yang lebih kaya. Kamu bisa cek detailnya di bagian Harga.'
-      : 'SAKU starts free. Pro is best if you want more AI usage, more receipt scans, unlimited wallets, split bill, recurring transactions, and richer insights. You can compare plans in the Pricing section.'
+      ? 'Tentu, silakan. Aku bisa bantu jawab dengan singkat dan jelas. Kamu bisa tanya misalnya: “SAKU cocok buat mahasiswa/karyawan?”, “fitur unggulannya apa?”, “Free dan Pro bedanya apa?”, atau “data keuanganku aman nggak?”.'
+      : 'Of course, go ahead. I can keep it short and clear. You can ask things like: “Is SAKU good for students or employees?”, “What are the best features?”, “Free vs Pro?”, or “Is my finance data safe?”.'
+  }
+
+  if (isOffTopic && !hasSakuContext) {
+    return isId
+      ? 'Maaf ya, aku khusus bantu tentang SAKU supaya jawabannya tetap relevan dan aman. Aku belum bisa bantu topik seperti coding, resep, atau tugas umum. Kalau mau, tanya saja soal cara mulai, paket, keamanan data, scan struk, AI, wallet, budget, pembayaran, atau Telegram.'
+      : 'Sorry, I am focused on SAKU so the answers stay relevant and safe. I cannot help with coding, recipes, or general tasks here. You can ask me about getting started, plans, data security, receipt scan, AI, wallets, budgets, payments, or Telegram.'
+  }
+
+  if (containsAny(normalized, ['fitur', 'keunggulan', 'unggulan', 'manfaat', 'benefit', 'advantage', 'features', 'top features', 'what can saku do'])) {
+    return isId
+      ? 'Keunggulan utama SAKU ada di 3 hal. Pertama, AI Transaction Assistant: kamu bisa catat transaksi pakai bahasa sehari-hari. Kedua, Scan Struk: foto struk jadi pratinjau transaksi yang bisa dicek dulu. Ketiga, Financial Insight: SAKU bantu membaca pola pengeluaran, budget yang menipis, dan cashflow bulanan. Fitur pendukungnya ada wallet, budget, target, tagihan rutin, split bill, export, dan Telegram.'
+      : 'SAKU’s main strengths are 3 things. First, AI Transaction Assistant: record transactions in natural daily language. Second, Receipt Scan: turn receipt photos into editable transaction previews. Third, Financial Insight: understand spending patterns, low budgets, and monthly cashflow. Supporting features include wallets, budgets, goals, recurring bills, split bill, export, and Telegram.'
+  }
+
+  if (containsAny(normalized, ['cocok', 'buat aku', 'untuk aku', 'mahasiswa', 'student', 'kuliah', 'karyawan', 'employee', 'freelancer', 'fresh graduate', 'for me'])) {
+    return isId
+      ? 'Kemungkinan cocok kalau kamu sering merasa pengeluaran kecil susah dilacak, punya uang di beberapa tempat, atau ingin tahu “bulan ini uang habis ke mana?”. SAKU paling pas untuk mahasiswa, karyawan, freelancer, dan profesional muda yang ingin mencatat uang harian tanpa spreadsheet. Mulai dari Free dulu juga aman.'
+      : 'It is likely a good fit if small expenses are hard to track, your money is spread across multiple places, or you often wonder where your money went this month. SAKU is best for students, employees, freelancers, and young professionals who want daily money tracking without spreadsheets. Starting with Free is a safe first step.'
+  }
+
+  if (containsAny(normalized, ['harga', 'paket', 'pricing', 'price', 'free', 'gratis', 'pro', 'premium', 'langganan', 'subscription', 'quota', 'kuota'])) {
+    return isId
+      ? 'Kalau baru coba, mulai dari Free dulu sudah cukup untuk merasakan alurnya. Pro lebih pas kalau kamu rutin pakai AI, sering scan struk, punya banyak wallet, butuh split bill, recurring transaction, export, dan insight yang lebih lengkap. Saran paling aman: mulai gratis, cek apakah workflow-nya cocok, lalu upgrade saat mulai dipakai harian.'
+      : 'If you are just trying it, Free is enough to feel the workflow. Pro is better if you regularly use AI, scan receipts, manage many wallets, need split bill, recurring transactions, export, and richer insights. My practical suggestion: start free, see if the workflow fits, then upgrade when it becomes part of your daily routine.'
   }
 
   if (containsAny(normalized, ['scan', 'struk', 'receipt', 'ocr', 'foto'])) {
     return isId
-      ? 'Scan Struk membantu membaca merchant, nominal, tanggal, kategori, dan dompet dari foto struk. Hasilnya tetap ditampilkan sebagai pratinjau dulu, jadi kamu bisa cek sebelum transaksi disimpan.'
-      : 'Receipt Scan reads merchant, amount, date, category, and wallet from a receipt photo. SAKU shows a preview first so you can review it before saving.'
+      ? 'Scan Struk cocok kalau kamu malas input manual setelah belanja. Kamu cukup foto struk, lalu SAKU mencoba membaca merchant, nominal, tanggal, kategori, dan catatan. Hasilnya tidak langsung dipaksa masuk: kamu tetap dapat pratinjau untuk cek dan edit sebelum disimpan. Tips kecil: foto struk dari atas, cukup terang, dan pastikan total pembayaran terlihat.'
+      : 'Receipt Scan is useful when you do not want to type purchases manually. Take a clear photo, and SAKU will try to read the merchant, amount, date, category, and notes. It does not force-save the result: you still get a preview to review and edit first. Small tip: take the photo from above, keep it bright, and make sure the total is visible.'
   }
 
-  if (containsAny(normalized, ['ai', 'chat', 'nlp', 'insight', 'assistant', 'asisten'])) {
+  if (containsAny(normalized, ['mulai', 'register', 'daftar', 'login', 'akun', 'start', 'sign up', 'baru mulai', 'new here', 'first'])) {
     return isId
-      ? 'AI SAKU bisa bantu catat transaksi dari bahasa sehari-hari, menjawab pertanyaan seputar pengeluaran, dan memberi insight yang lebih mudah ditindaklanjuti dari data keuanganmu.'
-      : 'SAKU AI helps record transactions from natural language, answer spending questions, and turn your finance data into practical insights.'
+      ? 'Kalau baru mulai, ikuti alur paling ringan ini: daftar gratis, buat wallet pertama seperti Cash atau rekening utama, lalu catat 3 transaksi pertama. Setelah itu dashboard mulai terasa berguna karena SAKU bisa membaca cashflow, kategori terbesar, dan kebiasaan belanja kamu.'
+      : 'If you are new, follow the simplest flow: create a free account, add your first wallet such as Cash or your main bank account, then record your first 3 transactions. After that, the dashboard becomes useful because SAKU can read your cashflow, top categories, and spending habits.'
+  }
+
+  if (containsAny(normalized, ['ai', 'chat', 'nlp', 'assistant', 'asisten', 'catat otomatis', 'bahasa sehari'])) {
+    return isId
+      ? 'AI SAKU membantu saat kamu malas buka form transaksi. Tulis saja seperti “beli nasi padang 35rb pake cash” atau “kemarin bayar kos 1,2 juta dari Mandiri”. SAKU akan membuat pratinjau dulu, jadi kamu tetap bisa cek wallet, kategori, tanggal, dan nominal sebelum disimpan.'
+      : 'SAKU AI helps when you do not want to open a transaction form. Just type something like “lunch 35k with cash” or “paid rent yesterday from Mandiri”. SAKU creates a preview first, so you can review the wallet, category, date, and amount before saving.'
+  }
+
+  if (containsAny(normalized, ['insight', 'analisis', 'analysis', 'laporan', 'report', 'cashflow', 'pengeluaran', 'spending'])) {
+    return isId
+      ? 'Insight SAKU membantu menjawab pertanyaan praktis seperti: uang paling banyak habis di mana, apakah cashflow bulan ini aman, budget mana yang mulai menipis, dan tagihan apa yang perlu disiapkan. Jadi bukan cuma daftar transaksi, tapi arahan kecil yang bisa langsung kamu tindaklanjuti.'
+      : 'SAKU Insight helps answer practical questions: where your money goes most, whether this month cashflow is safe, which budget is running low, and which bills need preparation. It is not just transaction data, but small next steps you can act on.'
   }
 
   if (containsAny(normalized, ['aman', 'security', 'secure', 'privasi', 'privacy', 'data', 'enkripsi'])) {
     return isId
-      ? 'SAKU dirancang untuk data finansial pribadi: akses akun dilindungi, pembayaran diproses lewat Midtrans, dan integrasi seperti analytics mengikuti preferensi privasi pengguna.'
-      : 'SAKU is designed for personal finance data: account access is protected, payments are processed through Midtrans, and analytics integrations follow user privacy preferences.'
+      ? 'Wajar banget kalau kamu mikir soal keamanan, karena ini data finansial pribadi. SAKU menjaga akses akun, tidak meminta password rekening bank, dan pembayaran diproses lewat Midtrans. Untuk analytics/cookie, kamu juga bisa memilih preferensi privasi. Kalau ingin detail, cek Privacy Policy dari footer.'
+      : 'It makes sense to care about security because this is personal finance data. SAKU protects account access, does not ask for your bank account password, and processes payments through Midtrans. For analytics/cookies, you can choose your privacy preference. For details, check the Privacy Policy in the footer.'
   }
 
   if (containsAny(normalized, ['telegram', 'bot', '@sakufinance_bot'])) {
     return isId
-      ? 'Telegram bisa dipakai untuk mencatat transaksi dan bertanya soal keuangan dari bot SAKU. Setelah login, hubungkan akun dari Profile agar bot mengenali data kamu.'
-      : 'Telegram can be used to record transactions and ask finance questions through the SAKU bot. After logging in, connect it from Profile so the bot can recognize your account.'
+      ? 'Bisa. Telegram membantu kalau kamu lebih sering mencatat transaksi dari chat. Setelah login, hubungkan akun SAKU dari Profile, lalu bot bisa mengenali akunmu. Cocok untuk catatan cepat seperti "beli kopi 25rb pake cash" tanpa harus buka dashboard.'
+      : 'Yes. Telegram helps when you prefer recording transactions from chat. After logging in, connect your SAKU account from Profile so the bot can recognize you. It is useful for quick notes like "coffee 25k with cash" without opening the dashboard.'
   }
 
   if (containsAny(normalized, ['bayar', 'payment', 'midtrans', 'qris', 'gopay', 'va', 'voucher', 'checkout'])) {
     return isId
-      ? 'Pembayaran SAKU diproses melalui Midtrans. Kamu bisa memakai metode seperti QRIS, GoPay, kartu, dan virtual account yang tersedia. Voucher bersifat opsional saat checkout.'
-      : 'SAKU payments are processed through Midtrans. You can use available methods such as QRIS, GoPay, cards, and virtual accounts. Vouchers are optional during checkout.'
+      ? 'Checkout SAKU diproses lewat Midtrans, jadi kamu bisa memilih metode yang tersedia seperti QRIS, GoPay, kartu, atau virtual account. Kalau punya voucher, masukkan saat checkout; kalau tidak punya, kosongkan saja dan lanjut pembayaran. Kalau invoice kedaluwarsa, kamu bisa membuat invoice baru tanpa memilih paket dari awal.'
+      : 'SAKU checkout is processed through Midtrans, so you can use available methods like QRIS, GoPay, cards, or virtual accounts. If you have a voucher, enter it during checkout; if not, leave it empty and continue. If an invoice expires, you can create a new invoice without choosing the plan again.'
   }
 
-  if (containsAny(normalized, ['mulai', 'register', 'daftar', 'login', 'akun', 'start', 'sign up'])) {
+  if (containsAny(normalized, ['wallet', 'dompet', 'bank', 'cash', 'e-wallet', 'ewallet', 'budget', 'target'])) {
     return isId
-      ? 'Cara mulai simpel: daftar gratis, buat wallet pertama, lalu catat transaksi manual, lewat AI chat, atau scan struk. Setelah ada data, dashboard dan insight akan makin berguna.'
-      : 'Getting started is simple: create a free account, add your first wallet, then record transactions manually, through AI chat, or by scanning receipts. Insights become more useful as your data grows.'
+      ? 'Di SAKU, wallet itu seperti kantong uang: Cash, bank, e-wallet, atau investasi. Setelah wallet dibuat, transaksi bisa dikaitkan ke sumber uang yang benar. Budget dan target lalu membantu kamu menjaga batas belanja dan tujuan seperti dana darurat, tabungan, atau rencana besar lainnya.'
+      : 'In SAKU, wallets are your money pockets: Cash, bank, e-wallet, or investment. Once wallets are set, transactions can be linked to the right money source. Budgets and goals then help you protect spending limits and targets like emergency funds, savings, or bigger plans.'
   }
 
   if (!hasSakuContext) {
     return isId
-      ? 'Aku bisa bantu menjelaskan SAKU, bukan chatbot umum. Coba tanya tentang fitur, harga paket, keamanan data, pembayaran, scan struk, AI, wallet, budget, Telegram, atau cara mulai.'
-      : 'I can explain SAKU, not general topics. Try asking about features, pricing, data security, payments, receipt scan, AI, wallets, budgets, Telegram, or getting started.'
+      ? 'Boleh. Biar aku jawab lebih pas, kamu lagi penasaran bagian apa dari SAKU: fitur unggulan, harga paket, keamanan data, cara mulai, atau pembayaran?'
+      : 'Sure. To answer better, which part of SAKU are you curious about: top features, pricing, data security, getting started, or payments?'
   }
 
   return isId
-    ? 'Bisa. Untuk SAKU, aku paling cocok bantu jelaskan fitur, harga paket, keamanan, pembayaran, cara mulai, AI, scan struk, wallet, budget, dan Telegram. Mau aku jelaskan bagian yang mana?'
-    : 'Sure. For SAKU, I can best help with features, pricing, security, payments, getting started, AI, receipt scan, wallets, budgets, and Telegram. Which part should I explain?'
+    ? 'Bisa. Aku bantu pelan-pelan ya. Bagian SAKU yang paling sering ditanyakan biasanya: cara mulai, paket Free/Pro/Premium, keamanan data, scan struk, AI chat, wallet, budget, pembayaran, dan Telegram. Kamu mau mulai dari yang mana?'
+    : 'Sure. I can walk you through it. The SAKU topics people usually ask about are: getting started, Free/Pro/Premium plans, data security, receipt scan, AI chat, wallets, budgets, payments, and Telegram. Which one would you like to start with?'
 }
 
 function detectLandingQuestionLanguage(value: string): 'id' | 'en' | null {
   const normalized = normalizeLandingQuestion(value)
   const idScore = countKeywordHits(normalized, [
     'apa',
+    'hai',
+    'halo',
+    'hallo',
     'bagaimana',
     'gimana',
     'kenapa',
@@ -508,9 +559,15 @@ function detectLandingQuestionLanguage(value: string): 'id' | 'en' | null {
     'struk',
     'dompet',
     'keuangan',
+    'ingin',
+    'nanya',
+    'tanya',
   ])
   const enScore = countKeywordHits(normalized, [
     'what',
+    'hi',
+    'hello',
+    'hey',
     'how',
     'why',
     'can',
@@ -527,6 +584,8 @@ function detectLandingQuestionLanguage(value: string): 'id' | 'en' | null {
     'receipt',
     'wallet',
     'finance',
+    'want',
+    'ask',
   ])
   if (idScore === 0 && enScore === 0) return null
   if (idScore === enScore) return null
@@ -534,7 +593,7 @@ function detectLandingQuestionLanguage(value: string): 'id' | 'en' | null {
 }
 
 function countKeywordHits(value: string, keywords: string[]) {
-  return keywords.reduce((total, keyword) => total + (value.includes(keyword) ? 1 : 0), 0)
+  return keywords.reduce((total, keyword) => total + (keywordMatches(value, keyword) ? 1 : 0), 0)
 }
 
 function normalizeLandingQuestion(value: string) {
@@ -547,12 +606,39 @@ function normalizeLandingQuestion(value: string) {
 }
 
 function containsAny(value: string, keywords: string[]) {
-  return keywords.some((keyword) => value.includes(keyword))
+  return keywords.some((keyword) => keywordMatches(value, keyword))
+}
+
+function keywordMatches(value: string, keyword: string) {
+  const normalizedKeyword = normalizeLandingQuestion(keyword)
+  if (!normalizedKeyword) return false
+  const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  if (/^[a-z0-9]+$/.test(normalizedKeyword)) {
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(value)
+  }
+  return value.includes(normalizedKeyword)
+}
+
+function isGreetingOnly(value: string) {
+  return /^(hi|hello|helo|hey|hai|halo|hallo|pagi|siang|sore|malam|assalamualaikum|permisi)(\s+(saku|admin|kak|min|gan|ya|dong))?[!.?\s]*$/i.test(value)
+}
+
+function isAskingToAsk(value: string) {
+  return /^(aku|saya|gua|gue|i)\s+(mau|ingin|want to|wanna)\s+(nanya|tanya|bertanya|ask)(\s+.+)?$/i.test(value) ||
+    /^(boleh|bisa|can i|may i)\s+(nanya|tanya|ask)(\s+.+)?$/i.test(value)
 }
 
 const SAKU_CONTEXT_KEYWORDS = [
   'saku',
   'finance',
+  'fitur',
+  'feature',
+  'features',
+  'keunggulan',
+  'unggulan',
+  'manfaat',
+  'benefit',
+  'cocok',
   'keuangan',
   'uang',
   'transaksi',
@@ -634,12 +720,12 @@ function FinalCTA({ locale, isAuthed }: { locale: 'id' | 'en'; isAuthed: boolean
               {isId ? 'Mulai dari Free' : 'Start from Free'}
             </p>
             <h2 className="mt-2 max-w-2xl text-3xl font-black leading-tight tracking-[-0.04em] text-[#17120f] sm:text-4xl">
-              {isId ? 'Siap bikin uang harian lebih kebaca?' : 'Ready to make daily money easier to read?'}
+              {isId ? 'Mulai dari satu catatan kecil hari ini.' : 'Start with one small record today.'}
             </h2>
             <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-[#17120f]/75">
               {isId
-                ? 'Mulai dari satu transaksi hari ini. Besok, pola uangmu sudah mulai terlihat.'
-                : 'Start with one transaction today. Tomorrow, your money pattern starts to show.'}
+                ? 'Tidak perlu langsung sempurna. Catat transaksi pertama, lalu biarkan SAKU membantu membaca pola uangmu sedikit demi sedikit.'
+                : 'No need to be perfect right away. Record your first transaction, then let SAKU help read your money patterns step by step.'}
             </p>
           </div>
           <div className="relative mt-6 flex flex-wrap gap-3 lg:mt-0">

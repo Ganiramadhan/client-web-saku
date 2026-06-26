@@ -53,7 +53,7 @@ export function UpcomingBillingPage() {
       />
 
       <BillingModal
-        key={editing?.id ?? 'new'}
+        key={`${editing?.id ?? 'new'}-${open ? 'open' : 'closed'}`}
         open={open}
         editing={editing}
         onClose={() => setOpen(false)}

@@ -16,18 +16,18 @@ export function HeroSection({ isAuthed }: { isAuthed: boolean }) {
 
   const copy = isId
     ? {
-        eyebrow: 'AI-powered personal finance assistant',
-        title: 'Catat keuangan harianmu, dibantu AI.',
-        accent: 'Chat, scan struk, dan pahami pengeluaran tanpa ribet.',
-        desc: 'SAKU membantu mencatat transaksi, mengatur wallet, membaca struk, dan memberi insight AI yang mudah dipahami setiap hari.',
+        eyebrow: 'Asisten keuangan harian berbasis AI',
+        title: 'Uang harian lebih kebaca, tanpa spreadsheet.',
+        accent: 'Catat lewat chat, scan struk, lalu lihat pola pengeluaranmu.',
+        desc: 'SAKU membantu mahasiswa, karyawan, dan freelancer mencatat transaksi lebih cepat, mengelola banyak wallet, dan mengambil keputusan belanja dengan lebih tenang.',
         primary: 'Mulai Gratis',
         secondary: 'Lihat Cara Kerja',
       }
     : {
         eyebrow: 'AI-powered personal finance assistant',
-        title: 'Track daily money with AI by your side.',
-        accent: 'Chat, scan receipts, and understand spending without the fuss.',
-        desc: 'SAKU helps record transactions, organize wallets, read receipts, and deliver AI insights you can act on every day.',
+        title: 'Make daily money easier to understand.',
+        accent: 'Chat transactions, scan receipts, then see your spending patterns.',
+        desc: 'SAKU helps students, employees, and freelancers track money faster, manage multiple wallets, and make calmer spending decisions.',
         primary: 'Start Free',
         secondary: 'See How It Works',
       }
@@ -192,8 +192,8 @@ function HeroPreview({ isMobile, isId }: { isMobile: boolean; isId: boolean }) {
 
               <p className="mt-3 text-sm leading-6 text-white/80">
                 {isId
-                  ? 'Kalau pola ini lanjut, kamu masih aman sekitar Rp185rb per hari.'
-                  : 'If this pattern continues, you still have around Rp185k/day safe to spend.'}
+                  ? 'Ruang belanja aman hari ini sekitar Rp185rb.'
+                  : 'Safe spending room today is around Rp185k.'}
               </p>
             </div>
 
