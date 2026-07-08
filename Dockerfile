@@ -1,23 +1,27 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:22-alpine AS deps
 
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     CI=true
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --prefer-offline
 
 # ─── 2. Build ─────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NODE_ENV=production
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 WORKDIR /app
 
@@ -42,6 +46,9 @@ ENV VITE_CLARITY_PROJECT_ID=${VITE_CLARITY_PROJECT_ID}
 ARG VITE_ANALYTICS_ENABLED
 ENV VITE_ANALYTICS_ENABLED=${VITE_ANALYTICS_ENABLED}
 
+ARG VITE_API_LOGGER
+ENV VITE_API_LOGGER=${VITE_API_LOGGER}
+
 ARG VITE_SENTRY_DSN
 ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 
@@ -61,8 +68,8 @@ RUN addgroup -S saku && adduser -S -G saku saku && \
     rm -rf /usr/share/nginx/html/* && \
     rm /etc/nginx/conf.d/default.conf
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --chown=saku:saku nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder --chown=saku:saku /app/dist /usr/share/nginx/html
 
 RUN chown -R saku:saku /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && chown saku:saku /var/run/nginx.pid

@@ -1,121 +1,105 @@
 # Saku Finance Admin
 
-Admin dashboard for the Saku Finance platform, built with React, TypeScript, and Vite. This frontend is designed to manage users, wallets, transactions, budgets, subscriptions, categories, split bills, AI tools, and application settings for the Saku Finance ecosystem.
+Admin dashboard frontend for Saku Finance, built with React, TypeScript, Vite, Tailwind CSS, and an Nginx production runtime.
 
----
+## Features
 
-## Overview
-
-The admin app provides a modern interface for operations teams and product admins to:
-- Manage user accounts and access
-- Review transaction history and wallet balances
-- Configure categories, budgets, and subscription plans
-- Monitor AI processing and receipt OCR workflows
-- Support split bill and finance management features
-
-Built with:
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- Zustand
-- TanStack Query
-- Recharts
-
----
-
-## Core Features
-
-- Full admin dashboard for the Saku Finance backend
-- User and wallet management pages
-- Transaction and category administration
-- Budget oversight and subscription controls
-- AI/OCR processing monitors and logs
-- Responsive layout for desktop admin usage
-
----
-
-## Project Structure
-
-- `src/main.tsx` — app bootstrap and entry point
-- `src/App.tsx` — root application shell
-- `src/layouts/AppLayout.tsx` — main admin layout wrapper
-- `src/routes/index.tsx` — route configuration
-- `src/features/` — feature modules and pages
-- `src/components/` — reusable UI components and feedback elements
-- `src/components/ui/` — shared design system primitives
-- `src/lib/` — shared utilities, API client, query client, toast, and confirmation helpers
-- `src/stores/` — state management stores
-- `src/types/` — shared TypeScript types
-- `src/i18n/` — localization setup and dictionaries
-
----
+- Admin dashboard for users, wallets, transactions, budgets, subscriptions, categories, split bills, and AI processing logs
+- Responsive operational UI for authenticated finance workflows
+- Server-side Nginx fallback for SPA routing
+- Docker-ready static runtime
+- Optional analytics and Sentry browser monitoring
 
 ## Requirements
 
-- Node.js 20+ or compatible runtime
-- `pnpm` package manager installed
+- Node.js 22+
+- pnpm
 
----
+## Environment
 
-## Getting Started
+Create a local environment file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Common frontend variables:
+
+```bash
+VITE_API_BASE_URL=/api/v1
+VITE_GOOGLE_CLIENT_ID=
+VITE_TURNSTILE_SITE_KEY=
+VITE_GA_MEASUREMENT_ID=
+VITE_CLARITY_PROJECT_ID=
+VITE_ANALYTICS_ENABLED=false
+VITE_API_LOGGER=false
+VITE_SENTRY_DSN=
+VITE_SENTRY_ENVIRONMENT=production
+VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+Do not commit real `.env` files. Values prefixed with `VITE_` are baked into the browser bundle, so they must not contain private secrets.
+
+## Development
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open the local development server URL shown in the terminal.
-
----
-
-## Build
+## Quality Checks
 
 ```bash
+pnpm lint
 pnpm build
 ```
 
----
+## Production Runtime
 
-## Monitoring
-
-Frontend error and performance monitoring uses Sentry when configured:
-
-```env
-VITE_SENTRY_DSN=
-VITE_SENTRY_ENVIRONMENT=production
-VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
-```
-
-Leave `VITE_SENTRY_DSN` empty for local development if monitoring is not needed. The app will keep running even when Sentry is not configured.
-
----
-
-## Preview Production Build
+The production image serves the Vite build with Nginx on internal port `3301`.
 
 ```bash
-pnpm preview
+docker build -t saku-finance-admin:latest .
+docker run -d \
+  --name web-saku-finance \
+  --restart unless-stopped \
+  --network saku-finance \
+  --network-alias web-saku-finance \
+  --expose 3301 \
+  saku-finance-admin:latest
 ```
 
----
+When running behind a reverse proxy, attach the proxy to the `saku-finance` Docker network and route traffic to `http://web-saku-finance:3301`. Host port publishing is not required when the reverse proxy shares the same Docker network.
 
-## Scripts
+## CI/CD
 
-- `pnpm dev` — start development server
-- `pnpm build` — compile and bundle production assets
-- `pnpm preview` — preview the production build locally
-- `pnpm lint` — run ESLint across the source code
+The Jenkins pipeline builds, pushes, deploys, health-checks, and rolls back the Docker image when the new container fails its health check. Infrastructure values are provided through Jenkins credentials, while public Vite build values are Jenkins parameters.
 
----
+Expected Jenkins credentials:
 
-## Notes
+- `docker-registry-host` as secret text, for example `registry.example.com` without protocol
+- `docker-registry-username` as secret text
+- `docker-registry-credentials` as secret text for the registry password or access token
+- `ganipedia-host-ssh-server` as secret text
+- `ganipedia-host-ssh-port` as secret text
+- `ganipedia-host-ssh-user` as secret text
+- `ganipedia-host-ssh-password` as secret text
 
-- `eslint.config.js` contains linting rules
-- `vite.config.ts` contains Vite build and dev server configuration
-- TypeScript config is split across `tsconfig.json`, `tsconfig.app.json`, and `tsconfig.node.json`
+Default deployment target:
 
----
+- Docker network: `saku-finance`
+- Container name: `web-saku-finance`
+- Network alias: `web-saku-finance`
+- Internal port: `3301`
+- Health path: `/healthz`
 
-## License
+## Project Structure
 
-This project is currently private.
+```text
+src/              React application source
+public/           Static public assets
+nginx.conf        Production Nginx config
+Dockerfile        Production image
+docker-compose.yml Local/manual container runtime
+Jenkinsfile       CI/CD pipeline
+```
