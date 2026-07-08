@@ -1,37 +1,63 @@
+import { Suspense, lazy, type ComponentType, type ReactNode } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { AppLayout } from '@/layouts/AppLayout'
+import { ProRoute } from '@/components/ProRoute'
+import { useAuthStore } from '@/stores/authStore'
 
-import { LandingPage } from '@/features/landing/pages/LandingPage'
-import { LoginPage, RegisterPage } from '@/features/auth/pages/AuthPages'
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
-import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
-import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
-import { TransactionsListPage } from '@/features/transactions/pages/TransactionsListPage'
-import { AddTransactionPage } from '@/features/transactions/pages/AddTransactionPage'
-import { TransactionDetailPage } from '@/features/transactions/pages/TransactionDetailPage'
-import { TargetsPage } from '@/features/targets/pages/TargetsPage'
-import { AILogsPage } from '@/features/ai/pages/AILogsPage'
-import { ScanReceiptPage } from '@/features/ai/pages/ScanReceiptPage'
-import { FreeTextPage } from '@/features/ai/pages/FreeTextPage'
-import { AdminUsersPage } from '@/features/adminUsers/pages/AdminUsersPage'
-import { ProfilePage } from '@/features/account/pages/ProfilePage'
-import { SettingsPage } from '@/features/account/pages/SettingsPage'
-import { PlansPage } from '@/features/subscription/pages/PlansPage'
-import { ThanksPage } from '@/features/subscription/pages/ThanksPage'
-import { SubscribersPage } from '@/features/subscription/pages/SubscribersPage'
-import { SplitBillsListPage } from '@/features/split/pages/SplitBillsListPage'
-import { SplitBillFormPage } from '@/features/split/pages/SplitBillFormPage'
-import { SplitBillDetailPage } from '@/features/split/pages/SplitBillDetailPage'
-import { NotFoundPage } from '@/features/misc/pages/NotFoundPage'
+const lazyRoute = (loader: () => Promise<Record<string, unknown>>, exportName: string): ComponentType<any> =>
+  lazy(async () => ({ default: (await loader())[exportName] as ComponentType<any> }))
+
+const HomePage = lazyRoute(() => import('@/features/home/pages/HomePage'), 'HomePage')
+const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage')
+const LoginPage = lazyRoute(() => import('@/features/auth/pages/LoginPage'), 'LoginPage')
+const RegisterPage = lazyRoute(() => import('@/features/auth/pages/RegisterPage'), 'RegisterPage')
+const LegalPage = lazyRoute(() => import('@/features/legal/pages/LegalPage'), 'LegalPage')
+const BlogPage = lazyRoute(() => import('@/features/legal/pages/BlogPage'), 'BlogPage')
+const AppLayout = lazyRoute(() => import('@/layouts/AppLayout'), 'AppLayout')
+const DashboardPage = lazyRoute(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage')
+const AdminDashboardPage = lazyRoute(() => import('@/features/adminDashboard/pages/AdminDashboardPage'), 'AdminDashboardPage')
+const WalletsPage = lazyRoute(() => import('@/features/wallets/pages/WalletsPage'), 'WalletsPage')
+const CategoriesPage = lazyRoute(() => import('@/features/categories/pages/CategoriesPage'), 'CategoriesPage')
+const TransactionsListPage = lazyRoute(() => import('@/features/transactions/pages/TransactionsListPage'), 'TransactionsListPage')
+const AddTransactionPage = lazyRoute(() => import('@/features/transactions/pages/AddTransactionPage'), 'AddTransactionPage')
+const TransactionDetailPage = lazyRoute(() => import('@/features/transactions/pages/TransactionDetailPage'), 'TransactionDetailPage')
+const TargetsPage = lazyRoute(() => import('@/features/targets/pages/TargetsPage'), 'TargetsPage')
+const AILogsPage = lazyRoute(() => import('@/features/ai/pages/AILogsPage'), 'AILogsPage')
+const ScanReceiptPage = lazyRoute(() => import('@/features/ai/pages/ScanReceiptPage'), 'ScanReceiptPage')
+const FreeTextPage = lazyRoute(() => import('@/features/ai/pages/FreeTextPage'), 'FreeTextPage')
+const AdminUsersPage = lazyRoute(() => import('@/features/adminUsers/pages/AdminUsersPage'), 'AdminUsersPage')
+const ProfilePage = lazyRoute(() => import('@/features/account/pages/ProfilePage'), 'ProfilePage')
+const SettingsPage = lazyRoute(() => import('@/features/account/pages/SettingsPage'), 'SettingsPage')
+const UpcomingBillingPage = lazyRoute(() => import('@/features/billing/pages/UpcomingBillingPage'), 'UpcomingBillingPage')
+const ThanksPage = lazyRoute(() => import('@/features/subscription/pages/ThanksPage'), 'ThanksPage')
+const PaymentRedirectPage = lazyRoute(() => import('@/features/subscription/pages/PaymentRedirectPage'), 'PaymentRedirectPage')
+const SubscribersPage = lazyRoute(() => import('@/features/subscription/pages/SubscribersPage'), 'SubscribersPage')
+const VouchersPage = lazyRoute(() => import('@/features/subscription/pages/VouchersPage'), 'VouchersPage')
+const CustomerServicePage = lazyRoute(() => import('@/features/support/pages/CustomerServicePage'), 'CustomerServicePage')
+const SplitBillsListPage = lazyRoute(() => import('@/features/split/pages/SplitBillsListPage'), 'SplitBillsListPage')
+const SplitBillFormPage = lazyRoute(() => import('@/features/split/pages/SplitBillFormPage'), 'SplitBillFormPage')
+const SplitBillDetailPage = lazyRoute(() => import('@/features/split/pages/SplitBillDetailPage'), 'SplitBillDetailPage')
+const NotFoundPage = lazyRoute(() => import('@/features/misc/pages/NotFoundPage'), 'NotFoundPage')
 
 export function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Public */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/" element={<HomeRedirect><HomePage /></HomeRedirect>} />
+      <Route path="/landing" element={<HomePage />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/privacy" element={<LegalPage mode="privacy" />} />
+      <Route path="/terms" element={<LegalPage mode="terms" />} />
+      <Route path="/cookies" element={<LegalPage mode="cookies" />} />
+      <Route path="/contact" element={<LegalPage mode="contact" />} />
+      <Route path="/about" element={<LegalPage mode="about" />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/payment/finish" element={<PaymentRedirectPage mode="finish" />} />
+      <Route path="/payment/error" element={<PaymentRedirectPage mode="error" />} />
 
       {/* Authenticated workspace */}
       <Route
@@ -50,13 +76,16 @@ export function AppRoutes() {
         <Route path="scan-receipt" element={<ScanReceiptPage />} />
         <Route path="free-text" element={<FreeTextPage />} />
         <Route path="targets" element={<TargetsPage />} />
+        <Route path="upcoming-billings" element={<UpcomingBillingPage />} />
         <Route path="split-bills" element={<SplitBillsListPage />} />
         <Route path="split-bills/new" element={<SplitBillFormPage />} />
         <Route path="split-bills/:id" element={<SplitBillDetailPage />} />
         <Route path="split-bills/:id/edit" element={<SplitBillFormPage />} />
+        <Route path="customer-service" element={<ProRoute><CustomerServicePage /></ProRoute>} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="subscription" element={<PlansPage />} />
+        <Route path="subscription" element={<Navigate to="/app/profile" replace />} />
+        <Route path="subscription/plans" element={<Navigate to="/app/profile" replace />} />
         <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
 
@@ -73,6 +102,9 @@ export function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
+        <Route path="customer-service" element={<CustomerServicePage />} />
+        <Route path="subscription/thanks" element={<ThanksPage />} />
       </Route>
 
       {/* Super Admin only */}
@@ -84,11 +116,42 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/super-admin/ai-logs" replace />} />
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="subscriptions" element={<SubscribersPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
         <Route path="ai-logs" element={<AILogsPage />} />
+        <Route path="customer-service" element={<CustomerServicePage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </Suspense>
+  )
+}
+
+function PublicRoute({ children }: { children: ReactNode }) {
+  const token = useAuthStore((s) => s.token)
+  if (token) return <Navigate to="/app" replace />
+  return <>{children}</>
+}
+
+function HomeRedirect({ children }: { children: ReactNode }) {
+  const token = useAuthStore((s) => s.token)
+  if (token && typeof window !== 'undefined') {
+    const key = 'saku-root-auto-dashboard-v1'
+    if (window.sessionStorage.getItem(key) !== '1') {
+      window.sessionStorage.setItem(key, '1')
+      return <Navigate to="/app" replace />
+    }
+  }
+  return <>{children}</>
+}
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-slate-50 px-4">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+    </div>
   )
 }

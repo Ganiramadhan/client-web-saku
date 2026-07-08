@@ -1,4 +1,10 @@
-export type WalletType = 'personal' | 'business' | 'shared'
+export type WalletType =
+  | 'e_wallet'
+  | 'bank_account'
+  | 'cash'
+  | 'credit_card'
+  | 'investment'
+  | 'savings'
 export type TransactionType = 'income' | 'expense'
 export type TransactionSource = 'manual' | 'ai_ocr' | 'import' | 'api'
 export type AIStatus = 'pending' | 'success' | 'failed'
@@ -17,6 +23,19 @@ export interface Wallet {
   target_deadline?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface WalletTransfer {
+  id: string
+  user_id: string
+  from_wallet_id: string
+  from_wallet_name: string
+  to_wallet_id: string
+  to_wallet_name: string
+  amount: number
+  currency: string
+  note?: string
+  created_at: string
 }
 
 export interface Category {
@@ -115,6 +134,10 @@ export interface AICategorizeItem {
   type: TransactionType
   confidence: number
   description?: string
+  date?: string
+  transaction_date?: string
+  wallet_hint?: string
+  recurring_hint?: string
 }
 
 export interface AICategorizeResponse {
@@ -123,7 +146,12 @@ export interface AICategorizeResponse {
   category: string
   type: TransactionType
   confidence: number
+  date?: string
+  transaction_date?: string
   needs_review: boolean
+  needs_clarification?: boolean
+  clarification_question?: string
+  missing_fields?: string[]
   raw_response?: Record<string, unknown>
   transactions?: AICategorizeItem[]
 }
@@ -131,7 +159,11 @@ export interface AICategorizeResponse {
 export interface AIScanReceiptResponse extends AICategorizeResponse {
   currency: string
   date: string
+  description?: string
   ocr_text?: string
+  line_items?: string[]
+  image_key?: string
+  log_id?: string
 }
 
 export interface AIInsightsResponse {
@@ -163,14 +195,48 @@ export interface AIChatResponse {
   reply: string
 }
 
+export type SupportTicketStatus = 'open' | 'waiting_user' | 'resolved'
+export type SupportPriority = 'normal' | 'high' | 'urgent'
+
+export interface SupportMessage {
+  id: string
+  ticket_id: string
+  user_id: string
+  role: 'user' | 'admin'
+  body: string
+  attachment_key?: string
+  attachment_name?: string
+  attachment_type?: string
+  attachment_url?: string
+  created_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  ticket_code?: string
+  user_id: string
+  user_name: string
+  user_email: string
+  user_photo_url?: string
+  subject: string
+  category: string
+  priority: SupportPriority
+  status: SupportTicketStatus
+  created_at: string
+  updated_at: string
+  messages: SupportMessage[]
+}
+
 export interface AdminUser {
   id: string
   name: string
   email: string
   role: string
+  auth_provider?: string
   status?: string
   phone?: string
   photo_url?: string
+  last_login_at?: string | null
   created_at: string
   updated_at: string
 }

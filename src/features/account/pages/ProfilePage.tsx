@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   HiOutlineCamera,
@@ -8,40 +9,155 @@ import {
   HiOutlineUser,
   HiOutlineShieldCheck,
   HiOutlineIdentification,
-  HiOutlineSparkles,
+  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2'
-import { Card, PageHeader, Input, Button, Spinner, Badge } from '@/components/ui'
+import {
+  Card,
+  PageHeader,
+  Input,
+  Button,
+  Spinner,
+  Badge,
+} from '@/components/ui'
+import { useLocale } from '@/i18n'
 import {
   getMe,
   updateProfile,
+  bindTelegram,
+  disconnectTelegram,
   uploadPhoto,
   deletePhoto,
 } from '@/features/auth/api'
 import { subscriptionApi } from '@/features/subscription/api'
-import { useAuthStore } from '@/stores/authStore'
+import { isAdminUser, useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
-import { Link } from 'react-router-dom'
-import { HiOutlineStar } from 'react-icons/hi2'
+import { confirm } from '@/lib/confirm'
+import { sanitizeReferralCode } from '../utils/billing'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import { openSubscriptionCheckout } from '@/features/subscription/utils/checkoutFlow'
+import {
+  SubscriptionCard,
+} from '../components/ProfilePanels'
 
 export function ProfilePage() {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        title: 'Pengaturan Akun',
+        subtitle: 'Kelola profil, integrasi Telegram, dan langganan SAKU.',
+        photoUploaded: 'Foto berhasil diunggah, klik Simpan untuk menerapkan.',
+        photoDeleted: 'Foto profil dihapus.',
+        profileUpdated: 'Profil berhasil diperbarui.',
+        invalidFormat: 'Format harus JPG, PNG, atau WEBP.',
+        maxSize: 'Ukuran maksimum 5 MB.',
+        paymentPending: 'Pembayaran belum selesai',
+        paymentFailed: 'Pembayaran gagal',
+        paymentExpired: 'Sesi pembayaran sudah kedaluwarsa. Silakan buat checkout baru.',
+        pendingPlanExists: 'Masih ada pembayaran pending. Lanjutkan dari kartu pembayaran pending atau batalkan dulu sebelum memilih paket.',
+        subCanceled: 'Langganan berhasil dibatalkan.',
+        accountInfo: 'Informasi Akun',
+        accountInfoDesc: 'Foto, nama tampilan, dan email yang dipakai untuk login.',
+        active: 'Aktif',
+        account: 'Akun',
+        uploadTitle: 'Upload foto profil',
+        change: 'Ganti',
+        delete: 'Hapus',
+        dragPhoto: 'Drag & drop foto, atau klik untuk pilih file',
+        fullName: 'Nama Lengkap',
+        fullNamePlaceholder: 'Nama lengkap',
+        reset: 'Reset',
+        save: 'Simpan Perubahan',
+        cancelTitle: 'Batalkan langganan atau pembayaran?',
+        cancelDesc: 'Langganan atau pembayaran pending akan dibatalkan. Kamu bisa memilih paket lain setelah proses selesai.',
+        cancelConfirm: 'Batalkan',
+        telegramTitle: 'Telegram Bot',
+        telegramDesc: 'Hubungkan Telegram untuk mencatat transaksi lewat chat AI.',
+        telegramConnected: 'Terhubung',
+        telegramDisconnected: 'Belum terhubung',
+        telegramChatId: 'Chat ID Telegram',
+        telegramPlaceholder: 'Contoh: 123456789',
+        telegramHint: 'Kirim pesan ke bot SAKU. Jika belum terhubung, bot akan menampilkan Chat ID kamu.',
+        telegramInvalid: 'Chat ID harus berupa angka 5-20 digit dari bot SAKU.',
+        telegramGuide1: '1. Buka SAKU Finance Bot di Telegram: @sakufinance_bot.',
+        telegramGuide2: '2. Kirim /start, lalu salin Chat ID yang dikirim bot.',
+        telegramGuide3: '3. Tempel Chat ID di sini, klik Hubungkan, lalu coba chat: beli kopi 25rb pake cash.',
+        telegramSave: 'Hubungkan',
+        telegramSaved: 'Telegram berhasil dihubungkan.',
+        telegramDisconnect: 'Putuskan',
+        telegramDisconnectedDone: 'Telegram berhasil diputuskan.',
+        telegramConnectedHint: 'Bot sudah siap mencatat transaksi dan menjawab pertanyaan keuangan dari Telegram kamu.',
+      }
+    : {
+        title: 'Account Settings',
+        subtitle: 'Manage your profile, Telegram integration, and SAKU subscription.',
+        photoUploaded: 'Photo uploaded. Click Save to apply it.',
+        photoDeleted: 'Profile photo deleted.',
+        profileUpdated: 'Profile updated.',
+        invalidFormat: 'Format must be JPG, PNG, or WEBP.',
+        maxSize: 'Maximum size is 5 MB.',
+        paymentPending: 'Payment is still pending',
+        paymentFailed: 'Payment failed',
+        paymentExpired: 'The payment session has expired. Please start a new checkout.',
+        pendingPlanExists: 'You still have a pending payment. Continue from the pending payment card or cancel it before choosing a plan.',
+        subCanceled: 'Subscription canceled.',
+        accountInfo: 'Account Information',
+        accountInfoDesc: 'Photo, display name, and email used for login.',
+        active: 'Active',
+        account: 'Account',
+        uploadTitle: 'Upload profile photo',
+        change: 'Change',
+        delete: 'Delete',
+        dragPhoto: 'Drag and drop photo, or click to choose a file',
+        fullName: 'Full Name',
+        fullNamePlaceholder: 'Full name',
+        reset: 'Reset',
+        save: 'Save Changes',
+        cancelTitle: 'Cancel subscription or payment?',
+        cancelDesc: 'The subscription or pending payment will be canceled. You can choose another plan after the process is complete.',
+        cancelConfirm: 'Cancel',
+        telegramTitle: 'Telegram Bot',
+        telegramDesc: 'Connect Telegram to record transactions through AI chat.',
+        telegramConnected: 'Connected',
+        telegramDisconnected: 'Not connected',
+        telegramChatId: 'Telegram Chat ID',
+        telegramPlaceholder: 'Example: 123456789',
+        telegramHint: 'Send a message to the SAKU bot. If it is not connected yet, the bot will show your Chat ID.',
+        telegramInvalid: 'Chat ID must be a 5-20 digit number from the SAKU bot.',
+        telegramGuide1: '1. Open SAKU Finance Bot on Telegram: @sakufinance_bot.',
+        telegramGuide2: '2. Send /start, then copy the Chat ID sent by the bot.',
+        telegramGuide3: '3. Paste the Chat ID here, click Connect, then try: beli kopi 25rb pake cash.',
+        telegramSave: 'Connect',
+        telegramSaved: 'Telegram connected.',
+        telegramDisconnect: 'Disconnect',
+        telegramDisconnectedDone: 'Telegram disconnected.',
+        telegramConnectedHint: 'The bot is ready to record transactions and answer finance questions from your Telegram.',
+      }
+  const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
   const qc = useQueryClient()
   const me = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const isBackofficeUser = isAdminUser(me.data ?? null)
   const sub = useQuery({ queryKey: ['subscription', 'active'], queryFn: subscriptionApi.active })
+  const subscriptions = useQuery({ queryKey: ['subscriptions', 'me'], queryFn: subscriptionApi.mySubscriptions })
   const plans = useQuery({ queryKey: ['subscriptions', 'plans'], queryFn: subscriptionApi.listPlans })
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [pendingPhotoKey, setPendingPhotoKey] = useState<string | null>(null)
   const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [busyPlan, setBusyPlan] = useState<string | null>(null)
+  const [busyResume, setBusyResume] = useState(false)
+  const [telegramChatId, setTelegramChatId] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (me.data) {
-      setName(me.data.name ?? '')
-      setEmail(me.data.email ?? '')
+      const timer = window.setTimeout(() => {
+        setName(me.data?.name ?? '')
+        setTelegramChatId(me.data?.telegram_chat_id ?? '')
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
   }, [me.data])
 
@@ -50,7 +166,7 @@ export function ProfilePage() {
     onSuccess: (res) => {
       setPendingPhotoKey(res.image)
       setPendingPhotoPreview(res.preview_url)
-      toast.success('Foto berhasil diunggah, klik Simpan untuk menerapkan.')
+      toast.success(copy.photoUploaded)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -62,7 +178,7 @@ export function ProfilePage() {
       qc.invalidateQueries({ queryKey: ['me'] })
       setPendingPhotoKey(null)
       setPendingPhotoPreview(null)
-      toast.success('Foto profil dihapus.')
+      toast.success(copy.photoDeleted)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
@@ -71,26 +187,47 @@ export function ProfilePage() {
     mutationFn: () =>
       updateProfile({
         name: name.trim() || undefined,
-        email: email.trim() || undefined,
         photo: pendingPhotoKey ?? undefined,
       }),
     onSuccess: (u) => {
       setUser(u)
       qc.invalidateQueries({ queryKey: ['me'] })
       setPendingPhotoKey(null)
-      setPendingPhotoPreview(null)
-      toast.success('Profil berhasil diperbarui.')
+      setPendingPhotoPreview((preview) => u.photo_url ? null : preview)
+      toast.success(copy.profileUpdated)
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const telegramBind = useMutation({
+    mutationFn: () => bindTelegram(telegramChatId.trim()),
+    onSuccess: (u) => {
+      setUser(u)
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setTelegramChatId(u.telegram_chat_id ?? '')
+      toast.success(copy.telegramSaved)
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const telegramDisconnect = useMutation({
+    mutationFn: disconnectTelegram,
+    onSuccess: (u) => {
+      setUser(u)
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setTelegramChatId('')
+      toast.success(copy.telegramDisconnectedDone)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
 
   const handleFile = (f: File) => {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) {
-      toast.error('Format harus JPG, PNG, atau WEBP.')
+      toast.error(copy.invalidFormat)
       return
     }
     if (f.size > 5 * 1024 * 1024) {
-      toast.error('Ukuran maksimum 5 MB.')
+      toast.error(copy.maxSize)
       return
     }
     upload.mutate(f)
@@ -122,14 +259,67 @@ export function ProfilePage() {
 
   const dirty =
     pendingPhotoKey !== null ||
-    name.trim() !== (me.data?.name ?? '') ||
-    email.trim() !== (me.data?.email ?? '')
+    name.trim() !== (me.data?.name ?? '')
+
+  const paidPlans = useMemo(
+    () => (plans.data ?? []).filter((plan) => plan.price > 0 && plan.is_active),
+    [plans.data],
+  )
+  const pendingSubscription = useMemo(
+    () => (subscriptions.data ?? []).find((item) => item.status === 'pending') ?? null,
+    [subscriptions.data],
+  )
+  const telegramChatIdValue = telegramChatId.trim()
+  const isTelegramChatIdValid = /^[1-9]\d{4,19}$/.test(telegramChatIdValue)
+
+  const handleSubscribe = async (planCode: string, voucherCode?: string, resumePending = false) => {
+    try {
+      if (pendingSubscription && !resumePending && isBlockingPendingPayment(pendingSubscription)) {
+        toast.info(copy.pendingPlanExists)
+        return
+      }
+      if (resumePending) setBusyResume(true)
+      else setBusyPlan(planCode)
+      trackEvent(analyticsEvents.productSelected, {
+        subscription_plan: planCode,
+      })
+      const checkout = resumePending && pendingSubscription?.id
+        ? await subscriptionApi.renewInvoice(pendingSubscription.id)
+        : await subscriptionApi.checkout(planCode, false, undefined, sanitizeReferralCode(voucherCode ?? ''))
+      await openSubscriptionCheckout({
+        checkout,
+        planCode,
+        locale,
+        navigate,
+        queryClient: qc,
+      })
+    } catch (e) {
+      const message = toErrorMessage(e)
+      toast.error(/expired|kedaluwarsa/i.test(message) ? copy.paymentExpired : message)
+      qc.invalidateQueries({ queryKey: ['subscriptions'] })
+      qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+    } finally {
+      if (resumePending) setBusyResume(false)
+      else setBusyPlan(null)
+    }
+  }
+
+  const cancelSubscription = useMutation({
+    mutationFn: (id: string) => subscriptionApi.cancel(id),
+    onSuccess: () => {
+      toast.success(copy.subCanceled)
+      qc.invalidateQueries({ queryKey: ['subscriptions'] })
+      qc.invalidateQueries({ queryKey: ['subscriptions', 'me'] })
+      qc.invalidateQueries({ queryKey: ['subscription', 'active'] })
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="Profil Saya"
-        subtitle="Kelola identitas, foto, dan informasi akun."
+        title={copy.title}
+        subtitle={copy.subtitle}
       />
 
       {me.isLoading ? (
@@ -137,40 +327,52 @@ export function ProfilePage() {
           <Spinner />
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main form */}
-          <Card className="lg:col-span-2">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+        <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+          <div className="space-y-6">
+          <Card className="bg-white/72">
+            <div className="flex items-start justify-between gap-4 border-b border-white/60 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-100 text-brand-700">
                 <HiOutlineIdentification className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {copy.accountInfo}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {copy.accountInfoDesc}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Informasi Akun
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Foto, nama tampilan, dan email yang dipakai untuk login.
-                </p>
-              </div>
+              <Badge tone={me.data?.status === 'active' ? 'green' : 'amber'}>
+                {me.data?.status === 'active' ? copy.active : me.data?.status ?? copy.account}
+              </Badge>
             </div>
 
-            <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="mt-5 rounded-2xl border border-white/75 bg-white/55 p-4 shadow-sm">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <div className="relative shrink-0 self-center sm:self-auto">
                 {photo ? (
                   <img
                     src={photo}
                     alt={me.data?.name ?? ''}
-                    className="h-20 w-20 rounded-full object-cover ring-2 ring-slate-100"
+                    referrerPolicy="no-referrer"
+                    className={cnProfilePhoto(upload.isPending || save.isPending)}
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-2xl font-semibold text-white">
+                  <div className={cnProfileAvatar(upload.isPending || save.isPending)}>
                     {initials}
                   </div>
                 )}
+                {(upload.isPending || save.isPending) ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
+                    <Spinner className="h-5 w-5 text-brand-700" />
+                  </div>
+                ) : null}
                 {pendingPhotoKey ? (
                   <span
                     className="absolute -right-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white"
-                    title="Foto baru menunggu disimpan"
+                    title={copy.photoUploaded}
                   >
                     <HiOutlineCheckCircle className="h-4 w-4" />
                   </span>
@@ -178,7 +380,7 @@ export function ProfilePage() {
               </div>
 
               <div className="min-w-0 flex-1 text-center sm:text-left">
-                <h2 className="truncate text-base font-semibold text-slate-900">
+                <h2 className="truncate text-base font-bold text-slate-900">
                   {me.data?.name ?? '—'}
                 </h2>
                 <p className="mt-0.5 truncate text-sm text-slate-500">
@@ -194,7 +396,7 @@ export function ProfilePage() {
                   {me.data?.status ? (
                     <Badge tone={me.data.status === 'active' ? 'green' : 'amber'}>
                       <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
-                      {me.data.status === 'active' ? 'Aktif' : me.data.status}
+                      {me.data.status === 'active' ? copy.active : me.data.status}
                     </Badge>
                   ) : null}
                 </div>
@@ -204,269 +406,243 @@ export function ProfilePage() {
                 <input
                   ref={fileRef}
                   type="file"
-                  aria-label="Upload foto profil"
-                  title="Upload foto profil"
+                  aria-label={copy.uploadTitle}
+                  title={copy.uploadTitle}
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={onPickFile}
                 />
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   leftIcon={<HiOutlineCamera className="h-4 w-4" />}
                   onClick={() => fileRef.current?.click()}
-                  loading={upload.isPending}
+                  disabled={upload.isPending}
+                  className="transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  Ganti
+                  {copy.change}
                 </Button>
                 {me.data?.photo_url ? (
                   <Button
-                    variant="ghost"
+                    variant="danger"
                     size="sm"
                     leftIcon={<HiOutlineTrash className="h-4 w-4" />}
                     onClick={() => removePhoto.mutate()}
                     loading={removePhoto.isPending}
+                    className="shadow-rose-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    Hapus
-                  </Button>
-                ) : null}
+                  {copy.delete}
+                </Button>
+              ) : null}
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setIsDragging(true)
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={onDrop}
-              className={
-                'mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-xs transition ' +
-                (isDragging
-                  ? 'border-brand-400 bg-brand-50 text-brand-700'
-                  : 'border-slate-200 bg-slate-50/60 text-slate-500 hover:border-brand-300 hover:text-brand-700')
-              }
-            >
-              <HiOutlineCamera className="h-4 w-4" />
-              <span>
-                Drag &amp; drop foto di sini, atau klik untuk pilih file ·{' '}
-                <span className="text-slate-400">JPG/PNG/WEBP · maks 5 MB</span>
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setIsDragging(true)
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={onDrop}
+                className={
+                  'mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-xs font-semibold transition-all duration-300 ' +
+                  (isDragging
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-700'
+                    : 'border-slate-200 bg-white/45 text-slate-500 hover:border-brand-400 hover:text-brand-700 hover:bg-white/75')
+                }
+              >
+                <HiOutlineCamera className="h-4 w-4" />
+                <span>
+                  {copy.dragPhoto} ·{' '}
+                  <span className="text-slate-400">JPG/PNG/WEBP · maks 5 MB</span>
+                </span>
+              </button>
+            </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                  <HiOutlineUser className="h-3.5 w-3.5" /> Nama Lengkap
+                  <HiOutlineUser className="h-3.5 w-3.5" /> {copy.fullName}
                 </label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Nama lengkap"
+                  placeholder={copy.fullNamePlaceholder}
                 />
               </div>
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                   <HiOutlineEnvelope className="h-3.5 w-3.5" /> Email
                 </label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@domain.com"
-                />
+                <div className="rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/70 px-4 py-3 text-sm font-bold text-[#17120f] shadow-sm shadow-[#17120f]/5">
+                  {me.data?.email ?? '—'}
+                  <p className="mt-1 text-xs font-medium text-[#4f4540]/70">
+                    {locale === 'id' ? 'Ganti email dari halaman Settings.' : 'Change email from Settings.'}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+            <div className="mt-6 grid gap-2 border-t border-white/60 pt-5 sm:flex sm:justify-end">
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
+                className="shadow-slate-200/50 transition hover:-translate-y-0.5 hover:shadow-md"
                 onClick={() => {
                   setName(me.data?.name ?? '')
-                  setEmail(me.data?.email ?? '')
                   setPendingPhotoKey(null)
                   setPendingPhotoPreview(null)
                 }}
                 disabled={save.isPending || !dirty}
               >
-                Reset
+                {copy.reset}
               </Button>
               <Button
+                className="transition hover:-translate-y-0.5 hover:shadow-md"
+                type="button"
+                variant="primary"
                 onClick={() => save.mutate()}
                 loading={save.isPending}
                 disabled={!dirty}
               >
-                Simpan Perubahan
+                {copy.save}
               </Button>
             </div>
           </Card>
 
-          {/* Side: Subscription + Tips */}
-          <div className="space-y-4">
-            <SubscriptionCard
-              sub={sub.data ?? null}
-              loading={sub.isLoading}
-              activePlan={
-                sub.data
-                  ? (plans.data ?? []).find((p) => p.code === sub.data?.plan_code) ?? null
-                  : null
-              }
-            />
-            <Card>
-              <div className="flex items-center gap-2">
-                <HiOutlineSparkles className="h-5 w-5 text-amber-500" />
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Tips Profil
-                </h3>
-              </div>
-              <ul className="mt-3 space-y-2.5 text-xs text-slate-600">
-                {[
-                  'Gunakan nama lengkap agar mudah dikenali di laporan.',
-                  'Foto profil membantu identitas saat berbagi wallet (shared).',
-                  'Pastikan email aktif untuk reset password & notifikasi penting.',
-                  'JPG/PNG/WEBP dengan ukuran maksimum 5 MB direkomendasikan.',
-                ].map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
-                      {i + 1}
-                    </span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+          </div>
 
-            <Card>
-              <div className="flex items-center gap-2">
-                <HiOutlineShieldCheck className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Privasi Data
-                </h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-600">
-                Data profil hanya digunakan untuk personalisasi dalam aplikasi SAKU
-                dan tidak dibagikan ke pihak ketiga. Untuk mengganti password, buka
-                menu <span className="font-semibold text-slate-700">Pengaturan</span>.
-              </p>
-            </Card>
+          <div className="space-y-4">
+          {!isBackofficeUser ? (
+            <>
+              <Card className="bg-white/72">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-200 bg-brand-100 text-brand-700">
+                      <HiOutlineChatBubbleLeftRight className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">{copy.telegramTitle}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{copy.telegramDesc}</p>
+                    </div>
+                  </div>
+                  <Badge tone={me.data?.telegram_chat_id ? 'green' : 'amber'}>
+                    {me.data?.telegram_chat_id ? copy.telegramConnected : copy.telegramDisconnected}
+                  </Badge>
+                </div>
+
+                {me.data?.telegram_chat_id ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-[#ecfdf5]/80 p-4 shadow-sm shadow-[#17120f]/5">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      {copy.telegramConnected}
+                    </p>
+                    <p className="mt-1 text-sm font-black text-[#134e4a]">
+                      {me.data.telegram_username ? `@${me.data.telegram_username}` : me.data.telegram_chat_id}
+                    </p>
+                    {me.data.telegram_username ? (
+                      <p className="mt-1 text-xs font-medium text-[#4f4540]/70">
+                        Chat ID: {me.data.telegram_chat_id}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-xs leading-5 text-[#134e4a]/80">{copy.telegramConnectedHint}</p>
+					<Button
+						type="button"
+						variant="danger"
+						className="mt-4 w-full"
+                      onClick={() => telegramDisconnect.mutate()}
+                      loading={telegramDisconnect.isPending}
+                    >
+                      {copy.telegramDisconnect}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-white/75 bg-white/55 p-4 shadow-sm">
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                      {copy.telegramChatId}
+                    </label>
+                    <Input
+                      value={telegramChatId}
+                      onChange={(event) => setTelegramChatId(event.target.value.replace(/\D/g, '').slice(0, 20))}
+                      placeholder={copy.telegramPlaceholder}
+                      inputMode="numeric"
+                    />
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{copy.telegramHint}</p>
+                    <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-xs leading-5 text-[#4f4540]">
+                      <p>{copy.telegramGuide1}</p>
+                      <p>{copy.telegramGuide2}</p>
+                      <p>{copy.telegramGuide3}</p>
+                    </div>
+                    {telegramChatIdValue && !isTelegramChatIdValid ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-600">{copy.telegramInvalid}</p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      className="mt-4 w-full transition hover:-translate-y-0.5 hover:shadow-md"
+                      onClick={() => telegramBind.mutate()}
+                      loading={telegramBind.isPending}
+                      disabled={!isTelegramChatIdValid}
+                    >
+                      {copy.telegramSave}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
+              <SubscriptionCard
+                sub={sub.data ?? null}
+                pendingSub={pendingSubscription}
+                loading={sub.isLoading}
+                plans={paidPlans}
+                plansLoading={plans.isLoading}
+                busyPlan={busyPlan}
+                resumeLoading={busyResume}
+                onSubscribe={handleSubscribe}
+                onCancel={async (id) => {
+                  const ok = await confirm({
+                    title: copy.cancelTitle,
+                    description: copy.cancelDesc,
+                    tone: 'danger',
+                    confirmLabel: copy.cancelConfirm,
+                  })
+                  if (ok) cancelSubscription.mutate(id)
+                }}
+                cancelLoading={cancelSubscription.isPending}
+                activePlan={
+                  sub.data
+                    ? (plans.data ?? []).find((p) => p.code === sub.data?.plan_code) ?? null
+                    : null
+                }
+              />
+            </>
+          ) : null}
+
           </div>
         </div>
       )}
+
     </div>
   )
 }
 
-function SubscriptionCard({
-  sub,
-  loading,
-  activePlan,
-}: {
-  sub: import('@/features/subscription/api').Subscription | null
-  loading: boolean
-  activePlan?: import('@/features/subscription/api').Plan | null
-}) {
-  if (loading) {
-    return (
-      <Card>
-        <div className="flex items-center gap-2">
-          <HiOutlineStar className="h-5 w-5 text-brand-600" />
-          <h3 className="text-sm font-semibold text-slate-900">Langganan</h3>
-        </div>
-        <p className="mt-3 text-xs text-slate-500">Memuat…</p>
-      </Card>
-    )
-  }
-  if (!sub) {
-    return (
-      <Card className="bg-gradient-to-br from-slate-50 to-white">
-        <div className="flex items-center gap-2">
-          <HiOutlineStar className="h-5 w-5 text-slate-400" />
-          <h3 className="text-sm font-semibold text-slate-900">Belum Berlangganan</h3>
-        </div>
-        <p className="mt-2 text-xs text-slate-600">
-          Upgrade ke paket Pro untuk membuka semua fitur AI dan laporan lanjutan.
-        </p>
-        <Link
-          to="/app/subscription"
-          className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
-        >
-          Lihat Paket
-        </Link>
-      </Card>
-    )
-  }
-  const isTrial = sub.is_trial || sub.status === 'trialing'
-  const trialEnd = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null
-  const periodEnd = sub.ends_at ? new Date(sub.ends_at) : null
-  const tone: 'green' | 'amber' | 'red' =
-    sub.status === 'active' ? 'green' : isTrial ? 'amber' : 'red'
-  return (
-    <Card className="bg-gradient-to-br from-brand-50 via-white to-amber-50/30 ring-1 ring-brand-100">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <HiOutlineStar className="h-5 w-5 text-amber-500" />
-          <h3 className="text-sm font-semibold text-slate-900">Langganan Aktif</h3>
-        </div>
-        <Badge tone={tone}>
-          {isTrial ? 'Trial' : sub.status === 'active' ? 'Aktif' : sub.status}
-        </Badge>
-      </div>
-      <div className="mt-3 space-y-1">
-        <p className="text-base font-bold text-slate-900">{sub.plan_name}</p>
-        <p className="text-xs text-slate-500">
-          {sub.currency} {sub.amount.toLocaleString('id-ID')}
-        </p>
-      </div>
-      <dl className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-xs">
-        {isTrial && trialEnd ? (
-          <div className="flex justify-between">
-            <dt className="text-slate-500">Trial berakhir</dt>
-            <dd className="font-semibold text-amber-700">
-              {trialEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </dd>
-          </div>
-        ) : null}
-        {periodEnd ? (
-          <div className="flex justify-between">
-            <dt className="text-slate-500">Periode hingga</dt>
-            <dd className="font-semibold text-slate-700">
-              {periodEnd.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </dd>
-          </div>
-        ) : null}
-        {sub.next_billing_at ? (
-          <div className="flex justify-between">
-            <dt className="text-slate-500">Tagihan berikutnya</dt>
-            <dd className="font-semibold text-slate-700">
-              {new Date(sub.next_billing_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-      {activePlan && activePlan.features.length > 0 ? (
-        <div className="mt-4 border-t border-slate-100 pt-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            Layanan aktif
-          </p>
-          <ul className="space-y-1.5 text-xs text-slate-700">
-            {activePlan.features.map((f) => (
-              <li key={f} className="flex items-start gap-1.5">
-                <HiOutlineCheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                <span className="leading-snug">{f}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <Link
-        to="/app/subscription"
-        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"
-      >
-        Kelola Langganan
-      </Link>
-    </Card>
-  )
+export default ProfilePage
+
+function isBlockingPendingPayment(subscription: { payment_status?: string; expires_at?: string | null }) {
+  if (subscription.payment_status !== 'pending') return false
+  if (!subscription.expires_at) return true
+  const expiresAt = new Date(subscription.expires_at).getTime()
+  return Number.isNaN(expiresAt) || expiresAt > Date.now()
+}
+
+function cnProfilePhoto(isLoading: boolean) {
+  return `h-20 w-20 rounded-full object-cover ring-2 ring-white/80 shadow-md transition ${
+    isLoading ? 'scale-95 opacity-60' : ''
+  }`
+}
+
+function cnProfileAvatar(isLoading: boolean) {
+  return `flex h-20 w-20 items-center justify-center rounded-full border border-[#17120f]/10 bg-brand-200 text-2xl font-black text-[#17120f] shadow-md transition ${
+    isLoading ? 'scale-95 opacity-60' : ''
+  }`
 }

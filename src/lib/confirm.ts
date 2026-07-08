@@ -4,6 +4,7 @@ export interface ConfirmOptions {
   confirmLabel?: string
   cancelLabel?: string
   tone?: 'danger' | 'primary'
+  mode?: 'confirm' | 'alert'
 }
 
 type Listener = (opts: ConfirmOptions, resolve: (ok: boolean) => void) => void
@@ -22,4 +23,8 @@ export function confirm(opts: ConfirmOptions): Promise<boolean> {
     }
     listener(opts, resolve)
   })
+}
+
+export function alertModal(opts: Omit<ConfirmOptions, 'mode' | 'cancelLabel'>): Promise<void> {
+  return confirm({ ...opts, mode: 'alert' }).then(() => undefined)
 }

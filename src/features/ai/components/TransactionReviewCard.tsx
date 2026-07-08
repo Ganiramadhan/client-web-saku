@@ -1,0 +1,467 @@
+import { useState } from 'react'
+import { HiOutlineCheckCircle } from 'react-icons/hi2'
+import { RiSparklingLine, RiWalletLine } from 'react-icons/ri'
+import { CurrencyInput, RSelect, Textarea, type SelectOption } from '@/components/ui'
+import { useLocale, useT } from '@/i18n'
+import { cn } from '@/lib/utils'
+import type { TransactionType } from '@/types/api'
+import { cleanMerchant, type Message, type TxForm } from '../utils/freeText'
+
+function translateCategoryName(name: string | undefined, locale: string): string {
+  if (!name) return ''
+  const n = name.toLowerCase()
+  const isId = locale === 'id'
+  const rules: Array<{ match: string[]; id: string; en: string }> = [
+    { match: ['makan', 'minum', 'kuliner', 'food', 'drink', 'kopi', 'coffee', 'warung', 'restoran'], id: 'Makanan & Minuman', en: 'Food & Drink' },
+    { match: ['trans', 'ojek', 'gojek', 'grab', 'bensin', 'mobil', 'motor', 'travel', 'bus', 'kereta'], id: 'Transportasi', en: 'Transportation' },
+    { match: ['belanja', 'shop', 'supermarket', 'mall', 'baju', 'pakaian'], id: 'Belanja', en: 'Shopping' },
+    { match: ['hiburan', 'nonton', 'bioskop', 'game', 'rekreasi', 'play'], id: 'Hiburan', en: 'Entertainment' },
+    { match: ['kesehatan', 'obat', 'dokter', 'rs', 'sakit', 'health', 'medical'], id: 'Kesehatan', en: 'Health' },
+    { match: ['tagihan', 'listrik', 'air', 'wifi', 'internet', 'pulsa', 'bill'], id: 'Tagihan', en: 'Bills' },
+    { match: ['gaji', 'salary', 'bonus', 'pendapatan', 'income'], id: 'Pendapatan', en: 'Income' },
+    { match: ['investasi', 'saham', 'reksadana', 'investment'], id: 'Investasi', en: 'Investment' },
+    { match: ['edukasi', 'sekolah', 'kuliah', 'buku', 'education'], id: 'Edukasi', en: 'Education' },
+  ]
+  const found = rules.find((rule) => rule.match.some((token) => n.includes(token)))
+  return found ? (isId ? found.id : found.en) : name
+}
+
+function getLetterMark(seed?: string): string {
+  return (seed?.trim()?.[0] ?? 'S').toUpperCase()
+}
+
+export function TransactionReviewCard({
+  message,
+  walletOptions,
+  categoryOptions,
+  onSave,
+  onFormChange,
+  onToggleSelect,
+  isSaving,
+}: {
+  message: Message
+  walletOptions: SelectOption[]
+  categoryOptions: (type: TransactionType) => SelectOption[]
+  onSave: (form: TxForm) => void
+  onFormChange: (form: TxForm) => void
+  onToggleSelect?: () => void
+  isSaving: boolean
+}) {
+  const t = useT()
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        saved: 'Tersimpan',
+        preview: 'Pratinjau Transaksi',
+        ready: 'Siap dicek',
+        noDescription: 'Deskripsi tidak tersedia',
+        noCategory: 'Kategori tidak tersedia',
+        chooseWallet: 'Pilih Dompet',
+        editDetail: 'Edit Detail',
+        saving: 'Menyimpan...',
+        confirm: 'Konfirmasi',
+        willSave: 'Akan disimpan',
+        skip: 'Lewati',
+        detail: 'Detail Transaksi',
+        editTx: 'Edit Transaksi',
+        amount: 'Nominal',
+        type: 'Tipe',
+        category: 'Kategori',
+        merchant: 'Merchant',
+        wallet: 'Dompet',
+        date: 'Tanggal Transaksi',
+        merchantPlaceholder: 'Nama toko / sumber',
+        description: 'Deskripsi (Opsional)',
+        descriptionPlaceholder: 'Catatan tambahan...',
+        cancelEdit: 'Batal Edit',
+        saveTransaction: 'Simpan Transaksi',
+      }
+    : {
+        saved: 'Saved',
+        preview: 'Transaction Preview',
+        ready: 'Ready to review',
+        noDescription: 'No description available',
+        noCategory: 'No category available',
+        chooseWallet: 'Choose Wallet',
+        editDetail: 'Edit Details',
+        saving: 'Saving...',
+        confirm: 'Confirm',
+        willSave: 'Will be saved',
+        skip: 'Skip',
+        detail: 'Transaction Details',
+        editTx: 'Edit Transaction',
+        amount: 'Amount',
+        type: 'Type',
+        category: 'Category',
+        merchant: 'Merchant',
+        wallet: 'Wallet',
+        date: 'Transaction Date',
+        merchantPlaceholder: 'Store / source name',
+        description: 'Description (Optional)',
+        descriptionPlaceholder: 'Additional notes...',
+        cancelEdit: 'Cancel Edit',
+        saveTransaction: 'Save Transaction',
+      }
+  const form = message.form as TxForm
+  const filteredCats = categoryOptions(form.type).map((option) => ({
+    ...option,
+    label: translateCategoryName(option.label, locale),
+  }))
+  const isBatch = !!message.batchId
+  const saved = !!message.saved
+  const selected = message.selected !== false
+  const update = (patch: Partial<TxForm>) => onFormChange({ ...form, ...patch })
+  const invalid = !form.wallet_id || !form.category_id || form.amount <= 0
+
+  const [isEditing, setIsEditing] = useState(false)
+
+  const walletName = walletOptions.find((w) => w.value === form.wallet_id)?.label
+  const categoryName = filteredCats.find((c) => c.value === form.category_id)?.label
+  const extractedCategoryName = translateCategoryName(message.extractedData?.category, locale)
+  const letterMark = getLetterMark(form.merchant_name || form.description || categoryName || extractedCategoryName)
+
+  if (!isEditing || saved) {
+    return (
+      <div className={cn('relative mt-3 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6]/78 shadow-[0_16px_38px_rgba(23,18,15,0.07)] backdrop-blur-2xl transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(23,18,15,0.09)]', saved && 'ring-1 ring-emerald-200')}>
+        {saved ? (
+          <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+            <HiOutlineCheckCircle className="h-3.5 w-3.5" />
+            {copy.saved}
+          </div>
+        ) : null}
+        <div className="px-5 pb-4 pt-5">
+          <div className="mb-3 flex items-center gap-2">
+            <RiSparklingLine className="h-4 w-4 animate-pulse text-brand-700" />
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700">
+              {copy.preview}
+            </p>
+            {!saved ? (
+              <span className="ml-auto inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
+                {copy.ready}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex w-full items-center gap-3 sm:min-w-0 sm:flex-1">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-brand-200 bg-brand-50 text-base font-extrabold text-brand-700 shadow-sm shadow-brand-100/60">
+              {letterMark}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-[#17120f]">
+                {form.description || copy.noDescription}
+              </p>
+              <p className="truncate text-xs text-[#4f4540]/60">
+                {categoryName || extractedCategoryName || copy.noCategory}
+              </p>
+            </div>
+            </div>
+
+            <span
+              className={cn(
+                'self-start text-lg font-extrabold shrink-0 sm:ml-auto sm:self-center',
+                form.type === 'income' ? 'text-emerald-700' : 'text-brand-600',
+              )}
+            >
+              {form.type === 'income' ? '+' : '-'}Rp {form.amount.toLocaleString('id-ID')}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-[#17120f]/8 bg-white/52 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <RiWalletLine className="h-4 w-4 text-[#4f4540]/45 shrink-0" />
+              <span className="truncate text-xs font-semibold text-[#4f4540]">
+                {walletName || copy.chooseWallet}
+              </span>
+            </div>
+
+            <span className="text-xs text-[#4f4540]/55 shrink-0">
+              {form.transaction_date}
+            </span>
+          </div>
+        </div>
+
+        {!saved ? (
+          <div className="flex border-t border-[#17120f]/8 bg-white/32">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="flex-1 py-3 text-xs font-black text-[#4f4540] transition-colors hover:bg-white/55"
+            >
+              {copy.editDetail}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(form)}
+              disabled={isSaving || invalid}
+              className="flex-1 py-3 text-xs font-bold text-brand-600 transition-colors hover:bg-brand-50/70 disabled:opacity-40"
+            >
+              {isSaving ? copy.saving : copy.confirm}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  // Edit / Saved Mode
+  return (
+    <div
+      className={cn(
+        'relative mt-3 overflow-hidden rounded-3xl border bg-white/40 backdrop-blur-xl transition shadow-md',
+        saved
+          ? 'border-emerald-300 ring-1 ring-emerald-100 bg-emerald-50/10'
+          : isBatch && selected && invalid
+            ? 'border-amber-300 ring-1 ring-amber-100'
+            : isBatch && selected
+              ? 'border-brand-300 ring-1 ring-brand-100'
+              : 'border-white/60',
+      )}
+    >
+      {saved ? (
+        <div className="pointer-events-none absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+          ✓ {copy.saved}
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          'border-b px-4 py-3',
+          saved ? 'border-emerald-100 bg-emerald-50/40' : 'border-slate-200/50 bg-slate-50/40',
+        )}
+      >
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {isBatch && !saved ? (
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={onToggleSelect}
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  aria-label={copy.willSave}
+                />
+                <span>{selected ? copy.willSave : copy.skip}</span>
+              </label>
+            ) : (
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {saved ? copy.detail : copy.editTx}
+              </span>
+            )}
+          </div>
+          {!saved ? (
+            <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+              {copy.ready}
+            </span>
+          ) : null}
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+          {[
+            {
+              label: copy.amount,
+              value: `Rp ${(message.extractedData?.amount ?? 0).toLocaleString('id-ID')}`,
+            },
+            {
+              label: copy.type,
+              value:
+                message.extractedData?.type === 'income' ? t.transactions.income : t.transactions.expense,
+            },
+            { label: copy.category, value: extractedCategoryName || '-' },
+            { label: copy.merchant, value: cleanMerchant(message.extractedData?.merchant_name) },
+          ].map((item) => (
+            <div key={item.label}>
+              <p className="text-xs text-slate-400">{item.label}</p>
+              <p className="truncate text-sm font-medium text-slate-800">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={cn('px-4 py-4', saved && 'pointer-events-none opacity-60')}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <RSelect
+              label={copy.type}
+              value={form.type}
+              options={[
+                { value: 'expense', label: t.transactions.expense },
+                { value: 'income', label: t.transactions.income },
+              ]}
+              onChange={(v) => update({ type: (v as TransactionType) ?? 'expense' })}
+            />
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">{copy.amount}</label>
+              <CurrencyInput
+                value={form.amount}
+                onChange={(val) => update({ amount: val })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+              {copy.date}
+            </label>
+            <input
+              type="date"
+              aria-label={copy.date}
+              value={form.transaction_date}
+              onChange={(e) => update({ transaction_date: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <RSelect
+              label={copy.wallet}
+              value={form.wallet_id}
+              options={walletOptions}
+              onChange={(v) => update({ wallet_id: v ?? '' })}
+            />
+            <RSelect
+              label={copy.category}
+              value={form.category_id}
+              options={filteredCats}
+              onChange={(v) => update({ category_id: v ?? '' })}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700">{copy.merchant}</label>
+            <input
+              type="text"
+              value={form.merchant_name}
+              onChange={(e) => update({ merchant_name: e.target.value })}
+              placeholder={copy.merchantPlaceholder}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+
+          <Textarea
+            label={copy.description}
+            value={form.description || ''}
+            onChange={(e) => update({ description: e.target.value })}
+            placeholder={copy.descriptionPlaceholder}
+            rows={2}
+          />
+        </div>
+
+        {!saved ? (
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(false)
+              }}
+              className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              {copy.cancelEdit}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSave(form)
+                setIsEditing(false)
+              }}
+              disabled={isSaving || invalid}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
+            >
+              {isSaving ? copy.saving : copy.saveTransaction}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────── Batch Actions Card ─────────────────────────── */
+
+export function BatchActionsCard({
+  batchId,
+  messages,
+  onBulkSave,
+  onBulkCancel,
+  onSelectAll,
+  isSaving,
+}: {
+  batchId: string
+  messages: Message[]
+  onBulkSave: (batchId: string) => void
+  onBulkCancel: (batchId: string) => void
+  onSelectAll: (batchId: string, value: boolean) => void
+  isSaving: boolean
+}) {
+  const { locale } = useLocale()
+  const copy = locale === 'id'
+    ? {
+        selectAll: 'Pilih semua',
+        of: 'dari',
+        selected: 'dipilih',
+        saved: 'tersimpan',
+        cancelAll: 'Batalkan semua',
+        saving: 'Menyimpan...',
+        saveSelected: 'Simpan terpilih',
+      }
+    : {
+        selectAll: 'Select all',
+        of: 'of',
+        selected: 'selected',
+        saved: 'saved',
+        cancelAll: 'Cancel all',
+        saving: 'Saving...',
+        saveSelected: 'Save selected',
+      }
+  const reviews = messages.filter(
+    (m) => m.batchId === batchId && m.type === 'transaction-review',
+  )
+  const remaining = reviews.filter((m) => !m.saved)
+  const selectedCount = remaining.filter((m) => m.selected !== false).length
+  const savedCount = reviews.length - remaining.length
+  const allSelected = remaining.length > 0 && selectedCount === remaining.length
+  if (reviews.length === 0) return null
+
+  return (
+    <div className="mt-3 rounded-xl border border-brand-200 bg-linear-to-br from-brand-50 to-white px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => onSelectAll(batchId, e.target.checked)}
+              disabled={remaining.length === 0 || isSaving}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              aria-label={copy.selectAll}
+            />
+            {copy.selectAll}
+          </label>
+          <div className="text-xs text-slate-600">
+            <span className="font-semibold text-brand-700">{selectedCount}</span>{' '}
+            {copy.of} {remaining.length} {copy.selected}
+            {savedCount > 0 ? (
+              <span className="ml-2 text-emerald-600">· {savedCount} {copy.saved}</span>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onBulkCancel(batchId)}
+            disabled={isSaving || remaining.length === 0}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          >
+            {copy.cancelAll}
+          </button>
+          <button
+            onClick={() => onBulkSave(batchId)}
+            disabled={isSaving || selectedCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
+          >
+            {isSaving ? copy.saving : `${copy.saveSelected} (${selectedCount})`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

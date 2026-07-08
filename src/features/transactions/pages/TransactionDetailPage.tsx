@@ -6,6 +6,7 @@ import {
   HiOutlinePencilSquare,
   HiOutlineTrash,
   HiOutlineCalendarDays,
+  HiOutlineClock,
   HiOutlineWallet,
   HiOutlineSparkles,
   HiOutlineDocumentText,
@@ -16,10 +17,11 @@ import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import { Button, Card, Badge, Skeleton, EmptyState } from '@/components/ui'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { formatCurrency, formatDate, formatDateTime, cn } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
+import { TransactionInfoRow } from '../components/TransactionInfoRow'
 
 export function TransactionDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -131,10 +133,10 @@ export function TransactionDetailPage() {
       {/* Hero card */}
       <Card
         className={cn(
-          'overflow-hidden border-0 p-0 shadow-md ring-1',
+          'overflow-hidden border shadow-xl shadow-slate-200/40 backdrop-blur-2xl transition-all duration-300',
           isIncome
-            ? 'bg-linear-to-br from-emerald-50 via-white to-white ring-emerald-100'
-            : 'bg-linear-to-br from-rose-50 via-white to-white ring-rose-100',
+            ? 'border-emerald-200/70 bg-gradient-to-br from-emerald-500/12 via-white/62 to-white/38'
+            : 'border-rose-200/70 bg-gradient-to-br from-rose-500/12 via-white/62 to-white/38',
         )}
       >
         <div className="px-6 py-7">
@@ -143,31 +145,32 @@ export function TransactionDetailPage() {
           </Badge>
           <div
             className={cn(
-              'text-4xl font-bold tabular-nums sm:text-5xl',
+              'text-4xl font-black tabular-nums sm:text-5xl',
               isIncome ? 'text-emerald-700' : 'text-rose-700',
             )}
           >
             {isIncome ? '+ ' : '- '}
             {formatCurrency(Number(tx.amount))}
           </div>
-          <div className="mt-2 text-sm text-slate-600">
+          <div className="mt-2 text-sm font-semibold text-slate-500">
             {categoryName} · {formatDate(tx.transaction_date)}
           </div>
         </div>
       </Card>
 
       {/* Info grid */}
-      <Card>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-          <InfoRow Icon={HiOutlineHashtag} label="Kategori" value={categoryName} />
-          <InfoRow Icon={HiOutlineWallet} label="Dompet" value={walletName} />
-          <InfoRow Icon={HiOutlineCalendarDays} label="Tanggal" value={formatDate(tx.transaction_date)} />
+      <Card className="border border-white/80 bg-white/55 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+          <TransactionInfoRow Icon={HiOutlineHashtag} label="Kategori" value={categoryName} />
+          <TransactionInfoRow Icon={HiOutlineWallet} label="Dompet" value={walletName} />
+          <TransactionInfoRow Icon={HiOutlineCalendarDays} label="Tanggal" value={formatDate(tx.transaction_date)} />
+          <TransactionInfoRow Icon={HiOutlineClock} label="Dibuat" value={formatDateTime(tx.created_at)} />
           {tx.merchant_name ? (
-            <InfoRow Icon={HiOutlineBuildingStorefront} label="Merchant" value={tx.merchant_name} />
+            <TransactionInfoRow Icon={HiOutlineBuildingStorefront} label="Merchant" value={tx.merchant_name} />
           ) : null}
           {tx.description ? (
             <div className="sm:col-span-2">
-              <InfoRow Icon={HiOutlineDocumentText} label="Deskripsi" value={tx.description} multiline />
+              <TransactionInfoRow Icon={HiOutlineDocumentText} label="Deskripsi" value={tx.description} multiline />
             </div>
           ) : null}
         </div>
@@ -175,52 +178,26 @@ export function TransactionDetailPage() {
 
       {/* AI block */}
       {tx.source && tx.source !== 'manual' && tx.confidence_score != null ? (
-        <Card>
+        <Card className="border border-violet-200/70 bg-linear-to-br from-violet-500/10 via-white/55 to-white/30 shadow-lg shadow-slate-200/35 backdrop-blur-2xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <HiOutlineSparkles className="h-4 w-4 text-violet-600" /> Tingkat Keyakinan AI
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <HiOutlineSparkles className="h-4 w-4 text-violet-600 animate-pulse" /> Tingkat Keyakinan AI
             </div>
-            <span className="text-sm font-bold tabular-nums text-slate-900">
+            <span className="text-sm font-black tabular-nums text-violet-700">
               {Math.round(Number(tx.confidence_score) * 100)}%
             </span>
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-100/50">
             <div
               className="h-full rounded-full bg-linear-to-r from-violet-500 to-fuchsia-500"
               style={{ width: `${Math.round(Number(tx.confidence_score) * 100)}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs font-semibold text-slate-500">
             Transaksi ini diekstrak otomatis. Periksa kembali jika perlu.
           </p>
         </Card>
       ) : null}
-    </div>
-  )
-}
-
-function InfoRow({
-  Icon,
-  label,
-  value,
-  multiline,
-}: {
-  Icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-  multiline?: boolean
-}) {
-  return (
-    <div className="flex gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-        <div className={cn('text-sm text-slate-900', multiline ? 'whitespace-pre-wrap' : 'truncate font-medium')}>
-          {value}
-        </div>
-      </div>
     </div>
   )
 }

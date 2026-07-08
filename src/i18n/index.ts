@@ -13,7 +13,15 @@ export const useI18nStore = create<I18nState>()(
       locale: 'id',
       setLocale: (locale) => set({ locale }),
     }),
-    { name: 'saku-locale' },
+    {
+      name: 'saku-locale',
+      version: 4,
+      migrate: (persisted) => {
+        const state = persisted as Partial<I18nState> | undefined
+        const locale = state?.locale === 'en' || state?.locale === 'id' ? state.locale : 'id'
+        return { ...state, locale } as I18nState
+      },
+    },
   ),
 )
 

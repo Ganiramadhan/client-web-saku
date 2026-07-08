@@ -8,6 +8,8 @@ dist
 README.md
 Dockerfile
 .dockerignore
+Jenkinsfile
+docker-compose.yml
 coverage
 .env
 .env.*

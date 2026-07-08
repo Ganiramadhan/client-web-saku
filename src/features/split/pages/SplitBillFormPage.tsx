@@ -1,39 +1,65 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams, Link } from 'react-router-dom'
-import {
-  HiOutlinePlus,
-  HiOutlineTrash,
-  HiOutlineArrowLeft,
-  HiOutlineCalculator,
-  HiOutlineUserGroup,
-} from 'react-icons/hi2'
-import {
-  Button,
-  Card,
-  CurrencyInput,
-  Input,
-  PageHeader,
-  Spinner,
-} from '@/components/ui'
-import { splitBillApi, type SplitBillParticipantInput } from '../api'
-import { formatCurrency } from '@/lib/utils'
+import { useNavigate, useParams } from 'react-router-dom'
+import { HiOutlineUserGroup } from 'react-icons/hi2'
+import { Card, CurrencyInput, Input, PageHeader, Spinner } from '@/components/ui'
+import { useLocale } from '@/i18n'
+import { splitBillApi } from '../api'
+import { aiApi, fileToBase64 } from '@/features/ai/api'
+import type { AIScanReceiptResponse } from '@/types/api'
 import { toast } from '@/lib/toast'
 import { toErrorMessage } from '@/lib/api'
-
-interface Row extends SplitBillParticipantInput {
-  _key: string
-}
-
-function newRow(name = '', amount = 0): Row {
-  return { _key: Math.random().toString(36).slice(2), name, amount, phone: '' }
-}
+import { validateImageFile } from '@/lib/files'
+import { analyticsEvents, trackEvent } from '@/lib/analytics'
+import {
+  ParticipantsEditor,
+  ReceiptDetailModal,
+  ReceiptScanPanel,
+  SplitSummaryCard,
+} from '../components/SplitBillFormPanels'
+import { newParticipantRow, type SplitParticipantRow } from '../utils/participants'
 
 export function SplitBillFormPage() {
+  const { locale } = useLocale()
   const nav = useNavigate()
   const qc = useQueryClient()
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
+  const copy = locale === 'id'
+    ? {
+        created: 'Split bill berhasil dibuat',
+        updated: 'Split bill diperbarui',
+        receiptTitle: (merchant?: string) => merchant ? `Split bill - ${merchant}` : 'Split bill dari struk',
+        merchant: 'Merchant',
+        date: 'Tanggal',
+        receiptRead: 'Struk berhasil dibaca. Cek kembali total sebelum dibagi.',
+        pageEdit: 'Edit Split Bill',
+        pageCreate: 'Buat Split Bill',
+        subtitle: 'Bagi tagihan secara adil dan kirim ke teman via WhatsApp.',
+        detail: 'Detail Tagihan',
+        titleLabel: 'Judul tagihan',
+        titlePlaceholder: 'Makan malam, patungan kado, dll.',
+        totalLabel: 'Total tagihan',
+        notesLabel: 'Catatan (opsional)',
+        notesPlaceholder: 'Tempat, tanggal, dll.',
+      }
+    : {
+        created: 'Split bill created',
+        updated: 'Split bill updated',
+        receiptTitle: (merchant?: string) => merchant ? `Split bill - ${merchant}` : 'Split bill from receipt',
+        merchant: 'Merchant',
+        date: 'Date',
+        receiptRead: 'Receipt scanned. Review the total before splitting.',
+        pageEdit: 'Edit Split Bill',
+        pageCreate: 'Create Split Bill',
+        subtitle: 'Split bills fairly and send them to friends via WhatsApp.',
+        detail: 'Bill Details',
+        titleLabel: 'Bill title',
+        titlePlaceholder: 'Dinner, gift contribution, etc.',
+        totalLabel: 'Total bill',
+        notesLabel: 'Notes (optional)',
+        notesPlaceholder: 'Place, date, etc.',
+      }
 
   const existing = useQuery({
     queryKey: ['split-bill', id],
@@ -44,22 +70,29 @@ export function SplitBillFormPage() {
   const [title, setTitle] = useState('')
   const [total, setTotal] = useState<number>(0)
   const [notes, setNotes] = useState('')
-  const [rows, setRows] = useState<Row[]>([newRow(), newRow()])
+  const [rows, setRows] = useState<SplitParticipantRow[]>([newParticipantRow(), newParticipantRow()])
+  const [receiptPreview, setReceiptPreview] = useState('')
+  const [receiptDetailOpen, setReceiptDetailOpen] = useState(false)
+  const [receiptDetail, setReceiptDetail] = useState<AIScanReceiptResponse | null>(null)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (existing.data) {
-      setTitle(existing.data.title)
-      setTotal(existing.data.total_amount)
-      setNotes(existing.data.notes ?? '')
-      setRows(
-        existing.data.participants.map((p) => ({
-          _key: p.id,
-          id: p.id,
-          name: p.name,
-          phone: p.phone,
-          amount: p.amount,
-        })),
-      )
+      const timer = window.setTimeout(() => {
+        setTitle(existing.data?.title ?? '')
+        setTotal(existing.data?.total_amount ?? 0)
+        setNotes(existing.data?.notes ?? '')
+        setRows(
+          existing.data?.participants.map((p) => ({
+            _key: p.id,
+            id: p.id,
+            name: p.name,
+            phone: p.phone,
+            amount: p.amount,
+          })) ?? [newParticipantRow(), newParticipantRow()],
+        )
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
   }, [existing.data])
 
@@ -91,7 +124,11 @@ export function SplitBillFormPage() {
         })),
       }),
     onSuccess: (b) => {
-      toast.success('Split bill berhasil dibuat')
+      trackEvent(analyticsEvents.splitBillCreated, {
+        feature_name: 'split_bill',
+        amount: total,
+      })
+      toast.success(copy.created)
       qc.invalidateQueries({ queryKey: ['split-bills'] })
       nav(`/app/split-bills/${b.id}`)
     },
@@ -112,13 +149,55 @@ export function SplitBillFormPage() {
         })),
       }),
     onSuccess: () => {
-      toast.success('Split bill diperbarui')
+      toast.success(copy.updated)
       qc.invalidateQueries({ queryKey: ['split-bills'] })
       qc.invalidateQueries({ queryKey: ['split-bill', id] })
       nav(`/app/split-bills/${id}`)
     },
     onError: (e) => toast.error(toErrorMessage(e)),
   })
+
+  const scanReceipt = useMutation({
+    mutationFn: async (file: File) => {
+      const base64 = await fileToBase64(file)
+      return aiApi.scanReceipt({ image_base64: base64, media_type: file.type })
+    },
+    onSuccess: (data) => {
+      const merchant = data.merchant_name?.trim()
+      setReceiptDetail(data)
+      setTotal(Number(data.amount || 0))
+      if (!title.trim()) setTitle(copy.receiptTitle(merchant))
+      setNotes((prev) => {
+        const next = [
+          prev.trim(),
+          merchant ? `${copy.merchant}: ${merchant}` : '',
+          data.date ? `${copy.date}: ${data.date}` : '',
+        ].filter(Boolean)
+        return Array.from(new Set(next)).join(' · ')
+      })
+      toast.success(copy.receiptRead)
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const handleReceiptFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const validationError = validateImageFile(file, { maxSizeMb: 5 })
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    setReceiptPreview(URL.createObjectURL(file))
+    scanReceipt.mutate(file)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview)
+    }
+  }, [receiptPreview])
 
   const canSubmit =
     title.trim().length > 0 &&
@@ -138,183 +217,85 @@ export function SplitBillFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Edit Split Bill' : 'Buat Split Bill'}
-        subtitle="Bagi tagihan secara adil dan kirim ke teman via WhatsApp."
-        action={
-          <Link to="/app/split-bills">
-            <Button variant="secondary" leftIcon={<HiOutlineArrowLeft className="h-4 w-4" />}>
-              Kembali
-            </Button>
-          </Link>
-        }
+        title={isEdit ? copy.pageEdit : copy.pageCreate}
+        subtitle={copy.subtitle}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
             <HiOutlineUserGroup className="h-5 w-5 text-brand-600" />
-            <h3 className="text-base font-semibold text-slate-900">Detail Tagihan</h3>
+            <h3 className="text-base font-semibold text-slate-900">{copy.detail}</h3>
           </div>
 
           <div className="mt-5 space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                Judul tagihan
+                {copy.titleLabel}
               </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Makan malam, patungan kado, dll."
+                placeholder={copy.titlePlaceholder}
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Total tagihan
+                  {copy.totalLabel}
                 </label>
                 <CurrencyInput value={total} onChange={setTotal} />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Catatan (opsional)
+                  {copy.notesLabel}
                 </label>
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Tempat, tanggal, dll."
+                  placeholder={copy.notesPlaceholder}
                 />
               </div>
             </div>
 
-            <div className="mt-2 border-t border-slate-100 pt-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-900">Peserta</h4>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<HiOutlineCalculator className="h-4 w-4" />}
-                    onClick={splitEven}
-                    disabled={total <= 0 || rows.length === 0}
-                  >
-                    Bagi Rata
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    leftIcon={<HiOutlinePlus className="h-4 w-4" />}
-                    onClick={() => setRows((p) => [...p, newRow()])}
-                  >
-                    Tambah
-                  </Button>
-                </div>
-              </div>
+            <ReceiptScanPanel
+              inputRef={receiptInputRef}
+              preview={receiptPreview}
+              isScanning={scanReceipt.isPending}
+              onFileChange={handleReceiptFile}
+              onPickFile={() => receiptInputRef.current?.click()}
+              onOpenDetail={() => setReceiptDetailOpen(true)}
+            />
 
-              <div className="mt-3 space-y-2">
-                {rows.map((r, idx) => (
-                  <div
-                    key={r._key}
-                    className="grid grid-cols-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/40 p-2"
-                  >
-                    <div className="col-span-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:hidden">
-                      Peserta {idx + 1}
-                    </div>
-                    <div className="col-span-12 sm:col-span-4">
-                      <Input
-                        placeholder="Nama"
-                        value={r.name}
-                        onChange={(e) =>
-                          setRows((p) =>
-                            p.map((x) => (x._key === r._key ? { ...x, name: e.target.value } : x)),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-7 sm:col-span-4">
-                      <Input
-                        placeholder="62812xxxx (opsional)"
-                        value={r.phone ?? ''}
-                        onChange={(e) =>
-                          setRows((p) =>
-                            p.map((x) =>
-                              x._key === r._key ? { ...x, phone: e.target.value } : x,
-                            ),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-4 sm:col-span-3">
-                      <CurrencyInput
-                        value={r.amount}
-                        onChange={(v) =>
-                          setRows((p) =>
-                            p.map((x) => (x._key === r._key ? { ...x, amount: v } : x)),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setRows((p) =>
-                            p.length > 2 ? p.filter((x) => x._key !== r._key) : p,
-                          )
-                        }
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30"
-                        disabled={rows.length <= 2}
-                        title="Hapus peserta"
-                      >
-                        <HiOutlineTrash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ParticipantsEditor
+              rows={rows}
+              total={total}
+              onRowsChange={setRows}
+              onSplitEven={splitEven}
+              onAddRow={() => setRows((prev) => [...prev, newParticipantRow()])}
+            />
           </div>
         </Card>
 
-        <Card className="h-fit">
-          <h3 className="text-sm font-semibold text-slate-900">Ringkasan</h3>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total tagihan</dt>
-              <dd className="font-semibold tabular-nums">{formatCurrency(total)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total dibagi</dt>
-              <dd className="font-semibold tabular-nums">{formatCurrency(sumRows)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-slate-100 pt-2">
-              <dt className="text-slate-500">Selisih</dt>
-              <dd
-                className={
-                  Math.abs(diff) < 0.01
-                    ? 'font-bold tabular-nums text-emerald-600'
-                    : 'font-bold tabular-nums text-rose-600'
-                }
-              >
-                {formatCurrency(diff)}
-              </dd>
-            </div>
-          </dl>
-          {Math.abs(diff) >= 0.01 ? (
-            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              Total per peserta belum sama dengan total tagihan.
-            </p>
-          ) : null}
-          <Button
-            className="mt-5 w-full"
-            onClick={() => (isEdit ? update.mutate() : create.mutate())}
-            loading={create.isPending || update.isPending}
-            disabled={!canSubmit}
-          >
-            {isEdit ? 'Simpan Perubahan' : 'Buat Split Bill'}
-          </Button>
-        </Card>
+        <SplitSummaryCard
+          total={total}
+          sumRows={sumRows}
+          diff={diff}
+          isEdit={isEdit}
+          canSubmit={canSubmit}
+          isSubmitting={create.isPending || update.isPending}
+          onSubmit={() => (isEdit ? update.mutate() : create.mutate())}
+        />
       </div>
+
+      <ReceiptDetailModal
+        open={receiptDetailOpen}
+        preview={receiptPreview}
+        detail={receiptDetail}
+        total={total}
+        onClose={() => setReceiptDetailOpen(false)}
+      />
     </div>
   )
 }

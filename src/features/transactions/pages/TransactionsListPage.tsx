@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useNavigate } from 'react-router-dom'
@@ -6,128 +6,59 @@ import {
   HiOutlinePencilSquare,
   HiOutlineTrash,
   HiPlus,
-  HiOutlineArrowDownCircle,
-  HiOutlineArrowUpCircle,
   HiOutlineFunnel,
   HiOutlineXMark,
   HiOutlineArrowDownTray,
+  HiOutlineEye,
+  HiOutlineArrowPath,
 } from 'react-icons/hi2'
-import {
-  IoFastFoodOutline,
-  IoCarOutline,
-  IoCartOutline,
-  IoReceiptOutline,
-  IoGameControllerOutline,
-  IoMedkitOutline,
-  IoSchoolOutline,
-  IoHomeOutline,
-  IoShirtOutline,
-  IoEllipsisHorizontalOutline,
-  IoCashOutline,
-  IoGiftOutline,
-  IoBriefcaseOutline,
-  IoTrendingUpOutline,
-  IoStorefrontOutline,
-  IoWalletOutline,
-  IoCardOutline,
-  IoSwapHorizontalOutline,
-  IoFlashOutline,
-  IoAirplaneOutline,
-  IoPawOutline,
-  IoHeartOutline,
-  IoBookOutline,
-  IoFitnessOutline,
-} from 'react-icons/io5'
-import { transactionApi, type TransactionUpdatePayload } from '@/features/transactions/api'
+import { transactionApi } from '@/features/transactions/api'
 import { walletApi } from '@/features/wallets/api'
 import { categoryApi } from '@/features/categories/api'
 import {
-  Badge,
   Button,
   Card,
-  CurrencyInput,
   DataTable,
   DateInput,
-  Input,
-  Modal,
   PageHeader,
   RSelect,
-  Textarea,
   type SelectOption,
 } from '@/components/ui'
-import { useT } from '@/i18n'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { MobileFab } from '@/components/MobileFab'
+import { useLocale, useT } from '@/i18n'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { toErrorMessage } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import type { Transaction } from '@/types/api'
+import {
+  CategoryCell,
+  DetailModal,
+  EditModal,
+  ExportModal,
+  MobileTransactionList,
+  SummaryCard,
+} from '../components/TransactionsListPanels'
+import { getTransactionCopy } from '../constants/copy'
 
 type TypeFilter = 'all' | 'income' | 'expense'
-
-// ─── Category icon helpers ────────────────────────────────────────
-type IconCmp = ComponentType<{ className?: string }>
-
-const CATEGORY_ICONS: Array<{ keys: string[]; Icon: IconCmp; tone: string }> = [
-  { keys: ['makan', 'minum', 'food', 'kuliner', 'kopi', 'cafe', 'resto'], Icon: IoFastFoodOutline, tone: 'bg-orange-100 text-orange-700' },
-  { keys: ['transport', 'bensin', 'parkir', 'taxi', 'grab', 'gojek', 'kendara', 'mobil', 'motor'], Icon: IoCarOutline, tone: 'bg-sky-100 text-sky-700' },
-  { keys: ['belanja', 'shopping', 'shop'], Icon: IoCartOutline, tone: 'bg-fuchsia-100 text-fuchsia-700' },
-  { keys: ['tagih', 'bill'], Icon: IoReceiptOutline, tone: 'bg-amber-100 text-amber-700' },
-  { keys: ['hibur', 'enter', 'film', 'game', 'musik'], Icon: IoGameControllerOutline, tone: 'bg-violet-100 text-violet-700' },
-  { keys: ['kesehat', 'health', 'obat', 'rumah sakit', 'klinik'], Icon: IoMedkitOutline, tone: 'bg-rose-100 text-rose-700' },
-  { keys: ['pendidik', 'sekolah', 'kursus', 'belajar', 'edu'], Icon: IoSchoolOutline, tone: 'bg-blue-100 text-blue-700' },
-  { keys: ['rumah', 'home', 'sewa', 'kost'], Icon: IoHomeOutline, tone: 'bg-teal-100 text-teal-700' },
-  { keys: ['pakai', 'baju', 'fashion', 'cloth'], Icon: IoShirtOutline, tone: 'bg-pink-100 text-pink-700' },
-  { keys: ['gaji', 'salary', 'penghasil'], Icon: IoCashOutline, tone: 'bg-emerald-100 text-emerald-700' },
-  { keys: ['bonus', 'tunjang'], Icon: IoGiftOutline, tone: 'bg-lime-100 text-lime-700' },
-  { keys: ['freelance', 'kerja', 'projek'], Icon: IoBriefcaseOutline, tone: 'bg-indigo-100 text-indigo-700' },
-  { keys: ['investasi', 'invest', 'saham', 'reksa', 'crypto'], Icon: IoTrendingUpOutline, tone: 'bg-green-100 text-green-700' },
-  { keys: ['hadiah', 'gift'], Icon: IoGiftOutline, tone: 'bg-rose-100 text-rose-700' },
-  { keys: ['penjual', 'jualan', 'sales'], Icon: IoStorefrontOutline, tone: 'bg-amber-100 text-amber-700' },
-  { keys: ['bunga', 'interest'], Icon: IoWalletOutline, tone: 'bg-emerald-100 text-emerald-700' },
-  { keys: ['cashback', 'reward'], Icon: IoCardOutline, tone: 'bg-cyan-100 text-cyan-700' },
-  { keys: ['transfer', 'kirim'], Icon: IoSwapHorizontalOutline, tone: 'bg-slate-100 text-slate-700' },
-  { keys: ['listrik', 'pln', 'air', 'pdam', 'gas', 'utilit'], Icon: IoFlashOutline, tone: 'bg-yellow-100 text-yellow-700' },
-  { keys: ['liburan', 'travel', 'tiket', 'hotel'], Icon: IoAirplaneOutline, tone: 'bg-cyan-100 text-cyan-700' },
-  { keys: ['hewan', 'pet', 'kucing', 'anjing'], Icon: IoPawOutline, tone: 'bg-orange-100 text-orange-700' },
-  { keys: ['donasi', 'sedekah', 'amal', 'charity'], Icon: IoHeartOutline, tone: 'bg-rose-100 text-rose-700' },
-  { keys: ['buku', 'book'], Icon: IoBookOutline, tone: 'bg-blue-100 text-blue-700' },
-  { keys: ['olahraga', 'gym', 'fitness', 'sport'], Icon: IoFitnessOutline, tone: 'bg-emerald-100 text-emerald-700' },
-]
-
-function resolveCategoryIcon(name?: string): { Icon: IconCmp; tone: string } {
-  const n = (name || '').toLowerCase()
-  if (n) {
-    for (const c of CATEGORY_ICONS) {
-      if (c.keys.some((k) => n.includes(k))) return { Icon: c.Icon, tone: c.tone }
-    }
-  }
-  return { Icon: IoEllipsisHorizontalOutline, tone: 'bg-slate-100 text-slate-600' }
-}
-
-function CategoryCell({ name }: { name: string }) {
-  const { Icon, tone } = resolveCategoryIcon(name)
-  return (
-    <div className="flex items-center gap-2">
-      <div className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + tone}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <span className="truncate font-medium text-slate-900">{name}</span>
-    </div>
-  )
-}
-
 export function TransactionsListPage() {
   const t = useT()
+  const { locale } = useLocale()
+  const txCopy = getTransactionCopy(locale)
   const navigate = useNavigate()
   const qc = useQueryClient()
 
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
 
   // filters
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [walletFilter, setWalletFilter] = useState<string>('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [monthFilter, setMonthFilter] = useState<Date | null>(null)
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -139,7 +70,7 @@ export function TransactionsListPage() {
   })
   const q = useQuery({
     queryKey: ['transactions', 'all'],
-    queryFn: () => transactionApi.list({ page: 1, limit: 500 }),
+    queryFn: () => transactionApi.list({ page: 1, limit: 1000 }),
   })
 
   const walletMap = useMemo(() => {
@@ -160,16 +91,34 @@ export function TransactionsListPage() {
       (c) => typeFilter === 'all' || c.type === typeFilter,
     )
     return [
-      { value: '', label: 'Semua Kategori' },
+      { value: '', label: txCopy.allCategories },
       ...cats.map((c) => ({ value: c.id, label: c.name })),
     ]
-  }, [categories.data, typeFilter])
+  }, [categories.data, typeFilter, txCopy.allCategories])
+
+  const walletFilterOptions: SelectOption[] = useMemo(
+    () => [
+      { value: '', label: txCopy.allWallets },
+      ...(wallets.data ?? []).map((wallet) => ({ value: wallet.id, label: wallet.name })),
+    ],
+    [txCopy.allWallets, wallets.data],
+  )
 
   const filteredTx = useMemo(() => {
     const all = q.data?.data ?? []
     return all.filter((tx) => {
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
+      if (walletFilter && tx.wallet_id !== walletFilter) return false
       if (categoryFilter && tx.category_id !== categoryFilter) return false
+      if (monthFilter) {
+        const txDate = new Date(tx.transaction_date)
+        if (
+          txDate.getFullYear() !== monthFilter.getFullYear() ||
+          txDate.getMonth() !== monthFilter.getMonth()
+        ) {
+          return false
+        }
+      }
       if (dateFrom) {
         const txTs = new Date(tx.transaction_date).getTime()
         const fromTs = new Date(dateFrom)
@@ -184,7 +133,21 @@ export function TransactionsListPage() {
       }
       return true
     })
-  }, [q.data, typeFilter, categoryFilter, dateFrom, dateTo])
+  }, [q.data, typeFilter, walletFilter, categoryFilter, monthFilter, dateFrom, dateTo])
+
+  useEffect(() => {
+    if (dateFrom && dateTo && dateTo < dateFrom) {
+      setDateTo(null)
+    }
+  }, [dateFrom, dateTo])
+
+  useEffect(() => {
+    const available = new Set(filteredTx.map((tx) => tx.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => available.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [filteredTx])
 
   const summary = useMemo(() => {
     let income = 0,
@@ -197,10 +160,46 @@ export function TransactionsListPage() {
     return { income, expense, net: income - expense, count: filteredTx.length }
   }, [filteredTx])
 
+  const todaySummary = useMemo(() => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(now)
+    end.setHours(23, 59, 59, 999)
+
+    let income = 0
+    let expense = 0
+
+    for (const tx of q.data?.data ?? []) {
+      const ts = new Date(tx.transaction_date).getTime()
+      if (ts < start.getTime() || ts > end.getTime()) continue
+
+      const amount = Number(tx.amount) || 0
+      if (tx.type === 'income') income += amount
+      else expense += amount
+    }
+
+    return { income, expense }
+  }, [q.data])
+
   const remove = useMutation({
     mutationFn: transactionApi.remove,
     onSuccess: () => {
-      toast.success('Transaksi dihapus')
+      toast.success(txCopy.deleted)
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['savings-goals'] })
+      qc.invalidateQueries({ queryKey: ['wallets'] })
+    },
+    onError: (e) => toast.error(toErrorMessage(e)),
+  })
+
+  const bulkRemove = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => transactionApi.remove(id)))
+    },
+    onSuccess: (_, ids) => {
+      toast.success(txCopy.deletedMany(ids.length))
+      setSelectedIds(new Set())
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['savings-goals'] })
       qc.invalidateQueries({ queryKey: ['wallets'] })
@@ -210,26 +209,91 @@ export function TransactionsListPage() {
 
   const onDelete = async (tx: Transaction) => {
     const ok = await confirm({
-      title: 'Hapus transaksi?',
-      description: 'Saldo dompet akan di-recalc setelah penghapusan.',
+      title: txCopy.deleteTitle,
+      description: txCopy.deleteDescription,
       tone: 'danger',
       confirmLabel: t.common.delete,
     })
     if (ok) remove.mutate(tx.id)
   }
 
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAllVisible = () => {
+    setSelectedIds((prev) => {
+      const allIds = filteredTx.map((tx) => tx.id)
+      const allSelected = allIds.length > 0 && allIds.every((id) => prev.has(id))
+      const next = new Set(prev)
+      if (allSelected) allIds.forEach((id) => next.delete(id))
+      else allIds.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  const onBulkDelete = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const ok = await confirm({
+      title: txCopy.deleteManyTitle(ids.length),
+      description: txCopy.deleteManyDescription,
+      tone: 'danger',
+      confirmLabel: txCopy.deleteAll,
+    })
+    if (ok) bulkRemove.mutate(ids)
+  }
+
   const resetFilters = () => {
     setTypeFilter('all')
+    setWalletFilter('')
     setCategoryFilter('')
+    setMonthFilter(null)
     setDateFrom(null)
     setDateTo(null)
   }
 
   const hasActiveFilter =
-    typeFilter !== 'all' || categoryFilter !== '' || dateFrom !== null || dateTo !== null
+    typeFilter !== 'all' || walletFilter !== '' || categoryFilter !== '' || monthFilter !== null || dateFrom !== null || dateTo !== null
 
   const columns = useMemo<ColumnDef<Transaction>[]>(
     () => [
+      {
+        id: 'select',
+        header: () => {
+          const allSelected = filteredTx.length > 0 && filteredTx.every((tx) => selectedIds.has(tx.id))
+          return (
+            <div className="flex justify-center">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAllVisible}
+                onClick={(event) => event.stopPropagation()}
+                aria-label={txCopy.deleteAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
+              />
+            </div>
+          )
+        },
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <input
+              type="checkbox"
+              checked={selectedIds.has(row.original.id)}
+              onChange={() => toggleSelected(row.original.id)}
+              onClick={(event) => event.stopPropagation()}
+              aria-label={txCopy.detail}
+              className="h-4 w-4 cursor-pointer rounded border-slate-300 text-brand-600 transition hover:scale-110 focus:ring-brand-500"
+            />
+          </div>
+        ),
+      },
       {
         id: 'no',
         header: () => <span className="block text-center">#</span>,
@@ -246,7 +310,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'date',
-        header: 'Tanggal',
+        header: txCopy.date,
         accessorFn: (tx) => tx.transaction_date,
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-slate-700">
@@ -256,15 +320,25 @@ export function TransactionsListPage() {
       },
       {
         id: 'category',
-        header: 'Kategori',
+        header: txCopy.category,
         accessorFn: (tx) => categoryMap.get(tx.category_id) ?? '—',
         cell: ({ row }) => (
           <CategoryCell name={categoryMap.get(row.original.category_id) ?? '—'} />
         ),
       },
       {
+        id: 'wallet',
+        header: txCopy.wallet,
+        accessorFn: (tx) => walletMap.get(tx.wallet_id) ?? '—',
+        cell: ({ row }) => (
+          <span className="line-clamp-1 max-w-[180px] text-sm font-medium text-slate-700">
+            {walletMap.get(row.original.wallet_id) ?? '—'}
+          </span>
+        ),
+      },
+      {
         id: 'description',
-        header: 'Deskripsi',
+        header: txCopy.description,
         enableSorting: false,
         accessorFn: (tx) => tx.description ?? tx.merchant_name ?? '',
         cell: ({ row }) => {
@@ -281,7 +355,7 @@ export function TransactionsListPage() {
       },
       {
         id: 'amount',
-        header: () => <span className="block text-right">Nominal</span>,
+        header: () => <span className="block text-right">{txCopy.amount}</span>,
         accessorFn: (tx) => Number(tx.amount),
         cell: ({ row }) => {
           const isIncome = row.original.type === 'income'
@@ -289,7 +363,7 @@ export function TransactionsListPage() {
             <div
               className={
                 'whitespace-nowrap text-right font-semibold ' +
-                (isIncome ? 'text-emerald-700' : 'text-rose-700')
+                (isIncome ? 'text-emerald-700' : 'text-[#b4533f]')
               }
             >
               {isIncome ? '+' : '-'}
@@ -300,20 +374,28 @@ export function TransactionsListPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="block text-right">Aksi</span>,
+        header: () => <span className="block text-right">{txCopy.action}</span>,
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <button
+              onClick={() => setViewing(row.original)}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-brand-50 hover:text-brand-700"
+              title={txCopy.detail}
+              aria-label={txCopy.detail}
+            >
+              <HiOutlineEye className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => setEditing(row.original)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-brand-700"
               title={t.common.edit}
             >
               <HiOutlinePencilSquare className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(row.original)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-[#ffe4dc] hover:text-[#b4533f]"
               title={t.common.delete}
             >
               <HiOutlineTrash className="h-4 w-4" />
@@ -323,7 +405,7 @@ export function TransactionsListPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [walletMap, categoryMap, t],
+    [walletMap, categoryMap, t, filteredTx, selectedIds],
   )
 
   return (
@@ -333,27 +415,43 @@ export function TransactionsListPage() {
         subtitle={t.transactions.subtitle}
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => q.refetch()}
+              loading={q.isFetching}
+              leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+            >
+              Refresh
+            </Button>
             <Button variant="outline" onClick={() => setExportOpen(true)}>
               <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
-              Export Excel
+              {txCopy.exportExcel}
             </Button>
-            <Button onClick={() => navigate('/app/transactions/add')}>
-              <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Transaksi
-            </Button>
+            <div className="hidden sm:block">
+              <Button onClick={() => navigate('/app/transactions/add')}>
+                <HiPlus className="mr-1 h-4 w-4" />
+                {txCopy.add}
+              </Button>
+            </div>
           </div>
         }
       />
 
       {/* Summary cards */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SummaryCard label="Pemasukan" value={summary.income} tone="emerald" />
-        <SummaryCard label="Pengeluaran" value={summary.expense} tone="rose" />
-        <SummaryCard label="Net Cashflow" value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <SummaryCard label={txCopy.income} helper={txCopy.matchesFilter} value={summary.income} tone="emerald" />
+          <SummaryCard label={txCopy.expense} helper={txCopy.matchesFilter} value={summary.expense} tone="rose" />
+          <SummaryCard label={txCopy.netCashflow} helper={`${summary.count} ${txCopy.transactionCount}`} value={summary.net} tone={summary.net >= 0 ? 'slate' : 'rose'} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SummaryCard label={txCopy.todayIncome} helper={txCopy.todayTotal} value={todaySummary.income} tone="emerald" compact />
+          <SummaryCard label={txCopy.todayExpense} helper={txCopy.todayTotal} value={todaySummary.expense} tone="rose" compact />
+        </div>
       </div>
 
       {/* Filter bar */}
-      <Card className="mb-4">
+      <Card className="mb-4 bg-white/60">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -362,7 +460,7 @@ export function TransactionsListPage() {
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 lg:hidden"
               >
                 <HiOutlineFunnel className="h-4 w-4" />
-                Filter
+                {txCopy.filter}
                 {hasActiveFilter ? (
                   <span className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                     !
@@ -371,28 +469,28 @@ export function TransactionsListPage() {
               </button>
               <h3 className="hidden items-center gap-2 text-sm font-semibold text-slate-700 lg:inline-flex">
                 <HiOutlineFunnel className="h-4 w-4" />
-                Filter
+                {txCopy.filter}
               </h3>
             </div>
             {hasActiveFilter ? (
               <button
                 onClick={resetFilters}
-                className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-rose-600"
+                className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-[#b4533f]"
               >
-                <HiOutlineXMark className="h-3.5 w-3.5" /> Reset
+                <HiOutlineXMark className="h-3.5 w-3.5" /> {txCopy.reset}
               </button>
             ) : null}
           </div>
 
-          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-4'}>
+          <div className={(showFilters ? 'grid' : 'hidden') + ' grid-cols-1 gap-3 sm:grid-cols-2 lg:grid! lg:grid-cols-6'}>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">Jenis</label>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.type}</label>
               <RSelect
                 value={typeFilter}
                 options={[
-                  { value: 'all', label: 'Semua' },
-                  { value: 'income', label: 'Pemasukan' },
-                  { value: 'expense', label: 'Pengeluaran' },
+                  { value: 'all', label: txCopy.all },
+                  { value: 'income', label: txCopy.income },
+                  { value: 'expense', label: txCopy.expense },
                 ]}
                 onChange={(v) => {
                   setTypeFilter((v as TypeFilter) ?? 'all')
@@ -401,7 +499,15 @@ export function TransactionsListPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">Kategori</label>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.wallet}</label>
+              <RSelect
+                value={walletFilter}
+                options={walletFilterOptions}
+                onChange={(v) => setWalletFilter(v ?? '')}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-600">{txCopy.category}</label>
               <RSelect
                 value={categoryFilter}
                 options={categoryFilterOptions}
@@ -410,25 +516,74 @@ export function TransactionsListPage() {
             </div>
             <div>
               <DateInput
-                label="Dari Tanggal"
+                label={txCopy.month}
+                value={monthFilter}
+                onChange={(d) => setMonthFilter(d)}
+                picker="month"
+                placeholderText={txCopy.allMonths}
+              />
+            </div>
+            <div>
+              <DateInput
+                label={txCopy.fromDate}
                 value={dateFrom}
-                onChange={(d) => setDateFrom(d)}
-                placeholderText="Pilih tanggal"
+                onChange={(d) => {
+                  setDateFrom(d)
+                  if (d && dateTo && dateTo < d) setDateTo(null)
+                }}
+                placeholderText={txCopy.pickDate}
                 maxDate={dateTo ?? undefined}
               />
             </div>
             <div>
               <DateInput
-                label="Sampai Tanggal"
+                label={txCopy.toDate}
                 value={dateTo}
                 onChange={(d) => setDateTo(d)}
-                placeholderText="Pilih tanggal"
+                placeholderText={dateFrom ? txCopy.pickDate : txCopy.pickStartFirst}
                 minDate={dateFrom ?? undefined}
+                disabled={!dateFrom}
               />
             </div>
           </div>
         </div>
       </Card>
+
+      {selectedIds.size > 0 ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-brand-100 bg-[#ffe4dc]/80 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#b4533f] shadow-sm">
+              <HiOutlineTrash className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-[#17120f]">
+                {selectedIds.size} {txCopy.selected}
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-[#7f2d23]">
+                {txCopy.bulkHelp}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="transition hover:-translate-y-0.5 hover:shadow-md"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              {txCopy.cancelSelect}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={onBulkDelete}
+              loading={bulkRemove.isPending}
+              leftIcon={<HiOutlineTrash className="h-4 w-4" />}
+            >
+              {txCopy.deleteSelected}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Desktop / tablet table */}
       <div className="hidden md:block">
@@ -436,17 +591,18 @@ export function TransactionsListPage() {
           data={filteredTx}
           columns={columns}
           loading={q.isLoading}
-          searchPlaceholder="Cari kategori, dompet, deskripsi…"
-          emptyTitle="Belum ada transaksi"
+          searchPlaceholder={txCopy.searchPlaceholder}
+          emptyTitle={txCopy.emptyTitle}
           emptyAction={
             <Button onClick={() => navigate('/app/transactions/add')}>
               <HiPlus className="mr-1 h-4 w-4" />
-              Tambah Transaksi
+              {txCopy.add}
             </Button>
           }
           getRowId={(r) => r.id}
           initialPageSize={10}
-onRowClick={(r) => setViewing(r)}
+          onRowClick={(r) => setViewing(r)}
+          labels={txCopy.tableLabels}
         />
       </div>
 
@@ -459,6 +615,9 @@ onRowClick={(r) => setViewing(r)}
         onView={(tx) => setViewing(tx)}
         onEdit={setEditing}
         onDelete={onDelete}
+        selectedIds={selectedIds}
+        onToggleSelected={toggleSelected}
+        copy={txCopy}
       />
 
       <DetailModal
@@ -468,679 +627,27 @@ onRowClick={(r) => setViewing(r)}
         onClose={() => setViewing(null)}
         onEdit={(tx) => { setViewing(null); setEditing(tx) }}
         onDelete={(tx) => { setViewing(null); onDelete(tx) }}
+        copy={txCopy}
       />
 
       <EditModal
         key={editing?.id ?? 'noedit'}
         tx={editing}
         onClose={() => setEditing(null)}
+        copy={txCopy}
       />
 
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         categoryOptions={categoryFilterOptions}
+        copy={txCopy}
+      />
+      <MobileFab
+        label={txCopy.add}
+        icon={<HiPlus className="h-6 w-6" />}
+        onClick={() => navigate('/app/transactions/add')}
       />
     </div>
-  )
-}
-
-function SummaryCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: 'emerald' | 'rose' | 'slate'
-}) {
-  const colour =
-    tone === 'emerald'
-      ? 'text-emerald-700'
-      : tone === 'rose'
-      ? 'text-rose-700'
-      : 'text-slate-900'
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        {label}
-      </div>
-      <div className={'mt-1 text-lg font-bold ' + colour}>
-        {formatCurrency(value)}
-      </div>
-    </div>
-  )
-}
-
-
-function MobileTransactionList({
-  loading,
-  items,
-  walletMap,
-  categoryMap,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  loading: boolean
-  items: Transaction[]
-  walletMap: Map<string, string>
-  categoryMap: Map<string, string>
-  onView: (tx: Transaction) => void
-  onEdit: (tx: Transaction) => void
-  onDelete: (tx: Transaction) => void
-}) {
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
-  const pageSize = 10
-
-  const filtered = useMemo(() => {
-    if (!search) return items
-    const s = search.toLowerCase()
-    return items.filter((tx) => {
-      const cat = (categoryMap.get(tx.category_id) ?? '').toLowerCase()
-      const wlt = (walletMap.get(tx.wallet_id) ?? '').toLowerCase()
-      const desc = (tx.merchant_name || tx.description || '').toLowerCase()
-      return cat.includes(s) || wlt.includes(s) || desc.includes(s)
-    })
-  }, [items, search, walletMap, categoryMap])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const safePage = Math.min(page, totalPages)
-  const start = (safePage - 1) * pageSize
-  const visible = filtered.slice(start, start + pageSize)
-
-  if (!loading && items.length === 0) return null
-
-  return (
-    <div className="space-y-3 md:hidden">
-      <input
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value)
-          setPage(1)
-        }}
-        placeholder="Cari…"
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-      />
-
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
-          ))}
-        </div>
-      ) : (
-        <>
-          {visible.map((tx, i) => {
-            const isIncome = tx.type === 'income'
-            const cat = categoryMap.get(tx.category_id) ?? '—'
-            const wlt = walletMap.get(tx.wallet_id) ?? '—'
-            const { Icon: CatIcon, tone: catTone } = resolveCategoryIcon(cat)
-            return (
-              <div
-                key={tx.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className={'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ' + catTone}>
-                      <CatIcon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-slate-400">
-                          #{start + i + 1}
-                        </span>
-                        <Badge tone={isIncome ? 'green' : 'red'}>
-                          {isIncome ? (
-                            <HiOutlineArrowDownCircle className="h-3 w-3" />
-                          ) : (
-                            <HiOutlineArrowUpCircle className="h-3 w-3" />
-                          )}
-                          <span className="ml-1">{isIncome ? 'Masuk' : 'Keluar'}</span>
-                        </Badge>
-                      </div>
-                      <p className="mt-1.5 truncate text-sm font-bold text-slate-900">{cat}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {formatDate(tx.transaction_date)} · {wlt}
-                      </p>
-                      {(tx.merchant_name || tx.description) && (
-                        <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-                          {tx.merchant_name || tx.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div
-                    className={
-                      'shrink-0 text-right text-base font-bold ' +
-                      (isIncome ? 'text-emerald-700' : 'text-rose-700')
-                    }
-                  >
-                    {isIncome ? '+' : '-'}
-                    {formatCurrency(Number(tx.amount))}
-                  </div>
-                </div>
-                <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
-                  <button
-                    onClick={() => onView(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                  >
-                    Detail
-                  </button>
-                  <button
-                    onClick={() => onEdit(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                  >
-                    <HiOutlinePencilSquare className="h-4 w-4" /> Edit
-                  </button>
-                  <button
-                    onClick={() => onDelete(tx)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                  >
-                    <HiOutlineTrash className="h-4 w-4" /> Hapus
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-
-          {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
-              Tidak ada transaksi yang cocok.
-            </div>
-          ) : null}
-
-          {filtered.length > pageSize ? (
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-              <span>
-                Hal. {safePage}/{totalPages}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  disabled={safePage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40"
-                >
-                  ‹
-                </button>
-                <button
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </>
-      )}
-    </div>
-  )
-}
-
-/* ─────────────────────── Detail modal ─────────────────────── */
-
-function DetailModal({
-  tx,
-  walletName,
-  categoryName,
-  onClose,
-  onEdit,
-  onDelete,
-}: {
-  tx: Transaction | null
-  walletName?: string
-  categoryName?: string
-  onClose: () => void
-  onEdit?: (tx: Transaction) => void
-  onDelete?: (tx: Transaction) => void
-}) {
-  if (!tx) return null
-  const isIncome = tx.type === 'income'
-  const { Icon: CatIcon } = resolveCategoryIcon(categoryName)
-  const sourceLabel =
-    tx.source && tx.source !== 'manual'
-      ? tx.source === 'ai_ocr'
-        ? 'Hasil Scan AI'
-        : tx.source === 'import'
-        ? 'Impor'
-        : tx.source === 'api'
-        ? 'API'
-        : tx.source
-      : null
-  return (
-    <Modal
-      open={Boolean(tx)}
-      onClose={onClose}
-      title="Detail Transaksi"
-      description="Ringkasan lengkap transaksi"
-      size="lg"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Tutup</Button>
-          {onEdit ? (
-            <Button
-              variant="outline"
-              leftIcon={<HiOutlinePencilSquare className="h-4 w-4" />}
-              onClick={() => onEdit(tx)}
-            >
-              Edit
-            </Button>
-          ) : null}
-          {onDelete ? (
-            <Button
-              variant="danger"
-              leftIcon={<HiOutlineTrash className="h-4 w-4" />}
-              onClick={() => onDelete(tx)}
-            >
-              Hapus
-            </Button>
-          ) : null}
-        </>
-      }
-    >
-      {/* Hero — softer gradient */}
-      <div
-        className={cn(
-          'relative overflow-hidden rounded-2xl p-5 ring-1',
-          isIncome
-            ? 'bg-linear-to-br from-emerald-50 via-white to-white ring-emerald-100'
-            : 'bg-linear-to-br from-rose-50 via-white to-white ring-rose-100',
-        )}
-      >
-        <div className="flex items-start gap-4">
-          <div
-            className={cn(
-              'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1',
-              isIncome
-                ? 'bg-white text-emerald-700 ring-emerald-200'
-                : 'bg-white text-rose-700 ring-rose-200',
-            )}
-          >
-            <CatIcon className="h-7 w-7" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge tone={isIncome ? 'green' : 'red'}>
-                {isIncome ? (
-                  <HiOutlineArrowDownCircle className="h-3.5 w-3.5" />
-                ) : (
-                  <HiOutlineArrowUpCircle className="h-3.5 w-3.5" />
-                )}
-                <span className="ml-1">{isIncome ? 'Pemasukan' : 'Pengeluaran'}</span>
-              </Badge>
-              {sourceLabel ? <Badge tone="violet">{sourceLabel}</Badge> : null}
-            </div>
-            <div className="mt-1.5 truncate text-sm font-semibold text-slate-700">
-              {categoryName ?? '—'}
-            </div>
-            <div
-              className={cn(
-                'mt-1 text-3xl font-bold tabular-nums sm:text-4xl',
-                isIncome ? 'text-emerald-700' : 'text-rose-700',
-              )}
-            >
-              {isIncome ? '+ ' : '- '}
-              {formatCurrency(Number(tx.amount))}
-            </div>
-            <div className="mt-1 text-xs text-slate-500">
-              {formatDate(tx.transaction_date)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Info grid */}
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <InfoTile label="Dompet" value={walletName ?? '—'} />
-        <InfoTile label="Merchant" value={tx.merchant_name || '—'} />
-        <InfoTile
-          label="Deskripsi"
-          value={
-            <span className="block whitespace-pre-wrap text-slate-700">
-              {tx.description || '—'}
-            </span>
-          }
-          className="col-span-2"
-        />
-        {typeof tx.confidence_score === 'number' ? (
-          <InfoTile
-            label="AI Confidence"
-            value={
-              <div className="flex items-center gap-2">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-all',
-                      tx.confidence_score >= 0.8
-                        ? 'bg-emerald-500'
-                        : tx.confidence_score >= 0.5
-                        ? 'bg-amber-500'
-                        : 'bg-rose-500',
-                    )}
-                    data-pct={(tx.confidence_score * 100).toFixed(0)}
-                    style={{ width: `${(tx.confidence_score * 100).toFixed(0)}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-slate-700">
-                  {(tx.confidence_score * 100).toFixed(0)}%
-                </span>
-              </div>
-            }
-            className="col-span-2"
-          />
-        ) : null}
-      </div>
-    </Modal>
-  )
-}
-
-function InfoTile({
-  label,
-  value,
-  className,
-}: {
-  label: string
-  value: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={
-        'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 ' +
-        (className ?? '')
-      }
-    >
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-medium text-slate-900">{value}</div>
-    </div>
-  )
-}
-
-/* ─────────────────────── Edit modal ─────────────────────── */
-
-function EditModal({
-  tx,
-  onClose,
-}: {
-  tx: Transaction | null
-  onClose: () => void
-}) {
-  const t = useT()
-  const qc = useQueryClient()
-  const wallets = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
-  const categories = useQuery({
-    queryKey: ['categories', 'all'],
-    queryFn: () => categoryApi.list(),
-  })
-
-  const [form, setForm] = useState<TransactionUpdatePayload>(() => ({
-    wallet_id: tx?.wallet_id,
-    category_id: tx?.category_id,
-    amount: tx ? Number(tx.amount) : 0,
-    type: tx?.type ?? 'expense',
-    description: tx?.description ?? '',
-    merchant_name: tx?.merchant_name ?? '',
-    transaction_date: tx?.transaction_date,
-  }))
-
-  const filteredCats = useMemo(
-    () =>
-      (categories.data ?? [])
-        .filter((c) => c.type === form.type)
-        .map<SelectOption>((c) => ({ value: c.id, label: c.name })),
-    [categories.data, form.type],
-  )
-
-  const walletOpts = useMemo(
-    () =>
-      (wallets.data ?? []).map<SelectOption>((w) => ({
-        value: w.id,
-        label: w.name,
-      })),
-    [wallets.data],
-  )
-
-  const m = useMutation({
-    mutationFn: () => {
-      if (!tx) throw new Error('No transaction')
-      const payload: TransactionUpdatePayload = {
-        ...form,
-        transaction_date: form.transaction_date
-          ? new Date(form.transaction_date).toISOString()
-          : undefined,
-      }
-      return transactionApi.update(tx.id, payload)
-    },
-    onSuccess: () => {
-      toast.success('Transaksi diperbarui')
-      qc.invalidateQueries({ queryKey: ['transactions'] })
-      qc.invalidateQueries({ queryKey: ['savings-goals'] })
-      qc.invalidateQueries({ queryKey: ['wallets'] })
-      onClose()
-    },
-    onError: (e) => toast.error(toErrorMessage(e)),
-  })
-
-  return (
-    <Modal
-      open={Boolean(tx)}
-      onClose={onClose}
-      title={tx ? 'Edit Transaksi' : ''}
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            {t.common.cancel}
-          </Button>
-          <Button loading={m.isPending} onClick={() => m.mutate()}>
-            {t.common.save}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <RSelect
-          label="Jenis"
-          value={form.type ?? 'expense'}
-          options={[
-            { value: 'expense', label: 'Pengeluaran' },
-            { value: 'income', label: 'Pemasukan' },
-          ]}
-          onChange={(v) =>
-            setForm({
-              ...form,
-              type: (v as 'income' | 'expense') ?? 'expense',
-              category_id: undefined,
-            })
-          }
-        />
-        <RSelect
-          label="Dompet"
-          value={form.wallet_id ?? ''}
-          options={walletOpts}
-          onChange={(v) => setForm({ ...form, wallet_id: v ?? '' })}
-        />
-        <RSelect
-          label="Kategori"
-          value={form.category_id ?? ''}
-          options={filteredCats}
-          onChange={(v) => setForm({ ...form, category_id: v ?? '' })}
-        />
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-            Nominal
-          </label>
-          <CurrencyInput
-            value={Number(form.amount ?? 0)}
-            onChange={(val) => setForm({ ...form, amount: val })}
-          />
-        </div>
-        <DateInput
-          label="Tanggal"
-          value={form.transaction_date || null}
-          onChange={(d) =>
-            setForm({
-              ...form,
-              transaction_date: d ? d.toISOString() : undefined,
-            })
-          }
-          placeholderText="Pilih tanggal"
-        />
-        <Input
-          label="Merchant"
-          placeholder="cth: Indomaret"
-          value={form.merchant_name ?? ''}
-          onChange={(e) => setForm({ ...form, merchant_name: e.target.value })}
-        />
-        <Textarea
-          label="Deskripsi"
-          rows={2}
-          value={form.description ?? ''}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-      </div>
-    </Modal>
-  )
-}
-
-
-type ExportMode = 'month' | 'range'
-
-function ExportModal({
-  open,
-  onClose,
-  categoryOptions,
-}: {
-  open: boolean
-  onClose: () => void
-  categoryOptions: SelectOption[]
-}) {
-  const [mode, setMode] = useState<ExportMode>('month')
-  const [month, setMonth] = useState<string>(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  })
-  const [from, setFrom] = useState<Date | null>(null)
-  const [to, setTo] = useState<Date | null>(null)
-  const [typeF, setTypeF] = useState<TypeFilter>('all')
-  const [catF, setCatF] = useState<string>('')
-  const [busy, setBusy] = useState(false)
-
-  const onExport = async () => {
-    setBusy(true)
-    try {
-      const params: Record<string, string> = {}
-      if (mode === 'month') {
-        params.month = month
-      } else {
-        if (from) params.from = from.toISOString()
-        if (to) {
-          const end = new Date(to)
-          end.setHours(23, 59, 59, 999)
-          params.to = end.toISOString()
-        }
-      }
-      if (typeF !== 'all') params.type = typeF
-      if (catF) params.category_id = catF
-
-      const blob = await transactionApi.exportXlsx(params)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const stamp = mode === 'month' ? month : `${(from ?? new Date()).toISOString().slice(0, 10)}_${(to ?? new Date()).toISOString().slice(0, 10)}`
-      a.download = `transaksi-${stamp}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      toast.success('File berhasil diunduh')
-      onClose()
-    } catch (e) {
-      toast.error(toErrorMessage(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Export Transaksi ke Excel"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>Batal</Button>
-          <Button onClick={onExport} loading={busy}>
-            <HiOutlineArrowDownTray className="mr-1 h-4 w-4" />
-            Download .xlsx
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('month')}
-            className={cn(
-              'rounded-lg border px-3 py-2 text-sm font-medium transition',
-              mode === 'month'
-                ? 'border-brand-300 bg-brand-50 text-brand-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-            )}
-          >
-            Per Bulan
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('range')}
-            className={cn(
-              'rounded-lg border px-3 py-2 text-sm font-medium transition',
-              mode === 'range'
-                ? 'border-brand-300 bg-brand-50 text-brand-700'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-            )}
-          >
-            Range Tanggal
-          </button>
-        </div>
-
-        {mode === 'month' ? (
-          <Input
-            type="month"
-            label="Pilih Bulan"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <DateInput label="Dari" value={from} onChange={setFrom} placeholderText="Pilih tanggal" maxDate={to ?? undefined} />
-            <DateInput label="Sampai" value={to} onChange={setTo} placeholderText="Pilih tanggal" minDate={from ?? undefined} />
-          </div>
-        )}
-
-        <RSelect
-          label="Jenis"
-          value={typeF}
-          options={[
-            { value: 'all', label: 'Semua' },
-            { value: 'income', label: 'Pemasukan' },
-            { value: 'expense', label: 'Pengeluaran' },
-          ]}
-          onChange={(v) => setTypeF((v as TypeFilter) ?? 'all')}
-        />
-        <RSelect
-          label="Kategori"
-          value={catF}
-          options={categoryOptions}
-          onChange={(v) => setCatF(v ?? '')}
-        />
-      </div>
-    </Modal>
   )
 }

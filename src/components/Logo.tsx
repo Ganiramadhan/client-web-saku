@@ -3,38 +3,38 @@ import { cn } from '@/lib/utils'
 
 export function Logo({
   size = 'md',
-  withText = true,
   className,
+  withText = true,
 }: {
   size?: 'sm' | 'md' | 'lg'
-  withText?: boolean
   className?: string
+  withText?: boolean
 }) {
-  const dim =
-    size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-11 w-11' : 'h-9 w-9'
-  const text =
-    size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-lg'
+  const logoSize =
+    size === 'sm'
+      ? withText ? 'h-12' : 'h-10'
+      : size === 'lg'
+      ? 'h-20'
+      : 'h-16'
 
   return (
-    <Link to="/" className={cn('inline-flex items-center gap-2.5 group', className)}>
-      <span
+    <Link
+      to="/"
+      className={cn(
+        'inline-flex items-center group',
+        className,
+      )}
+    >
+      <img
+        src="/logo.png"
+        alt="SAKU"
         className={cn(
-          'flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm ring-1 ring-brand-500/20 transition group-hover:shadow-md',
-          dim,
+          logoSize,
+          withText ? 'w-auto' : 'w-10',
+          'object-contain transition-all duration-200 group-hover:scale-105'
         )}
-      >
-        <img src="/icon-saku.ico" alt="SAKU" className="h-full w-full object-cover" />
-      </span>
-      {withText ? (
-        <span
-          className={cn(
-            'font-bold tracking-tight text-slate-900 transition group-hover:text-brand-700',
-            text,
-          )}
-        >
-          SAKU
-        </span>
-      ) : null}
+        draggable={false}
+      />
     </Link>
   )
 }

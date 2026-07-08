@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
+import {
+  HiOutlineArrowPath,
+  HiOutlineBolt,
+  HiOutlineCheckCircle,
+  HiOutlineClock,
+  HiOutlineDocumentMagnifyingGlass,
+} from 'react-icons/hi2'
 import { aiLogApi } from '@/features/ai/api'
-import { Badge, DataTable, PageHeader, Pagination } from '@/components/ui'
+import { AdminDataTable, AdminMetricCard, Badge, Button, PageHeader } from '@/components/ui'
 import { useT } from '@/i18n'
 import { formatDateTime } from '@/lib/utils'
 import type { AIProcessingLog as AILog } from '@/types/api'
@@ -10,24 +17,46 @@ import type { AIProcessingLog as AILog } from '@/types/api'
 export function AILogsPage() {
   const t = useT()
   const [page, setPage] = useState(1)
-  const limit = 50
+  const limit = 10
   const q = useQuery({
     queryKey: ['ai-logs', page, limit],
     queryFn: () => aiLogApi.listAll(page, limit),
   })
 
-  const rows = q.data?.data ?? []
+  const rows = useMemo(() => q.data?.data ?? [], [q.data?.data])
   const meta = q.data?.meta ?? null
+  const stats = useMemo(() => {
+    const successful = rows.filter((log) => log.status === 'success').length
+    const measuredLatency = rows.filter((log) => log.latency_ms != null)
+    return {
+      total: meta?.total ?? rows.length,
+      successRate: rows.length > 0 ? Math.round((successful / rows.length) * 100) : 0,
+      receiptScans: rows.filter((log) => log.feature === 'scan_receipt').length,
+      averageLatency: measuredLatency.length > 0
+        ? Math.round(measuredLatency.reduce((sum, log) => sum + Number(log.latency_ms || 0), 0) / measuredLatency.length)
+        : 0,
+    }
+  }, [meta?.total, rows])
 
   const columns = useMemo<ColumnDef<AILog>[]>(
     () => [
+      {
+        id: 'no',
+        header: '#',
+        cell: ({ row }) => (
+          <span className="text-xs tabular-nums text-slate-400">
+            {(page - 1) * limit + row.index + 1}
+          </span>
+        ),
+        enableSorting: false,
+      },
       {
         id: 'user',
         header: 'User',
         accessorFn: (l) => l.user_name ?? '',
         cell: ({ row }) => (
-          <div className="min-w-[160px]">
-            <div className="font-medium text-slate-900">{row.original.user_name || '—'}</div>
+          <div className="min-w-[190px]">
+            <div className="font-semibold text-slate-900">{row.original.user_name || '—'}</div>
             {row.original.user_email ? (
               <div className="text-xs text-slate-500">{row.original.user_email}</div>
             ) : null}
@@ -117,28 +146,48 @@ export function AILogsPage() {
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t],
+    [limit, page, t],
   )
 
   return (
-    <div>
-      <PageHeader title={t.ai.title} subtitle={t.ai.subtitle} />
+    <div className="space-y-6">
+      <PageHeader
+        title={t.ai.title}
+        subtitle={t.ai.subtitle}
+        action={
+          <Button
+            variant="outline"
+            onClick={() => q.refetch()}
+            loading={q.isFetching}
+            leftIcon={<HiOutlineArrowPath className="h-4 w-4" />}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
-      <DataTable
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminMetricCard label="Total Requests" value={stats.total} helper="AI processing logs recorded" Icon={HiOutlineBolt} tone="brand" loading={q.isLoading} />
+        <AdminMetricCard label="Success Rate" value={`${stats.successRate}%`} helper="Successful requests on this page" Icon={HiOutlineCheckCircle} tone="emerald" loading={q.isLoading} />
+        <AdminMetricCard label="Receipt Scans" value={stats.receiptScans} helper="OCR usage on this page" Icon={HiOutlineDocumentMagnifyingGlass} tone="violet" loading={q.isLoading} />
+        <AdminMetricCard label="Avg. Latency" value={`${stats.averageLatency}ms`} helper="Measured processing time" Icon={HiOutlineClock} tone="amber" loading={q.isLoading} />
+      </section>
+
+      <AdminDataTable
         data={rows}
         columns={columns}
         loading={q.isLoading}
-        searchPlaceholder="Cari user, model, error…"
-        emptyTitle={t.common.empty}
+        searchPlaceholder="Search user, model, or error..."
+        emptyTitle="No AI logs yet"
         getRowId={(r) => r.id}
+        serverPagination={meta ? {
+          page: meta.page,
+          pageSize: meta.limit,
+          totalPages: meta.total_pages,
+          totalRows: meta.total,
+          onPageChange: setPage,
+        } : undefined}
       />
-
-      {meta && meta.total_pages > 1 ? (
-        <div className="mt-4">
-          <Pagination page={meta.page} totalPages={meta.total_pages} onChange={setPage} />
-        </div>
-      ) : null}
     </div>
   )
 }

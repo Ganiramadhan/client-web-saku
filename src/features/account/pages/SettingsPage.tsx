@@ -1,283 +1,513 @@
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  HiOutlineEye,
-  HiOutlineEyeSlash,
-  HiOutlineShieldCheck,
-  HiOutlineLockClosed,
+  HiOutlineBell,
+  HiOutlineCalendarDays,
+  HiOutlineChevronRight,
+  HiOutlineCog6Tooth,
+  HiOutlineEnvelope,
+  HiOutlineGlobeAlt,
   HiOutlineKey,
-  HiOutlineCheckCircle,
-  HiOutlineExclamationTriangle,
+  HiOutlineLanguage,
+  HiOutlineShieldCheck,
+  HiOutlineSparkles,
+  HiOutlineUser,
+  HiOutlineWallet,
 } from 'react-icons/hi2'
-import { Card, PageHeader, Input, Button } from '@/components/ui'
-import { changePassword } from '@/features/auth/api'
-import { toErrorMessage } from '@/lib/api'
-import { toast } from '@/lib/toast'
+import { Button, Card, Input, Modal, PageHeader, RSelect } from '@/components/ui'
+import { useLocale } from '@/i18n'
 import { cn } from '@/lib/utils'
+import { readCashflowStartDay, writeCashflowStartDay } from '@/lib/cashflowPeriod'
+import { useAuthStore } from '@/stores/authStore'
+import { changeEmail, deleteAccount, logout, updateProfile } from '@/features/auth/api'
+import { confirm } from '@/lib/confirm'
+import { toast } from '@/lib/toast'
+import { toErrorMessage } from '@/lib/api'
+import { AppInfoCard } from '../components/AppInfoCard'
+import { ChangePasswordPanel } from '../components/ChangePasswordPanel'
+import { DeleteAccountPanel } from '../components/DeleteAccountPanel'
+import { LogoutPanel } from '../components/LogoutPanel'
 
 export function SettingsPage() {
-  const [current, setCurrent] = useState('')
-  const [next, setNext] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [showCurrent, setShowCurrent] = useState(false)
-  const [showNext, setShowNext] = useState(false)
-
-  const strength = scoreStrength(next)
-
-  const change = useMutation({
-    mutationFn: () =>
-      changePassword({ current_password: current, new_password: next }),
-    onSuccess: () => {
-      setCurrent('')
-      setNext('')
-      setConfirm('')
-      toast.success('Password berhasil diubah.')
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+  const clearSession = useAuthStore((s) => s.clear)
+  const { locale, setLocale } = useLocale()
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [nextEmail, setNextEmail] = useState(user?.email ?? '')
+  const [emailPassword, setEmailPassword] = useState('')
+  const [cashflowStartDay, setCashflowStartDay] = useState(() => user?.cashflow_start_day ?? readCashflowStartDay())
+  const content = locale === 'id'
+    ? {
+        title: 'Pengaturan',
+        subtitle: 'Atur akun, preferensi, AI, notifikasi, dan keamanan dari satu tempat.',
+        account: 'Account',
+        accountDesc: 'Identitas akun dan akses dasar.',
+        preferences: 'Preferences',
+        preferencesDesc: 'Cara SAKU menampilkan data dan bahasa.',
+        ai: 'AI Settings',
+        aiDesc: 'Preferensi default untuk fitur AI dan OCR.',
+        notifications: 'Notification',
+        notificationsDesc: 'Pengingat penting dari email, billing, dan Telegram.',
+        security: 'Security',
+        securityDesc: 'Password, sesi login, dan penghapusan akun.',
+        cashflowCycle: 'Siklus cashflow',
+        cashflowCycleBody: 'Tanggal gajian atau awal periode untuk dashboard.',
+      }
+    : {
+        title: 'Settings',
+        subtitle: 'Manage account, preferences, AI, notifications, and security in one place.',
+        account: 'Account',
+        accountDesc: 'Account identity and access basics.',
+        preferences: 'Preferences',
+        preferencesDesc: 'How SAKU displays data and language.',
+        ai: 'AI Settings',
+        aiDesc: 'Default preferences for AI and OCR features.',
+        notifications: 'Notification',
+        notificationsDesc: 'Important reminders from email, billing, and Telegram.',
+        security: 'Security',
+        securityDesc: 'Password, login sessions, and account deletion.',
+        cashflowCycle: 'Cashflow cycle',
+        cashflowCycleBody: 'Payday or period start date for the dashboard.',
+      }
+  const languageOptions = [
+    {
+      value: 'id',
+      label: '🇮🇩 Indonesia',
     },
-    onError: (e) => toast.error(toErrorMessage(e)),
+    {
+      value: 'en',
+      label: '🇺🇸 English',
+    },
+  ] as const
+  const cashflowDayOptions = Array.from({ length: 31 }, (_, index) => {
+    const day = index + 1
+    return {
+      value: String(day),
+      label: locale === 'id' ? `Tanggal ${day}` : `Day ${day}`,
+    }
   })
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!current || !next || !confirm) {
-      toast.error('Semua field wajib diisi.')
-      return
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      qc.clear()
+      clearSession()
+      navigate('/login', { replace: true })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => {
+      qc.clear()
+      clearSession()
+      toast.success(locale === 'id' ? 'Akun berhasil dihapus.' : 'Account deleted successfully.')
+      navigate('/', { replace: true })
+    },
+    onError: (error) => toast.error(toErrorMessage(error)),
+  })
+
+  const changeEmailMutation = useMutation({
+    mutationFn: () => changeEmail({ email: nextEmail.trim(), password: emailPassword }),
+    onSuccess: (updated) => {
+      setUser(updated)
+      qc.invalidateQueries({ queryKey: ['me'] })
+      setEmailPassword('')
+      setEmailOpen(false)
+      toast.success(locale === 'id' ? 'Email berhasil diperbarui.' : 'Email updated successfully.')
+    },
+    onError: (error) => toast.error(toErrorMessage(error)),
+  })
+
+  const cashflowCycleMutation = useMutation({
+    mutationFn: (day: number) => updateProfile({ cashflow_start_day: day }),
+    onSuccess: (updated) => {
+      setUser(updated)
+      writeCashflowStartDay(updated.cashflow_start_day ?? 1)
+      qc.invalidateQueries({ queryKey: ['me'] })
+    },
+    onError: (error) => toast.error(toErrorMessage(error)),
+  })
+
+  useEffect(() => {
+    if (!emailOpen) {
+      setNextEmail(user?.email ?? '')
+      setEmailPassword('')
     }
-    if (next.length < 6) {
-      toast.error('Password baru minimal 6 karakter.')
-      return
+  }, [emailOpen, user?.email])
+
+  useEffect(() => {
+    const persisted = user?.cashflow_start_day
+    if (persisted) {
+      setCashflowStartDay(persisted)
+      writeCashflowStartDay(persisted)
     }
-    if (next === current) {
-      toast.error('Password baru harus berbeda dari yang sekarang.')
-      return
-    }
-    if (next !== confirm) {
-      toast.error('Konfirmasi password tidak cocok.')
-      return
-    }
-    change.mutate()
+  }, [user?.cashflow_start_day])
+
+  const handleDeleteAccount = async () => {
+    const ok = await confirm({
+      title: locale === 'id' ? 'Hapus akun permanen?' : 'Delete account permanently?',
+      description:
+        locale === 'id'
+          ? 'Semua data akun akan dihapus dan kamu akan keluar dari SAKU.'
+          : 'All account data will be deleted and you will be signed out of SAKU.',
+      tone: 'danger',
+      confirmLabel: locale === 'id' ? 'Hapus Akun' : 'Delete Account',
+    })
+    if (ok) deleteMutation.mutate()
   }
 
-  const checks = [
-    { ok: next.length >= 8, label: 'Minimal 8 karakter' },
-    { ok: /[A-Z]/.test(next), label: 'Mengandung huruf besar' },
-    { ok: /[a-z]/.test(next), label: 'Mengandung huruf kecil' },
-    { ok: /\d/.test(next), label: 'Mengandung angka' },
-    { ok: /[^A-Za-z0-9]/.test(next), label: 'Mengandung simbol' },
-  ]
-
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="Pengaturan Keamanan"
-        subtitle="Kelola password dan preferensi keamanan akun."
+        title={content.title}
+        subtitle={content.subtitle}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form */}
-        <Card className="lg:col-span-2">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-              <HiOutlineKey className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">
-                Ubah Password
-              </h3>
-              <p className="text-xs text-slate-500">
-                Pilih password yang kuat dan unik untuk akun ini.
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={onSubmit} className="mt-5 space-y-4">
-            <div className="relative">
-              <Input
-                label="Password Sekarang"
-                type={showCurrent ? 'text' : 'password'}
-                value={current}
-                onChange={(e) => setCurrent(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
-              <EyeBtn show={showCurrent} onToggle={() => setShowCurrent((v) => !v)} />
-            </div>
-
-            <div>
-              <div className="relative">
-                <Input
-                  label="Password Baru"
-                  type={showNext ? 'text' : 'password'}
-                  value={next}
-                  onChange={(e) => setNext(e.target.value)}
-                  placeholder="Min. 8 karakter"
-                  autoComplete="new-password"
-                  required
-                  minLength={6}
-                />
-                <EyeBtn show={showNext} onToggle={() => setShowNext((v) => !v)} />
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+        <div className="space-y-5">
+          <SettingsGroup
+            title={content.account}
+            description={content.accountDesc}
+            Icon={HiOutlineUser}
+            items={[
+              {
+                label: 'Profile',
+                body: 'Nama, email, dan foto profil.',
+                Icon: HiOutlineUser,
+                onClick: () => navigate('/app/profile'),
+              },
+              {
+                label: 'Email',
+                body: 'Alamat utama untuk login dan notifikasi.',
+                Icon: HiOutlineEnvelope,
+                onClick: () => setEmailOpen(true),
+              },
+              {
+                label: 'Password',
+                body: 'Kelola password manual akun.',
+                Icon: HiOutlineKey,
+                onClick: () => setPasswordOpen(true),
+              },
+            ]}
+          />
+          <SettingsGroup
+            title={content.ai}
+            description={content.aiDesc}
+            Icon={HiOutlineSparkles}
+            items={[
+              {
+                label: 'AI default wallet',
+                body: 'Dompet utama untuk transaksi natural language.',
+                Icon: HiOutlineWallet,
+                toggle: true,
+                defaultEnabled: true,
+              },
+              {
+                label: 'AI category suggestion',
+                body: 'Rekomendasi kategori sebelum transaksi disimpan.',
+                Icon: HiOutlineSparkles,
+                toggle: true,
+                defaultEnabled: true,
+              },
+              {
+                label: 'OCR preferences',
+                body: 'Review hasil scan sebelum masuk transaksi.',
+                Icon: HiOutlineCog6Tooth,
+                toggle: true,
+                defaultEnabled: true,
+              },
+            ]}
+          />
+        </div>
+        <div className="space-y-5">
+          <SettingsGroup
+            title={content.preferences}
+            description={content.preferencesDesc}
+            Icon={HiOutlineCog6Tooth}
+            items={[
+              {
+                label: 'Currency',
+                body: 'Rupiah Indonesia sebagai format utama.',
+                Icon: HiOutlineGlobeAlt,
+              },
+              {
+                label: 'Language',
+                body: 'Bahasa Indonesia / English.',
+                Icon: HiOutlineLanguage,
+                control: (
+                  <div className="w-full sm:w-44">
+                    <RSelect
+                      value={locale}
+                      onChange={(value) => value && setLocale(value as 'id' | 'en')}
+                      options={[...languageOptions]}
+                      clearable={false}
+                      isSearchable={false}
+                      aria-label={locale === 'id' ? 'Pilih bahasa' : 'Choose language'}
+                    />
+                  </div>
+                ),
+              },
+              {
+                label: content.cashflowCycle,
+                body: content.cashflowCycleBody,
+                Icon: HiOutlineCalendarDays,
+                control: (
+                  <div className="w-full sm:w-44">
+                    <RSelect
+                      value={String(cashflowStartDay)}
+                      onChange={(value) => {
+                        const next = writeCashflowStartDay(Number(value || 1))
+                        setCashflowStartDay(next)
+                        cashflowCycleMutation.mutate(next)
+                      }}
+                      options={cashflowDayOptions}
+                      clearable={false}
+                      isSearchable={false}
+                      aria-label={content.cashflowCycle}
+                    />
+                  </div>
+                ),
+              },
+              {
+                label: 'Theme',
+                body: 'Mode terang dan gelap.',
+                Icon: HiOutlineCog6Tooth,
+              },
+            ]}
+          />
+          <AppInfoCard />
+          <SettingsGroup
+            title={content.notifications}
+            description={content.notificationsDesc}
+            Icon={HiOutlineBell}
+            items={[
+              {
+                label: 'Email notification',
+                body: 'OTP, pembayaran, dan update subscription.',
+                Icon: HiOutlineEnvelope,
+                toggle: true,
+                defaultEnabled: true,
+              },
+              {
+                label: 'Upcoming bills',
+                body: 'Pengingat tagihan yang akan jatuh tempo.',
+                Icon: HiOutlineBell,
+                toggle: true,
+                defaultEnabled: true,
+              },
+              {
+                label: 'Telegram notification',
+                body: 'Catat dan cek transaksi dari Telegram.',
+                Icon: HiOutlineSparkles,
+                toggle: true,
+                defaultEnabled: false,
+              },
+            ]}
+          />
+          <section className="rounded-[1.5rem] border border-[#17120f]/14 bg-[#fffaf6]/72 p-4 shadow-sm shadow-[#17120f]/5">
+            <div className="mb-4 flex items-start gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl border border-[#17120f]/10 bg-[#ffe4dc] text-brand-700">
+                <HiOutlineShieldCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-black text-[#17120f]">{content.security}</h2>
+                <p className="mt-1 text-xs leading-5 text-[#4f4540]">{content.securityDesc}</p>
               </div>
-              {next ? <StrengthMeter score={strength} /> : null}
             </div>
-
-            <Input
-              label="Konfirmasi Password Baru"
-              type={showNext ? 'text' : 'password'}
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Ulangi password baru"
-              autoComplete="new-password"
-              required
-              error={
-                confirm && confirm !== next
-                  ? 'Tidak cocok dengan password baru.'
-                  : undefined
-              }
-            />
-
-            {next ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Persyaratan
-                </p>
-                <ul className="grid gap-1 sm:grid-cols-2">
-                  {checks.map((c) => (
-                    <li
-                      key={c.label}
-                      className={cn(
-                        'flex items-center gap-1.5 text-xs',
-                        c.ok ? 'text-emerald-700' : 'text-slate-500',
-                      )}
-                    >
-                      {c.ok ? (
-                        <HiOutlineCheckCircle className="h-3.5 w-3.5" />
-                      ) : (
-                        <HiOutlineExclamationTriangle className="h-3.5 w-3.5 text-slate-300" />
-                      )}
-                      {c.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setCurrent('')
-                  setNext('')
-                  setConfirm('')
+            <div className="space-y-3">
+              <LogoutPanel
+                onLogout={() => {
+                  logoutMutation.mutate()
                 }}
-                disabled={change.isPending}
-              >
-                Reset
-              </Button>
-              <Button type="submit" loading={change.isPending}>
-                Simpan Password Baru
-              </Button>
+              />
+              <DeleteAccountPanel onDelete={handleDeleteAccount} loading={deleteMutation.isPending} />
             </div>
-          </form>
-        </Card>
-
-        {/* Tips */}
-        <div className="space-y-4">
-          <Card>
-            <div className="flex items-center gap-2">
-              <HiOutlineShieldCheck className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-sm font-semibold text-slate-900">
-                Tips Keamanan
-              </h3>
-            </div>
-            <ul className="mt-3 space-y-2.5 text-xs text-slate-600">
-              {[
-                'Gunakan minimal 8 karakter dengan kombinasi huruf, angka, dan simbol.',
-                'Jangan gunakan ulang password dari aplikasi lain.',
-                'Aktifkan password manager untuk menyimpan password yang panjang.',
-                'Ganti password secara berkala, minimal 6 bulan sekali.',
-              ].map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">
-                    {i + 1}
-                  </span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-
-          <Card>
-            <div className="flex items-center gap-2">
-              <HiOutlineLockClosed className="h-5 w-5 text-brand-600" />
-              <h3 className="text-sm font-semibold text-slate-900">
-                Privasi & Enkripsi
-              </h3>
-            </div>
-            <p className="mt-2 text-xs text-slate-600">
-              Password disimpan dalam bentuk hash (bcrypt) dan tidak pernah dikirim
-              dalam bentuk teks biasa. Semua koneksi diamankan dengan TLS 1.3.
-            </p>
-          </Card>
+          </section>
         </div>
       </div>
+
+      <Modal
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+        title={locale === 'id' ? 'Ubah Password' : 'Change Password'}
+        description={
+          locale === 'id'
+            ? 'Perbarui password akun manual kamu dengan aman.'
+            : 'Securely update your manual account password.'
+        }
+      >
+        <ChangePasswordPanel showHeader={false} embedded />
+      </Modal>
+
+      <Modal
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        title={locale === 'id' ? 'Ganti Email' : 'Change Email'}
+        description={
+          locale === 'id'
+            ? 'Masukkan email baru dan password akun untuk menjaga keamanan.'
+            : 'Enter a new email and your account password to keep this secure.'
+        }
+        mobilePlacement="center"
+      >
+        <div className="space-y-4">
+          <Input
+            label={locale === 'id' ? 'Email baru' : 'New email'}
+            type="email"
+            value={nextEmail}
+            onChange={(event) => setNextEmail(event.target.value)}
+            placeholder="nama@email.com"
+          />
+          <Input
+            label={locale === 'id' ? 'Password akun' : 'Account password'}
+            type="password"
+            value={emailPassword}
+            onChange={(event) => setEmailPassword(event.target.value)}
+            placeholder={locale === 'id' ? 'Masukkan password saat ini' : 'Enter current password'}
+          />
+          <div className="rounded-2xl border border-[#17120f]/10 bg-[#fff3ee] p-3 text-xs leading-5 text-[#4f4540]">
+            {locale === 'id'
+              ? 'Setelah email berubah, gunakan email baru untuk login dan menerima notifikasi SAKU.'
+              : 'After changing it, use the new email to sign in and receive SAKU notifications.'}
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setEmailOpen(false)}>
+              {locale === 'id' ? 'Batal' : 'Cancel'}
+            </Button>
+            <Button
+              type="button"
+              loading={changeEmailMutation.isPending}
+              disabled={!nextEmail.trim() || !emailPassword}
+              onClick={() => changeEmailMutation.mutate()}
+            >
+              {locale === 'id' ? 'Simpan Email' : 'Save Email'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
 
-function EyeBtn({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+type SettingsItem = {
+  label: string
+  body: string
+  Icon: typeof HiOutlineUser
+  onClick?: () => void
+  toggle?: boolean
+  defaultEnabled?: boolean
+  control?: ReactNode
+}
+
+function SettingsGroup({
+  title,
+  description,
+  Icon,
+  items,
+}: {
+  title: string
+  description: string
+  Icon: typeof HiOutlineUser
+  items: SettingsItem[]
+}) {
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-2xl border border-[#17120f]/10 bg-[#fddf82]/65 text-[#17120f]">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div>
+          <h2 className="text-base font-black text-[#17120f]">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-[#4f4540]">{description}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-2">
+        {items.map((item) => (
+          item.toggle ? <ToggleSetting key={item.label} item={item} /> : <ActionSetting key={item.label} item={item} />
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function ActionSetting({ item }: { item: SettingsItem }) {
+  const ItemIcon = item.Icon
+  const mainContent = (
+    <div className="flex min-w-0 flex-1 items-start gap-3">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#ecfdf5] text-emerald-700">
+        <ItemIcon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-[#17120f]">{item.label}</p>
+        <p className="mt-0.5 text-xs leading-5 text-[#4f4540]/75">{item.body}</p>
+      </div>
+    </div>
+  )
+  const content = (
+    <>
+      {mainContent}
+      {item.control ? <div className="w-full shrink-0 sm:w-auto">{item.control}</div> : null}
+      {item.onClick ? <HiOutlineChevronRight className="mt-2 h-4 w-4 shrink-0 text-[#4f4540]/50" /> : null}
+    </>
+  )
+  const rowClass = cn(
+    'flex w-full gap-3 rounded-2xl border border-[#17120f]/8 bg-white/58 px-3 py-3 text-left',
+    item.control ? 'flex-col sm:flex-row sm:items-center' : 'items-start',
+  )
+  if (!item.onClick) {
+    return (
+      <div className={rowClass}>
+        {content}
+      </div>
+    )
+  }
   return (
     <button
       type="button"
-      onClick={onToggle}
-      className="absolute right-3 top-8.5 text-slate-400 hover:text-slate-700"
-      aria-label={show ? 'Sembunyikan' : 'Tampilkan'}
-      tabIndex={-1}
+      onClick={item.onClick}
+      className={cn(rowClass, 'transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:bg-[#fff3ee] hover:shadow-sm hover:shadow-brand-100/50')}
     >
-      {show ? (
-        <HiOutlineEyeSlash className="h-4 w-4" />
-      ) : (
-        <HiOutlineEye className="h-4 w-4" />
-      )}
+      {content}
     </button>
   )
 }
 
-function StrengthMeter({ score }: { score: number }) {
-  const labels = ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat']
-  const colors = [
-    'bg-rose-500',
-    'bg-orange-500',
-    'bg-amber-500',
-    'bg-lime-500',
-    'bg-emerald-500',
-  ]
+function ToggleSetting({ item }: { item: SettingsItem }) {
+  const [enabled, setEnabled] = useState(item.defaultEnabled ?? true)
+  const ItemIcon = item.Icon
   return (
-    <div className="mt-2">
-      <div className="flex gap-1">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span
-            key={i}
-            className={cn(
-              'h-1.5 flex-1 rounded-full transition',
-              i <= score ? colors[score] : 'bg-slate-200',
-            )}
-          />
-        ))}
+    <button
+      type="button"
+      onClick={() => setEnabled((value) => !value)}
+      className="flex w-full items-center gap-3 rounded-2xl border border-[#17120f]/8 bg-white/58 px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:bg-[#fff3ee] hover:shadow-sm hover:shadow-brand-100/50"
+      aria-pressed={enabled}
+    >
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#ecfdf5] text-emerald-700">
+        <ItemIcon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-[#17120f]">{item.label}</p>
+        <p className="mt-0.5 text-xs leading-5 text-[#4f4540]/75">{item.body}</p>
       </div>
-      <p className="mt-1.5 text-[11px] font-medium text-slate-500">
-        Kekuatan: <span className="text-slate-700">{labels[score]}</span>
-      </p>
-    </div>
+      <span
+        className={cn(
+          'relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors duration-200',
+          enabled ? 'bg-brand-300' : 'bg-[#17120f]/12',
+        )}
+      >
+        <span
+          className={cn(
+            'block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+            enabled && 'translate-x-5',
+          )}
+        />
+      </span>
+    </button>
   )
-}
-
-function scoreStrength(pw: string): number {
-  let s = 0
-  if (pw.length >= 6) s++
-  if (pw.length >= 10) s++
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++
-  if (/\d/.test(pw)) s++
-  if (/[^A-Za-z0-9]/.test(pw)) s++
-  return Math.min(4, Math.max(0, s - 1))
 }

@@ -1,15 +1,20 @@
 import {
   forwardRef,
+  useEffect,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { formatRupiah, parseRupiah } from '@/lib/utils'
 
-export { DataTable, type DataTableProps } from './DataTable'
+export { DataTable, type DataTableProps, type DataTableLabels } from './DataTable'
+export { AdminDataTable } from './AdminDataTable'
+export { AdminMetricCard, AdminPanel, type AdminMetricTone } from './AdminSurface'
+export { DataListPagination } from './DataListPagination'
 export { RSelect, type SelectOption } from './RSelect'
 export { DateInput, type DateInputProps } from './DateInput'
 
@@ -24,28 +29,46 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: ReactNode
   rightIcon?: ReactNode
 }
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, leftIcon, rightIcon, className, children, disabled, ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    leftIcon,
+    rightIcon,
+    className,
+    children,
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60'
+    'inline-flex items-center justify-center gap-2 rounded-2xl border font-black cursor-pointer transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100'
+
   const sizes: Record<ButtonSize, string> = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
     lg: 'px-5 py-2.5 text-base',
   }
+
   const variants: Record<ButtonVariant, string> = {
     primary:
-      'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus:ring-brand-500/40',
+      'border-[#17120f]/20 bg-brand-300 text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:bg-brand-200 hover:shadow-md focus:ring-brand-500/30',
+
     secondary:
-      'bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500/40',
+      'border-[#17120f]/15 bg-[#17120f] text-white shadow-sm shadow-[#17120f]/10 hover:bg-[#2a211d] hover:shadow-md focus:ring-slate-500/30',
+
     outline:
-      'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-300/40',
-    ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-300/40',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500/40',
+      'border-[#17120f]/16 bg-[#fffaf6] text-[#17120f] shadow-sm shadow-[#17120f]/5 hover:bg-[#fddf82]/70 hover:shadow-md focus:ring-slate-300/30',
+
+    ghost:
+      'border-transparent bg-transparent text-[#17120f] shadow-none hover:border-[#17120f]/12 hover:bg-[#fffaf6]/80 hover:shadow-sm focus:ring-slate-300/30',
+
+    danger:
+      'border-[#b4533f]/18 bg-[#ffe4dc] text-[#7f2d23] shadow-sm shadow-[#b4533f]/8 hover:bg-[#ffd3c7] hover:text-[#6f241b] hover:shadow-md focus:ring-[#ff9d8d]/35',
   }
+
   return (
     <button
       ref={ref}
@@ -54,16 +77,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? (
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-70" />
       ) : (
         leftIcon
       )}
-      {children}
+
+      {!loading && children}
+
       {!loading && rightIcon ? rightIcon : null}
     </button>
   )
 })
-
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -78,20 +102,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <label className="block">
       {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+        <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+          {label}
+        </span>
       ) : null}
+
       <input
         ref={ref}
         className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition placeholder:text-slate-400',
-          'focus:outline-none focus:ring-2',
+          'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 shadow-sm backdrop-blur-xl transition-all duration-150 placeholder:text-slate-400',
+          'bg-[#fffaf6] hover:bg-white focus:outline-none',
           error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+            ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+            : 'border-[#17120f]/18 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/18',
           className,
         )}
         {...rest}
       />
+
       {error ? (
         <span className="mt-1 block text-xs text-rose-600">{error}</span>
       ) : hint ? (
@@ -119,11 +147,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       <select
         ref={ref}
         className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition',
-          'focus:outline-none focus:ring-2',
+          'w-full rounded-xl border bg-[#fffaf6] px-3 py-2.5 text-sm shadow-sm transition',
+          'focus:outline-none',
           error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
+            ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+            : 'border-[#17120f]/18 focus:border-brand-300 focus:ring-2 focus:ring-brand-500/18',
           className,
         )}
         {...rest}
@@ -142,39 +170,78 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: string
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { label, error, className, ...rest },
-  ref,
-) {
-  return (
-    <label className="block">
-      {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
-      ) : null}
-      <textarea
-        ref={ref}
-        rows={3}
-        className={cn(
-          'w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition',
-          'focus:outline-none focus:ring-2',
-          error
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
-            : 'border-slate-300 focus:border-brand-500 focus:ring-brand-500/30',
-          className,
-        )}
-        {...rest}
-      />
-      {error ? <span className="mt-1 block text-xs text-rose-600">{error}</span> : null}
-    </label>
-  )
-})
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  function Textarea(
+    { label, error, className, ...rest },
+    ref,
+  ) {
+    return (
+      <label className="block">
+        {label ? (
+          <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+            {label}
+          </span>
+        ) : null}
 
+        <textarea
+          ref={ref}
+          rows={3}
+          className={cn(
+            `
+            w-full
+            rounded-xl
+            border
+            px-3
+            py-2.5
+            text-sm
+            text-slate-900
+            shadow-sm
+            transition-all
+            duration-150
+
+            placeholder:text-slate-400
+
+            hover:bg-white
+
+            focus:outline-none
+            focus:ring-2
+            resize-none
+            `,
+
+            error
+              ? `
+                border-rose-300
+                bg-white/80
+                focus:border-rose-500
+                focus:ring-rose-500/30
+              `
+              : `
+                border-[#17120f]/18
+                bg-[#fffaf6]
+                focus:border-brand-300
+                focus:ring-brand-500/18
+              `,
+
+            className,
+          )}
+          {...rest}
+        />
+
+        {error ? (
+          <span className="mt-1 block text-xs text-rose-600">
+            {error}
+          </span>
+        ) : null}
+      </label>
+    )
+  },
+)
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200',
+        'rounded-[1.5rem] border border-[#17120f]/14 bg-[#fffaf6]/92 p-6 shadow-[0_18px_45px_rgba(23,18,15,0.08)] transition-all duration-300',
         className,
       )}
       {...rest}
@@ -197,17 +264,17 @@ export function Badge({
   className?: string
 }) {
   const tones: Record<BadgeTone, string> = {
-    gray: 'bg-slate-100 text-slate-700',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-rose-100 text-rose-700',
-    amber: 'bg-amber-100 text-amber-800',
-    blue: 'bg-sky-100 text-sky-700',
-    violet: 'bg-violet-100 text-violet-700',
+    gray: 'border border-[#17120f]/12 bg-[#fffaf6] text-[#17120f]',
+    green: 'border border-emerald-200 bg-emerald-100 text-emerald-900',
+    red: 'border border-rose-200 bg-rose-100 text-rose-900',
+    amber: 'border border-[#17120f]/12 bg-[#fddf82]/75 text-[#17120f]',
+    blue: 'border border-brand-200 bg-brand-100 text-[#17120f]',
+    violet: 'border border-violet-200 bg-violet-100 text-violet-900',
   }
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black',
         tones[tone],
         className,
       )}
@@ -228,8 +295,8 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+    <div className="flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-[#17120f]/20 bg-[#fffaf6]/80 px-6 py-12 text-center shadow-sm shadow-[#17120f]/5">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#17120f]/15 bg-brand-100 text-[#17120f]">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
       </div>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
@@ -252,8 +319,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+        <h1 className="text-2xl font-black tracking-tight text-[#17120f]">{title}</h1>
+        {subtitle ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">{subtitle}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
     </div>
@@ -270,6 +337,7 @@ export function Modal({
   footer,
   size = 'md',
   closeOnBackdrop = true,
+  mobilePlacement = 'bottom',
 }: {
   open: boolean
   onClose: () => void
@@ -279,16 +347,32 @@ export function Modal({
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   closeOnBackdrop?: boolean
+  mobilePlacement?: 'bottom' | 'center'
 }) {
-  if (!open) return null
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return
+    document.body.classList.add('saku-modal-open')
+    return () => {
+      document.body.classList.remove('saku-modal-open')
+    }
+  }, [open])
+
+  if (!open || typeof document === 'undefined') return null
   const widths = {
     sm: 'max-w-sm',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-3xl',
   }
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+  return createPortal(
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4',
+        mobilePlacement === 'center'
+          ? 'items-center p-4'
+          : 'items-end p-0',
+      )}
+    >
       <div
         className="animate-overlay-in absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
         onClick={closeOnBackdrop ? onClose : undefined}
@@ -297,13 +381,13 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'animate-panel-in relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden bg-white shadow-2xl ring-1 ring-slate-200',
-          'rounded-t-2xl sm:rounded-2xl',
+          'animate-panel-in relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden border border-[#17120f]/12 bg-[#fffaf6] shadow-[0_24px_70px_rgba(23,18,15,0.16)]',
+          mobilePlacement === 'center' ? 'rounded-2xl' : 'rounded-t-2xl sm:rounded-2xl',
           widths[size],
         )}
       >
         {title ? (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-[#17120f]/10 px-6 py-4">
             <div className="min-w-0">
               <h3 className="text-base font-semibold text-slate-900">{title}</h3>
               {description ? (
@@ -321,12 +405,13 @@ export function Modal({
         ) : null}
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer ? (
-          <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-[#17120f]/10 bg-[#f6eee8]/70 px-6 py-3 sm:flex-row sm:items-center">
             {footer}
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -364,31 +449,102 @@ export function Pagination({
   onChange: (p: number) => void
 }) {
   if (totalPages <= 1) return null
+  const safePage = Math.min(Math.max(page, 1), totalPages)
+  const pages = buildPaginationPages(safePage, totalPages)
+
   return (
-    <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+    <div className="mt-4 flex flex-col gap-3 px-1 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
       <span>
-        Page <strong>{page}</strong> / {totalPages}
+        Page <strong>{safePage}</strong> / {totalPages}
       </span>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => onChange(page - 1)}
+      <div className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200/70 bg-white/45 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md sm:w-auto sm:flex-wrap sm:overflow-visible">
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => onChange(1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+        >
+          <span className="sm:hidden">First</span>
+          <span className="hidden sm:inline">First page</span>
+        </button>
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => onChange(safePage - 1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
         >
           Prev
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => onChange(page + 1)}
+        </button>
+        {pages.map((item, index) =>
+          item === '...' ? (
+            <span key={`gap-${index}`} className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-slate-400" aria-hidden>
+              ...
+            </span>
+          ) : (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onChange(item)}
+              aria-current={item === safePage ? 'page' : undefined}
+              className={cn(
+                'h-8 min-w-8 shrink-0 rounded-lg border px-2 text-xs font-semibold transition-all duration-200 ease-out',
+                item === safePage
+                  ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
+                  : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
+                item !== safePage && 'max-sm:hidden',
+              )}
+            >
+              {item}
+            </button>
+          ),
+        )}
+        <button
+          type="button"
+          disabled={safePage >= totalPages}
+          onClick={() => onChange(safePage + 1)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
         >
           Next
-        </Button>
+        </button>
+        <button
+          type="button"
+          disabled={safePage >= totalPages}
+          onClick={() => onChange(totalPages)}
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+        >
+          <span className="sm:hidden">Last</span>
+          <span className="hidden sm:inline">Last page</span>
+        </button>
       </div>
     </div>
   )
+}
+
+function buildPaginationPages(page: number, totalPages: number): Array<number | '...'> {
+  if (totalPages <= 3) return Array.from({ length: totalPages }, (_, index) => index + 1)
+  const pages = new Set<number>([page - 1, page, page + 1])
+  if (page <= 2) {
+    pages.add(1)
+    pages.add(2)
+    pages.add(3)
+  }
+  if (page >= totalPages - 1) {
+    pages.add(totalPages - 2)
+    pages.add(totalPages - 1)
+    pages.add(totalPages)
+  }
+  const sorted = Array.from(pages)
+    .filter((item) => item >= 1 && item <= totalPages)
+    .sort((a, b) => a - b)
+  const out: Array<number | '...'> = []
+  if ((sorted[0] ?? 1) > 1) out.push('...')
+  for (const item of sorted) {
+    const prev = out[out.length - 1]
+    if (typeof prev === 'number' && item - prev > 1) out.push('...')
+    out.push(item)
+  }
+  if ((sorted[sorted.length - 1] ?? totalPages) < totalPages) out.push('...')
+  return out
 }
 
 
