@@ -61,22 +61,23 @@ The production image serves the Vite build with Nginx on internal port `3301`.
 ```bash
 docker build -t saku-finance-admin:latest .
 docker run -d \
-  --name web-saku-finance \
+  --name saku-finance \
   --restart unless-stopped \
   --network saku-finance \
-  --network-alias web-saku-finance \
+  --network-alias saku-finance \
   --expose 3301 \
   saku-finance-admin:latest
 ```
 
-When running behind a reverse proxy, attach the proxy to the `saku-finance` Docker network and route traffic to `http://web-saku-finance:3301`. Host port publishing is not required when the reverse proxy shares the same Docker network.
+When running behind a reverse proxy, attach the proxy to the `saku-finance` Docker network and route traffic to `http://saku-finance:3301`. Host port publishing is not required when the reverse proxy shares the same Docker network.
 
 ## CI/CD
 
-The Jenkins pipeline builds, pushes, deploys, health-checks, and rolls back the Docker image when the new container fails its health check. Infrastructure values are provided through Jenkins credentials, while public Vite build values are Jenkins parameters.
+The Jenkins pipeline builds, pushes, deploys, health-checks, and rolls back the Docker image when the new container fails its health check. Infrastructure values and public Vite build values are provided through Jenkins credentials, so webhook-triggered builds use the same configuration as manual builds.
 
 Expected Jenkins credentials:
 
+- `saku-finance-admin-env` as secret file containing the frontend `.env` values used at build time
 - `docker-registry-host` as secret text, for example `registry.example.com` without protocol
 - `docker-registry-username` as secret text
 - `docker-registry-credentials` as secret text for the registry password or access token
@@ -88,8 +89,8 @@ Expected Jenkins credentials:
 Default deployment target:
 
 - Docker network: `saku-finance`
-- Container name: `web-saku-finance`
-- Network alias: `web-saku-finance`
+- Container name: `saku-finance`
+- Network alias: `saku-finance`
 - Internal port: `3301`
 - Health path: `/healthz`
 

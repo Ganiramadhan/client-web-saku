@@ -1,20 +1,9 @@
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'VITE_API_BASE_URL', defaultValue: '/api/v1', description: 'Public API base path baked into the Vite bundle.')
-        string(name: 'VITE_GOOGLE_CLIENT_ID', defaultValue: '', description: 'Public Google OAuth client ID.')
-        string(name: 'VITE_TURNSTILE_SITE_KEY', defaultValue: '', description: 'Public Cloudflare Turnstile site key.')
-        string(name: 'VITE_GA_MEASUREMENT_ID', defaultValue: '', description: 'Public Google Analytics measurement ID.')
-        string(name: 'VITE_CLARITY_PROJECT_ID', defaultValue: '', description: 'Public Microsoft Clarity project ID.')
-        choice(name: 'VITE_ANALYTICS_ENABLED', choices: ['false', 'true'], description: 'Enable analytics scripts in the built frontend.')
-        choice(name: 'VITE_API_LOGGER', choices: ['false', 'true'], description: 'Enable frontend API request logging.')
-        string(name: 'VITE_SENTRY_DSN', defaultValue: '', description: 'Public Sentry browser DSN. Leave empty to disable Sentry.')
-        string(name: 'VITE_SENTRY_ENVIRONMENT', defaultValue: 'production', description: 'Sentry environment label.')
-        string(name: 'VITE_SENTRY_TRACES_SAMPLE_RATE', defaultValue: '0.1', description: 'Sentry browser traces sample rate.')
-    }
-
     environment {
+        ADMIN_ENV_FILE_CREDENTIALS_ID = "saku-finance-admin-env"
+
         REGISTRY_HOST_CREDENTIALS_ID = "docker-registry-host"
         REGISTRY_USERNAME_CREDENTIALS_ID = "docker-registry-username"
         REGISTRY_PASSWORD_CREDENTIALS_ID = "docker-registry-credentials"
@@ -93,6 +82,7 @@ Alias       : ${NETWORK_ALIAS}:${CONTAINER_PORT}
             }
             steps {
                 withCredentials([
+                    file(credentialsId: "${ADMIN_ENV_FILE_CREDENTIALS_ID}", variable: 'SAKU_ADMIN_ENV_FILE'),
                     string(credentialsId: "${REGISTRY_HOST_CREDENTIALS_ID}", variable: 'REGISTRY'),
                     string(credentialsId: "${REGISTRY_USERNAME_CREDENTIALS_ID}", variable: 'DOCKER_USER'),
                     string(credentialsId: "${REGISTRY_PASSWORD_CREDENTIALS_ID}", variable: 'DOCKER_PASS'),
@@ -105,9 +95,7 @@ Alias       : ${NETWORK_ALIAS}:${CONTAINER_PORT}
                         set -euo pipefail
                         set +x
 
-                        VITE_API_BASE_URL="${VITE_API_BASE_URL:-/api/v1}"
-
-                        for name in REGISTRY DOCKER_USER DOCKER_PASS DEPLOY_HOST DEPLOY_SSH_PORT DEPLOY_SSH_USER SSH_PASS; do
+                        for name in SAKU_ADMIN_ENV_FILE REGISTRY DOCKER_USER DOCKER_PASS DEPLOY_HOST DEPLOY_SSH_PORT DEPLOY_SSH_USER SSH_PASS; do
                             eval "value=\\${$name:-}"
                             if [ -z "$value" ]; then
                                 echo "ERROR: required Jenkins credential value $name is empty." >&2
@@ -126,8 +114,23 @@ Alias       : ${NETWORK_ALIAS}:${CONTAINER_PORT}
                             *[!0-9]*|'')
                                 echo "ERROR: SSH port credential must be numeric." >&2
                                 exit 1
-                                ;;
+                            ;;
                         esac
+
+                        if [ ! -s "$SAKU_ADMIN_ENV_FILE" ]; then
+                            echo "ERROR: Jenkins secret file credential $ADMIN_ENV_FILE_CREDENTIALS_ID is empty or missing." >&2
+                            exit 1
+                        fi
+
+                        set -a
+                        . "$SAKU_ADMIN_ENV_FILE"
+                        set +a
+
+                        VITE_API_BASE_URL="${VITE_API_BASE_URL:-/api/v1}"
+                        VITE_ANALYTICS_ENABLED="${VITE_ANALYTICS_ENABLED:-false}"
+                        VITE_API_LOGGER="${VITE_API_LOGGER:-false}"
+                        VITE_SENTRY_ENVIRONMENT="${VITE_SENTRY_ENVIRONMENT:-production}"
+                        VITE_SENTRY_TRACES_SAMPLE_RATE="${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.1}"
 
                         case "$VITE_API_BASE_URL" in
                             http://*|https://*|/*)
@@ -137,6 +140,14 @@ Alias       : ${NETWORK_ALIAS}:${CONTAINER_PORT}
                                 exit 1
                                 ;;
                         esac
+
+                        for name in VITE_GOOGLE_CLIENT_ID VITE_TURNSTILE_SITE_KEY; do
+                            eval "value=\\${$name:-}"
+                            if [ -z "$value" ]; then
+                                echo "ERROR: required frontend env $name is missing in $ADMIN_ENV_FILE_CREDENTIALS_ID." >&2
+                                exit 1
+                            fi
+                        done
                     '''
                 }
             }
@@ -147,38 +158,47 @@ Alias       : ${NETWORK_ALIAS}:${CONTAINER_PORT}
                 branch 'main'
             }
             steps {
-                sh '''
-                    set -euo pipefail
+                withCredentials([
+                    file(credentialsId: "${ADMIN_ENV_FILE_CREDENTIALS_ID}", variable: 'SAKU_ADMIN_ENV_FILE')
+                ]) {
+                    sh '''
+                        set -euo pipefail
+                        set +x
 
-                    VITE_API_BASE_URL="${VITE_API_BASE_URL:-/api/v1}"
-                    VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID:-}"
-                    VITE_TURNSTILE_SITE_KEY="${VITE_TURNSTILE_SITE_KEY:-}"
-                    VITE_GA_MEASUREMENT_ID="${VITE_GA_MEASUREMENT_ID:-}"
-                    VITE_CLARITY_PROJECT_ID="${VITE_CLARITY_PROJECT_ID:-}"
-                    VITE_ANALYTICS_ENABLED="${VITE_ANALYTICS_ENABLED:-false}"
-                    VITE_API_LOGGER="${VITE_API_LOGGER:-false}"
-                    VITE_SENTRY_DSN="${VITE_SENTRY_DSN:-}"
-                    VITE_SENTRY_ENVIRONMENT="${VITE_SENTRY_ENVIRONMENT:-production}"
-                    VITE_SENTRY_TRACES_SAMPLE_RATE="${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.1}"
+                        set -a
+                        . "$SAKU_ADMIN_ENV_FILE"
+                        set +a
 
-                    docker build \
-                        --tag "$LOCAL_IMAGE" \
-                        --tag "$LOCAL_LATEST" \
-                        --label "org.opencontainers.image.revision=$GIT_COMMIT_SHORT" \
-                        --label "org.opencontainers.image.source=$JOB_NAME" \
-                        --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
-                        --build-arg "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" \
-                        --build-arg "VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY" \
-                        --build-arg "VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID" \
-                        --build-arg "VITE_CLARITY_PROJECT_ID=$VITE_CLARITY_PROJECT_ID" \
-                        --build-arg "VITE_ANALYTICS_ENABLED=$VITE_ANALYTICS_ENABLED" \
-                        --build-arg "VITE_API_LOGGER=$VITE_API_LOGGER" \
-                        --build-arg "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" \
-                        --build-arg "VITE_SENTRY_ENVIRONMENT=$VITE_SENTRY_ENVIRONMENT" \
-                        --build-arg "VITE_SENTRY_TRACES_SAMPLE_RATE=$VITE_SENTRY_TRACES_SAMPLE_RATE" \
-                        --progress=plain \
-                        .
-                '''
+                        VITE_API_BASE_URL="${VITE_API_BASE_URL:-/api/v1}"
+                        VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID:-}"
+                        VITE_TURNSTILE_SITE_KEY="${VITE_TURNSTILE_SITE_KEY:-}"
+                        VITE_GA_MEASUREMENT_ID="${VITE_GA_MEASUREMENT_ID:-}"
+                        VITE_CLARITY_PROJECT_ID="${VITE_CLARITY_PROJECT_ID:-}"
+                        VITE_ANALYTICS_ENABLED="${VITE_ANALYTICS_ENABLED:-false}"
+                        VITE_API_LOGGER="${VITE_API_LOGGER:-false}"
+                        VITE_SENTRY_DSN="${VITE_SENTRY_DSN:-}"
+                        VITE_SENTRY_ENVIRONMENT="${VITE_SENTRY_ENVIRONMENT:-production}"
+                        VITE_SENTRY_TRACES_SAMPLE_RATE="${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.1}"
+
+                        docker build \
+                            --tag "$LOCAL_IMAGE" \
+                            --tag "$LOCAL_LATEST" \
+                            --label "org.opencontainers.image.revision=$GIT_COMMIT_SHORT" \
+                            --label "org.opencontainers.image.source=$JOB_NAME" \
+                            --build-arg "VITE_API_BASE_URL=$VITE_API_BASE_URL" \
+                            --build-arg "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" \
+                            --build-arg "VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY" \
+                            --build-arg "VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID" \
+                            --build-arg "VITE_CLARITY_PROJECT_ID=$VITE_CLARITY_PROJECT_ID" \
+                            --build-arg "VITE_ANALYTICS_ENABLED=$VITE_ANALYTICS_ENABLED" \
+                            --build-arg "VITE_API_LOGGER=$VITE_API_LOGGER" \
+                            --build-arg "VITE_SENTRY_DSN=$VITE_SENTRY_DSN" \
+                            --build-arg "VITE_SENTRY_ENVIRONMENT=$VITE_SENTRY_ENVIRONMENT" \
+                            --build-arg "VITE_SENTRY_TRACES_SAMPLE_RATE=$VITE_SENTRY_TRACES_SAMPLE_RATE" \
+                            --progress=plain \
+                            .
+                    '''
+                }
             }
         }
 
