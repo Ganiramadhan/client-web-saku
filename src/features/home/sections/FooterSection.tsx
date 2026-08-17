@@ -101,36 +101,27 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
           </div>
 
           <div className="overflow-hidden rounded-[1.5rem] border border-[#17120f]/35 bg-[#071a2c] shadow-[0_22px_60px_rgba(7,26,44,0.16)]">
-            <div className="grid gap-5 p-5 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+            <div className="grid gap-5 p-5">
               <div className="text-white">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-extrabold text-brand-100">
                   <RiShieldCheckLine className="h-3.5 w-3.5" />
                   {locale === 'id' ? 'Checkout aman' : 'Secure checkout'}
                 </div>
                 <h3 className="mt-3 text-lg font-black tracking-tight sm:text-xl">
-                  {locale === 'id' ? 'Pembayaran resmi, pilihan metode tetap fleksibel.' : 'Official payments with flexible methods.'}
+                  {locale === 'id' ? 'Pembayaran resmi lewat QRIS.' : 'Official payments via QRIS.'}
                 </h3>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-brand-50/80">
                   {locale === 'id'
-                    ? 'Checkout diproses melalui Midtrans dan mendukung channel yang tersedia seperti QRIS, GoPay, kartu, virtual account, retail payment, dan paylater.'
-                    : 'Checkout is processed through Midtrans and supports available channels such as QRIS, GoPay, cards, virtual accounts, retail payment, and paylater.'}
+                    ? 'Checkout diproses melalui Midtrans dan hanya menggunakan QRIS, jadi kamu bisa bayar dari e-wallet atau m-banking mana pun yang mendukung QRIS.'
+                    : 'Checkout is processed through Midtrans and uses QRIS only, so you can pay from any e-wallet or m-banking app that supports QRIS.'}
                 </p>
-              </div>
-
-              <div className="overflow-visible rounded-[1.15rem] bg-transparent px-0 py-0">
-                <img
-                  src="/payment-support-midtrans.webp"
-                  alt="Metode pembayaran Midtrans"
-                  className="mx-auto h-auto max-h-[235px] w-full object-contain object-center"
-                  loading="lazy"
-                />
               </div>
             </div>
           </div>
           <p className="mt-3 text-xs font-semibold leading-5 text-slate-400">
                 {locale === 'id'
-                  ? 'Metode pembayaran mengikuti channel yang tersedia di halaman checkout Midtrans.'
-                  : 'Payment methods follow the channels available on the Midtrans checkout page.'}
+                  ? 'Saat ini SAKU hanya menerima pembayaran QRIS melalui Midtrans.'
+                  : 'SAKU currently accepts QRIS payments only, processed through Midtrans.'}
           </p>
         </div>
 

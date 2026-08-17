@@ -515,8 +515,8 @@ function buildSakuSupportReply(message: string, locale: 'id' | 'en') {
 
   if (containsAny(normalized, ['bayar', 'payment', 'midtrans', 'qris', 'gopay', 'va', 'voucher', 'checkout'])) {
     return isId
-      ? 'Checkout SAKU diproses lewat Midtrans, jadi kamu bisa memilih metode yang tersedia seperti QRIS, GoPay, kartu, atau virtual account. Kalau punya voucher, masukkan saat checkout; kalau tidak punya, kosongkan saja dan lanjut pembayaran. Kalau invoice kedaluwarsa, kamu bisa membuat invoice baru tanpa memilih paket dari awal.'
-      : 'SAKU checkout is processed through Midtrans, so you can use available methods like QRIS, GoPay, cards, or virtual accounts. If you have a voucher, enter it during checkout; if not, leave it empty and continue. If an invoice expires, you can create a new invoice without choosing the plan again.'
+      ? 'Checkout SAKU diproses lewat Midtrans dan saat ini hanya menggunakan QRIS, jadi kamu tinggal scan lewat e-wallet atau m-banking yang mendukung QRIS. Kalau punya voucher, masukkan saat checkout; kalau tidak punya, kosongkan saja dan lanjut pembayaran. Kalau invoice kedaluwarsa, kamu bisa membuat invoice baru tanpa memilih paket dari awal.'
+      : 'SAKU checkout is processed through Midtrans and currently uses QRIS only, so you just scan it from any e-wallet or m-banking app that supports QRIS. If you have a voucher, enter it during checkout; if not, leave it empty and continue. If an invoice expires, you can create a new invoice without choosing the plan again.'
   }
 
   if (containsAny(normalized, ['wallet', 'dompet', 'bank', 'cash', 'e-wallet', 'ewallet', 'budget', 'target'])) {

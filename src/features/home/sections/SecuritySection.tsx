@@ -33,7 +33,7 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
         {
           Icon: RiBankCardLine,
           title: 'Pembayaran lewat Midtrans',
-          desc: 'Checkout mendukung QRIS, GoPay, kartu, virtual account, dan channel tersedia.',
+          desc: 'Checkout hanya lewat QRIS, diproses aman lewat Midtrans.',
           bg: '#ecfdf5',
           color: 'text-emerald-700',
         },
@@ -56,7 +56,7 @@ export function SecuritySection({ isAuthed }: { isAuthed: boolean }) {
         {
           Icon: RiBankCardLine,
           title: 'Midtrans checkout',
-          desc: 'Checkout supports QRIS, GoPay, cards, virtual accounts, and available channels.',
+          desc: 'Checkout is QRIS-only, processed securely through Midtrans.',
           bg: '#ecfdf5',
           color: 'text-emerald-700',
         },

@@ -78,8 +78,8 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
       }
       if (subscription.payment_status === 'pending') {
         toast.info(locale === 'id'
-          ? 'Pembayaran masih pending. Snap dapat dibuka kembali dari halaman sebelumnya.'
-          : 'Payment is still pending. Snap can be reopened from the previous page.')
+          ? 'Pembayaran masih pending. Kamu bisa membuka QRIS lagi dari halaman sebelumnya.'
+          : 'Payment is still pending. You can reopen the QRIS checkout from the previous page.')
         navigate(paymentReturnPath(), { replace: true })
         return
       }
@@ -87,8 +87,8 @@ export function PaymentRedirectPage({ mode }: { mode: 'finish' | 'error' }) {
     },
     onError: () => {
       toast.info(locale === 'id'
-        ? 'Status pembayaran belum dapat dipastikan. Kamu dikembalikan agar bisa membuka Snap lagi.'
-        : 'Payment status could not be confirmed yet. You were returned so Snap can be reopened.')
+        ? 'Status pembayaran belum dapat dipastikan. Kamu dikembalikan agar bisa membuka QRIS lagi.'
+        : 'Payment status could not be confirmed yet. You were returned so the QRIS checkout can be reopened.')
       navigate(paymentReturnPath(), { replace: true })
     },
     onSettled: () => {

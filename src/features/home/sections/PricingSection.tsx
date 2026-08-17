@@ -446,7 +446,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       { planCode: checkoutPlanCode, voucherCode: finalVoucherCode },
       {
         onSuccess: (outcome) => {
-          if (outcome === 'active' || outcome === 'redirected') {
+          if (outcome === 'active') {
             setCheckoutPlanCode(null)
             setVoucherCode('')
             setVoucherError('')

@@ -589,8 +589,8 @@ function getContent(mode: LegalMode, isId: boolean): LegalContent {
             ? 'SAKU menggunakan format Rupiah, konteks wallet lokal, metode pembayaran populer, dan pengalaman mobile-first agar lebih dekat dengan kebiasaan pengguna Indonesia.'
             : 'SAKU uses Rupiah formatting, local wallet context, popular payment methods, and a mobile-first experience to fit Indonesian user habits.',
           bullets: isId
-            ? ['Mendukung QRIS, GoPay, dan Virtual Account melalui payment gateway.', 'Bahasa dan konteks transaksi dibuat natural untuk pengguna Indonesia.', 'Telegram membantu pencatatan saat sedang tidak membuka web.']
-            : ['Supports QRIS, GoPay, and Virtual Account through a payment gateway.', 'Language and transaction context are natural for Indonesian users.', 'Telegram helps tracking when the web app is not open.'],
+            ? ['Checkout langganan menggunakan QRIS melalui payment gateway Midtrans.', 'Bahasa dan konteks transaksi dibuat natural untuk pengguna Indonesia.', 'Telegram membantu pencatatan saat sedang tidak membuka web.']
+            : ['Subscription checkout uses QRIS through the Midtrans payment gateway.', 'Language and transaction context are natural for Indonesian users.', 'Telegram helps tracking when the web app is not open.'],
           icon: HiOutlineWallet,
         },
         {
