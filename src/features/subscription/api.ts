@@ -53,15 +53,14 @@ export interface AdminSubscription extends Subscription {
 export interface CheckoutResponse {
   subscription_id: string
   order_id: string
-  snap_token: string
-  redirect_url: string
+  qr_string: string
+  qr_image_url?: string
   expires_at?: string | null
   payment_status: string
   original_amount: number
   discount_amount: number
   amount: number
   voucher_code?: string
-  client_key: string
   is_production: boolean
 }
 

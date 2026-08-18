@@ -218,6 +218,22 @@ body.saku-payment-open .saku-mobile-bottom-nav {
 .scan-spinner-motion { animation: scan-spinner 0.85s linear infinite; }
 .scan-pulse-motion { animation: scan-pulse 1.2s ease-out infinite; }
 
+/* One-shot confetti burst for success moments (e.g. payment confirmed) */
+@keyframes confetti-burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.35); opacity: 0; }
+}
+.confetti-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 9999px;
+  animation: confetti-burst 750ms cubic-bezier(.2,.8,.2,1) both;
+}
+
 .landing-page section {
   animation: landing-section-in 0.55s ease both;
 }

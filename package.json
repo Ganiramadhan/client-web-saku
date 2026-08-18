@@ -16,6 +16,7 @@
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.16.0",
     "clsx": "^2.1.1",
+    "qrcode": "^1.5.4",
     "react": "^19.2.6",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.6",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-datepicker": "^7.0.0",
     "@types/react-dom": "^19.2.3",
