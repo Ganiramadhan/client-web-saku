@@ -459,6 +459,102 @@ function buildSakuSupportReply(message: string, locale: 'id' | 'en') {
       : 'Sorry, I am focused on SAKU so the answers stay relevant and safe. I cannot help with coding, recipes, or general tasks here. You can ask me about getting started, plans, data security, receipt scan, AI, wallets, budgets, payments, or Telegram.'
   }
 
+  const isSlowComplaint = containsAny(normalized, [
+    'lambat', 'lemot', 'lelet', 'lama banget', 'kelamaan', 'delay', 'lag', 'ngelag',
+    'macet', 'stuck', 'timeout', 'nge-hang', 'hang', 'not responding', 'tidak merespon',
+    'slow', 'freeze', 'freezing',
+  ])
+  if (isSlowComplaint && containsAny(normalized, ['ai', 'chat', 'nlp', 'asisten', 'assistant'])) {
+    return isId
+      ? 'Wajar kalau AI Chat butuh beberapa detik buat balas — di baliknya itu model AI beneran yang membaca kalimat kamu, bukan pencarian instan, jadi kalimat yang lebih panjang/kompleks memang bisa sedikit lebih lama. Kalau kerasa lambat banget (lebih dari ±15 detik) atau macet total, coba cek koneksi internet, kirim ulang dengan kalimat lebih singkat, atau refresh halaman. Kalau masih terus lambat, kabari lewat halaman Contact/Customer Service biar dicek langsung.'
+      : 'It is normal for AI Chat to take a few seconds to reply — under the hood that is a real AI model reading your sentence, not an instant lookup, so longer or more complex messages can take a bit more time. If it feels unusually slow (more than ~15 seconds) or completely stuck, try checking your internet connection, sending a shorter message, or refreshing the page. If it is still consistently slow, let us know via the Contact/Customer Service page so we can look into it.'
+  }
+  if (isSlowComplaint && containsAny(normalized, ['scan', 'struk', 'receipt', 'ocr', 'foto'])) {
+    return isId
+      ? 'Scan struk memang butuh waktu lebih lama dari fitur lain karena SAKU sedang membaca gambar (OCR) sekaligus memprosesnya dengan AI, biasanya beberapa detik sampai belasan detik tergantung kejelasan foto. Kalau lebih dari itu atau macet total, coba pakai foto yang lebih terang/tidak blur, pastikan koneksi internet stabil, atau ulangi upload-nya. Kalau tetap lambat terus, kabari lewat Contact/Customer Service ya.'
+      : 'Receipt scan naturally takes longer than other features because SAKU is reading the image (OCR) and processing it with AI at the same time — usually a few seconds up to around ten seconds depending on photo clarity. If it takes noticeably longer or gets stuck, try a brighter/sharper photo, check your internet connection, or retry the upload. If it is still consistently slow, let us know via Contact/Customer Service.'
+  }
+  if (isSlowComplaint) {
+    return isId
+      ? 'Maaf soal itu, aku bantu cek ya. Coba dulu: refresh halaman, pastikan koneksi internet stabil, dan cek apakah cuma satu fitur tertentu yang lambat atau semuanya. Kalau bisa disebutkan fitur mana persisnya (AI Chat, Scan Struk, dashboard, dll), aku bisa kasih penjelasan lebih spesifik. Kalau tetap terus lambat, laporkan lewat halaman Contact/Customer Service biar tim SAKU bisa cek langsung.'
+      : 'Sorry about that, let me help narrow it down. First try: refreshing the page, checking your internet connection, and noting whether it is one specific feature or everything that feels slow. If you can tell me which feature exactly (AI Chat, Receipt Scan, dashboard, etc.), I can give a more specific answer. If it stays slow, please report it via the Contact/Customer Service page so the SAKU team can check directly.'
+  }
+
+  // Account/login trouble — checked before the generic 'error' bucket below so
+  // "gagal login"/"OTP gak masuk" gets account-specific steps, not a vague
+  // "try refreshing" answer that doesn't actually solve it.
+  if (containsAny(normalized, [
+    'lupa password', 'reset password', 'ga bisa login', 'gabisa login', 'tidak bisa login',
+    'nggak bisa login', 'gk bisa login', 'gagal login', 'otp', 'kode verifikasi',
+    'verifikasi email', 'email tidak masuk', 'email tidak diterima', 'akun diblokir',
+    'akun disuspend', 'akun ke-suspend', 'akun dibanned', 'kena banned', 'akun terkunci',
+    'terkunci', 'cant log in', "can't log in", 'cannot log in', 'account locked',
+    'account suspended',
+  ])) {
+    return isId
+      ? 'Kalau lupa password, pakai tombol "Lupa Password" di halaman login untuk kirim link reset ke email kamu (cek juga folder spam kalau belum masuk). Kalau kode OTP tidak muncul, tunggu 1-2 menit lalu minta kirim ulang. Kalau fitur Pro tiba-tiba terasa terkunci padahal biasanya bisa dipakai, kemungkinan langganan kamu sudah berakhir — cek statusnya di Profile. Kalau semua itu sudah dicoba tapi masih tidak bisa masuk, kabari lewat Contact/Customer Service ya.'
+      : 'If you forgot your password, use the "Forgot Password" button on the login page to get a reset link by email (check spam too). If the OTP code does not arrive, wait 1-2 minutes and request a new one. If Pro features suddenly feel locked when they used to work, your subscription may have ended — check its status in Profile. If you have tried all that and still cannot log in, please reach out via Contact/Customer Service.'
+  }
+
+  // Payment/billing complaints — distinct from the generic "how do I pay"
+  // bucket further below: this is for "I already paid but nothing happened".
+  if (containsAny(normalized, [
+    'sudah bayar', 'udah bayar', 'sudah transfer', 'saldo kepotong', 'ke-charge',
+    'kecharge', 'kepotong dua kali', 'double charge', 'terpotong dua kali',
+    'kebayar dua kali', 'belum aktif', 'paket belum aktif', 'gabisa cancel',
+    'ga bisa cancel', 'tidak bisa cancel', 'minta refund', 'gimana refund',
+    'cara refund', 'kok belum masuk', 'already paid', 'paid but', 'not activated yet',
+    'charged twice',
+  ])) {
+    return isId
+      ? 'Kalau kamu sudah bayar tapi paket belum aktif, statusnya biasanya update otomatis begitu pembayaran QRIS dikonfirmasi — tunggu sebentar lalu cek lagi di halaman Profile/Subscription. Kalau sudah lebih dari beberapa menit tetap belum aktif, atau merasa kena potong dua kali/nominal salah, jangan bayar ulang — langsung hubungi Contact/Customer Service dengan Order ID pembayaranmu biar bisa diverifikasi dan diproses manual (termasuk kalau perlu refund).'
+      : 'If you have already paid but your plan is not active yet, the status usually updates automatically once QRIS payment is confirmed — wait a moment and check again on the Profile/Subscription page. If it stays inactive after several minutes, or you think you were charged twice or the wrong amount, do not pay again — contact Customer Service directly with your payment Order ID so it can be verified and processed manually (including refunds if needed).'
+  }
+
+  // Missing/incorrect data — reassure first (nothing auto-deletes), then give
+  // a concrete thing to check before escalating, so it does not read like a
+  // brush-off on something as sensitive as someone's own money records.
+  if (containsAny(normalized, [
+    'transaksi hilang', 'data hilang', 'saldo salah', 'saldo tidak sesuai',
+    'saldo ga sesuai', 'saldo gak sesuai', 'history hilang', 'riwayat hilang',
+    'transaksi ilang', 'data ilang', 'missing transaction', 'data is missing',
+    'balance is wrong', 'wrong balance',
+  ])) {
+    return isId
+      ? 'Transaksi dan saldo di SAKU tidak pernah terhapus otomatis, jadi kalau kelihatan hilang biasanya karena filter wallet/tanggal yang lagi aktif, atau transaksinya tercatat di wallet lain. Coba cek dulu filter di halaman Transaksi dan pastikan wallet yang benar terpilih. Kalau sudah dicek dan datanya memang hilang atau salah, laporkan lewat Contact/Customer Service dengan detail transaksinya biar bisa ditelusuri.'
+      : 'Transactions and balances in SAKU are never deleted automatically, so if something looks missing it is usually a wallet/date filter, or it was recorded under a different wallet. Check the filters on the Transactions page and make sure the right wallet is selected. If you have checked and data really is missing or wrong, please report it via Contact/Customer Service with the transaction details so it can be traced.'
+  }
+
+  // General technical failure (error/crash/won't open) — kept broad and
+  // checked after the more specific login/payment/data buckets above so those
+  // still win on overlapping words like "gagal".
+  if (containsAny(normalized, [
+    'error', 'gagal', 'force close', 'crash', 'ngecrash', 'nge-crash',
+    'ke-close sendiri', 'tertutup sendiri', 'layar putih', 'blank putih',
+    'stuck di loading', 'loading terus', 'ga bisa dibuka', 'gabisa dibuka',
+    'tidak bisa dibuka', 'server error', 'not found', '404', '500',
+    "won't open", 'wont open', 'keeps crashing', 'blank screen',
+  ])) {
+    return isId
+      ? 'Maaf ya kalau lagi error atau gagal terus. Coba beberapa langkah ini dulu: refresh halaman atau tutup-buka ulang aplikasinya, pastikan koneksi internet stabil, dan cek apakah sudah pakai versi terbaru. Kalau masih error atau muncul pesan error tertentu, laporkan lewat Contact/Customer Service sertakan screenshot-nya ya, biar tim SAKU bisa cek langsung penyebabnya.'
+      : 'Sorry about the error or repeated failures. Try these first: refresh the page or restart the app, make sure your internet connection is stable, and check you are on the latest version. If it keeps failing or shows a specific error message, please report it via Contact/Customer Service with a screenshot so the SAKU team can look into the exact cause.'
+  }
+
+  // Broad negative-sentiment catch-all — for venting/complaints that do not
+  // name a specific feature. Acknowledges the frustration instead of jumping
+  // straight to a marketing pitch, and asks a narrowing question.
+  if (containsAny(normalized, [
+    'kecewa', 'jelek', 'buruk', 'parah', 'nyesel', 'menyesal', 'kesel', 'kesal',
+    'gamau pake', 'ga mau pake', 'gak mau pake', 'gaguna', 'ga guna', 'tidak berguna',
+    'ribet banget', 'banyak bug', 'useless', 'annoying', 'frustrating', 'frustrated',
+    'disappointed', 'disappointing', 'terrible', 'awful', 'buggy', 'worst app',
+    'hate this',
+  ])) {
+    return isId
+      ? 'Maaf banget kalau pengalamannya bikin kecewa — aku mau bantu perbaiki, tapi butuh sedikit detail biar bisa diarahkan dengan tepat. Bagian mana yang bermasalah: AI Chat, Scan Struk, pembayaran, login, atau yang lain? Kalau butuh ditangani langsung oleh tim SAKU, kamu juga bisa hubungi lewat Contact/Customer Service.'
+      : 'I am really sorry the experience has been disappointing — I want to help fix it, but I need a bit more detail to point you the right way. Which part is the issue: AI Chat, Receipt Scan, payments, login, or something else? If you would like it handled directly by the SAKU team, you can also reach out via Contact/Customer Service.'
+  }
+
   if (containsAny(normalized, ['fitur', 'keunggulan', 'unggulan', 'manfaat', 'benefit', 'advantage', 'features', 'top features', 'what can saku do'])) {
     return isId
       ? 'Keunggulan utama SAKU ada di 3 hal. Pertama, AI Transaction Assistant: kamu bisa catat transaksi pakai bahasa sehari-hari. Kedua, Scan Struk: foto struk jadi pratinjau transaksi yang bisa dicek dulu. Ketiga, Financial Insight: SAKU bantu membaca pola pengeluaran, budget yang menipis, dan cashflow bulanan. Fitur pendukungnya ada wallet, budget, target, tagihan rutin, split bill, export, dan Telegram.'
@@ -675,6 +771,21 @@ const SAKU_CONTEXT_KEYWORDS = [
   'privasi',
   'security',
   'keamanan',
+  'password',
+  'otp',
+  'error',
+  'gagal',
+  'crash',
+  'refund',
+  'cancel',
+  'batal',
+  'hilang',
+  'lambat',
+  'delay',
+  'kecewa',
+  'bug',
+  'suspend',
+  'blokir',
 ]
 
 const OFF_TOPIC_KEYWORDS = [
