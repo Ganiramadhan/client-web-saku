@@ -110,6 +110,11 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
       ? 'Scan struk membutuhkan waktu lebih lama dari biasanya. Coba gunakan foto yang lebih jelas atau ulangi sebentar lagi.'
       : 'Receipt scan is taking longer than usual. Try a clearer photo or try again in a moment.'
   }
+  if (/^subscription cannot be cancelled from status/i.test(normalized)) {
+    return locale === 'id'
+      ? 'Langganan ini sudah tidak bisa dibatalkan dari status saat ini. Muat ulang halaman untuk melihat status terbaru.'
+      : 'This subscription can no longer be cancelled from its current status. Refresh the page to see its latest status.'
+  }
   if (locale === 'en') return message
   const map: Record<string, string> = {
     'Free plan can create up to 2 wallets. Upgrade to Pro for unlimited wallets':
@@ -152,6 +157,15 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
     'current password is incorrect': 'Password saat ini tidak sesuai.',
     'invalid or expired OTP code': 'Kode OTP tidak valid atau sudah kedaluwarsa.',
     'registration requires a Gmail address': 'Registrasi wajib menggunakan alamat Gmail agar OTP bisa diterima dengan aman.',
+    'you already have a pending payment. Please cancel it before choosing another plan':
+      'Kamu masih punya pembayaran yang tertunda. Batalkan dulu sebelum memilih paket lain.',
+    'you are already subscribed to this plan': 'Kamu sudah berlangganan paket ini.',
+    'invoice can only be renewed for pending subscriptions':
+      'Invoice hanya bisa diperbarui untuk langganan yang masih berstatus tertunda.',
+    'payment has already been completed': 'Pembayaran untuk langganan ini sudah selesai diproses.',
+    'payment service is temporarily unavailable, please try again in a moment':
+      'Layanan pembayaran sedang tidak tersedia, silakan coba lagi sebentar lagi.',
+    'voucher code already exists': 'Kode voucher ini sudah digunakan.',
   }
   return map[normalized] ?? message
 }
