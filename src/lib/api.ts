@@ -149,6 +149,7 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
     'Wallet currencies must match': 'Mata uang wallet harus sama.',
     'account is not verified': 'Akun belum diverifikasi. Masukkan kode OTP dari email untuk menyelesaikan pendaftaran.',
     'invalid credentials': 'Email atau password tidak sesuai.',
+    'current password is incorrect': 'Password saat ini tidak sesuai.',
     'invalid or expired OTP code': 'Kode OTP tidak valid atau sudah kedaluwarsa.',
     'registration requires a Gmail address': 'Registrasi wajib menggunakan alamat Gmail agar OTP bisa diterima dengan aman.',
   }
