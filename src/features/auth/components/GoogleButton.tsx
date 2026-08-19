@@ -27,6 +27,7 @@ interface GISWindow {
             logo_alignment?: string
           },
         ) => void
+        cancel: () => void
       }
     }
   }
@@ -53,15 +54,14 @@ export function GoogleButton({
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !ref.current) return
+    const container = ref.current
 
     const existing = Array.from(document.getElementsByTagName('script')).find((script) =>
       script.src?.includes('accounts.google.com/gsi/client'),
     )
-    const desiredSrc = `https://accounts.google.com/gsi/client?hl=${locale}`
-    if (!existing || existing.src !== desiredSrc) {
-      existing?.parentNode?.removeChild(existing)
+    if (!existing) {
       const script = document.createElement('script')
-      script.src = desiredSrc
+      script.src = `https://accounts.google.com/gsi/client?hl=${locale}`
       script.async = true
       script.defer = true
       document.head.appendChild(script)
@@ -75,8 +75,9 @@ export function GoogleButton({
         if (!cancelled) window.setTimeout(tryInit, 250)
         return
       }
-      if (cancelled || rendered || !ref.current) return
+      if (cancelled || rendered) return
       rendered = true
+      container.replaceChildren()
       w.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: async (resp) => {
@@ -93,10 +94,10 @@ export function GoogleButton({
           }
         },
       })
-      w.google.accounts.id.renderButton(ref.current, {
+      w.google.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
-        width: Math.min(ref.current.offsetWidth || 360, 400),
+        width: Math.min(container.offsetWidth || 360, 400),
         shape: 'rectangular',
         text: 'continue_with',
         logo_alignment: 'left',
@@ -105,6 +106,7 @@ export function GoogleButton({
     tryInit()
     return () => {
       cancelled = true
+      ;(window as unknown as GISWindow).google?.accounts?.id?.cancel()
     }
   }, [locale, mode, t.auth.googleLoginFailedMessage, t.auth.googleLoginFailedTitle, t.auth.googleRegisterFailedMessage, t.auth.googleRegisterFailedTitle])
 
