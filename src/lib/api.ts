@@ -166,6 +166,8 @@ function translateApiMessage(message: string, locale: 'id' | 'en'): string {
     'payment service is temporarily unavailable, please try again in a moment':
       'Layanan pembayaran sedang tidak tersedia, silakan coba lagi sebentar lagi.',
     'voucher code already exists': 'Kode voucher ini sudah digunakan.',
+    'Too many messages. Please wait a moment before trying again.':
+      'Terlalu banyak pesan berturut-turut. Tunggu sebentar dulu ya sebelum kirim lagi.',
   }
   return map[normalized] ?? message
 }
