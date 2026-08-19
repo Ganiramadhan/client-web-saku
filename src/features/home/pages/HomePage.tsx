@@ -347,7 +347,7 @@ function LandingSupportChat({ locale }: { locale: 'id' | 'en' }) {
               >
                 <div
                   className={cn(
-                    'max-w-[85%] rounded-[1.15rem] px-4 py-3 text-sm font-bold leading-6',
+                    'max-w-[85%] whitespace-pre-wrap rounded-[1.15rem] px-4 py-3 text-sm font-bold leading-6',
                     message.role === 'user'
                       ? 'rounded-br-md border border-[#17120f]/12 bg-brand-500 text-[#17120f] shadow-[0_8px_18px_rgba(255,111,97,0.16)]'
                       : 'rounded-bl-md border border-[#17120f]/10 bg-white/82 text-[#4f4540]',
