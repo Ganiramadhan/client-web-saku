@@ -9,6 +9,7 @@ import {
 } from 'react-icons/hi2'
 import { Button, Card, Input, PageHeader } from '@/components/ui'
 import { changePassword } from '@/features/auth/api'
+import { PasswordRequirementsChecklist } from '@/features/auth/components/AuthFormParts'
 import { useLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
@@ -200,6 +201,7 @@ export function ChangePasswordPanel({
                 onToggle={() => setShowNext((v) => !v)}
               />
             </div>
+            <PasswordRequirementsChecklist password={next} confirmPassword={confirm} />
             <div className="mt-2 flex items-center justify-between gap-3">
               {next ? (
                 <StrengthMeter

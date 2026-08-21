@@ -12,6 +12,7 @@ import {
   FieldEmail,
   FieldPassword,
   OtpInput,
+  PasswordRequirementsChecklist,
   formatCountdown,
   sanitizeDisplayName,
   sanitizeEmail,
@@ -226,6 +227,7 @@ export function RegisterPage() {
             label={t.auth.password}
             minLength={8}
           />
+          <PasswordRequirementsChecklist password={password} />
           <TurnstileWidget onVerify={setTurnstileToken} resetSignal={turnstileResetSignal} />
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white/75 p-3 text-xs leading-5 text-slate-600">
             <input

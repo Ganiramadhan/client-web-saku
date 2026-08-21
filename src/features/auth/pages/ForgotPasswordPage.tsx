@@ -196,7 +196,7 @@ export function ForgotPasswordPage() {
               minLength={8}
               placeholder={t.auth.passwordMin.replace('{n}', '8')}
             />
-            <PasswordPolicyPanel score={strength} onGenerate={generatePassword} />
+            <PasswordPolicyPanel score={strength} onGenerate={generatePassword} password={newPassword} confirmPassword={confirmPassword} />
           </>
         ) : null}
 
