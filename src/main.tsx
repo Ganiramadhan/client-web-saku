@@ -12,6 +12,22 @@ import './index.css'
 
 initSentry()
 
+// After a new deploy, module chunks referenced by an already-open tab can
+// 404 (old hash no longer exists). Vite fires `vite:preloadError` for these
+// failures; reload once to pick up the current chunk manifest instead of
+// leaving the user stuck on the ErrorBoundary fallback.
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', () => {
+    const key = 'saku_chunk_reload_at'
+    const lastReload = Number(window.sessionStorage.getItem(key) || 0)
+    const now = Date.now()
+    if (now - lastReload > 10_000) {
+      window.sessionStorage.setItem(key, String(now))
+      window.location.reload()
+    }
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<div className="p-6 text-sm text-slate-600">Terjadi kendala sementara. Silakan muat ulang halaman.</div>}>

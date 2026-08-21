@@ -545,10 +545,10 @@ export function DashboardPage() {
         <Card>
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-slate-950">
+              <h2 className="text-base font-black text-[#17120f]">
                 {getTrendTitle(trendRange, copy)}
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-[#6f625b]">
                 {copy.trendDescription}
               </p>
             </div>
@@ -584,10 +584,10 @@ export function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-slate-950">
+              <h2 className="text-base font-black text-[#17120f]">
                 {t.dashboard.recentTransactions}
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-[#6f625b]">
                 {copy.recentDescription}
               </p>
             </div>
@@ -645,11 +645,11 @@ export function DashboardPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-950">
+                        <p className="truncate text-sm font-semibold text-[#17120f]">
                           {tx.description || 'Tanpa deskripsi'}
                         </p>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#6f625b]">
                           <span>{formatDate(tx.transaction_date)}</span>
                         </div>
                       </div>
@@ -909,7 +909,7 @@ function StatCard({
       </div>
 
       <div className="relative flex items-center justify-between gap-3 sm:gap-4">
-        <p className="min-w-0 text-xs font-semibold text-slate-600 sm:text-sm">{label}</p>
+        <p className="min-w-0 text-xs font-semibold text-[#4f4540] sm:text-sm">{label}</p>
 
         <div
           className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 sm:h-11 sm:w-11 sm:rounded-2xl', color.icon)}
@@ -950,11 +950,11 @@ function MobileTrendSummary({ data, copy }: { data: ReturnType<typeof buildTrend
           <p className="mt-2 text-lg font-extrabold text-[#7f2d23]">{formatCurrency(expense)}</p>
         </div>
       </div>
-      <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+      <div className="rounded-2xl border border-[#17120f]/12 bg-[#fffaf6]/80 p-4">
         <div className="space-y-3">
           {data.slice(-6).map((item) => (
             <div key={item.label} className="grid grid-cols-[54px_1fr] items-center gap-3">
-              <span className="text-[11px] font-semibold text-slate-400">{item.label}</span>
+              <span className="text-[11px] font-semibold text-[#6f625b]">{item.label}</span>
               <div className="space-y-1.5">
                 <div className="h-2 overflow-hidden rounded-full bg-[#ecfdf5]">
                   <div className="h-full rounded-full bg-[#7ddfc0]" style={{ width: `${Math.max(4, (item.income / maxValue) * 100)}%` }} />
@@ -1016,7 +1016,7 @@ function UpcomingBillingCard({
             <p className="text-xs font-black uppercase tracking-wide text-[#17120f]">
               {copy.closestReminder}
             </p>
-            <p className="mt-1 text-xl font-extrabold text-slate-950">
+            <p className="mt-1 text-xl font-extrabold text-[#17120f]">
               {rows[0].name}
             </p>
             <p className="mt-1 text-sm leading-6 text-[#4f4540]">
@@ -1042,8 +1042,8 @@ function UpcomingBillingCard({
           </Link>
         </div>
       ) : (
-        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-white/50 px-4 py-6">
-          <p className="text-sm text-slate-500">{copy.emptyBilling}</p>
+        <div className="mt-5 rounded-2xl border border-dashed border-[#17120f]/16 bg-[#fffaf6]/60 px-4 py-6">
+          <p className="text-sm text-[#6f625b]">{copy.emptyBilling}</p>
           <Link
             to="/app/upcoming-billings"
             className="mt-4 inline-flex items-center gap-1 text-xs font-black text-brand-700 hover:underline"

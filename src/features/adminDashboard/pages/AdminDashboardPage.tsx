@@ -183,14 +183,14 @@ export function AdminDashboardPage() {
               <div key={item.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-950">{item.user_name || item.user_email}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{item.plan_name || item.plan_code}</p>
+                    <p className="truncate text-sm font-bold text-[#17120f]">{item.user_name || item.user_email}</p>
+                    <p className="mt-1 truncate text-xs text-[#6f625b]">{item.plan_name || item.plan_code}</p>
                   </div>
                   <Badge tone={item.status === 'active' ? 'green' : item.status === 'pending' ? 'amber' : 'gray'}>
                     {item.status}
                   </Badge>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#6f625b]">
                   <span>{formatCurrency(Number(item.amount || 0), item.currency)}</span>
                   <span>{formatDateTime(item.created_at)}</span>
                 </div>
@@ -210,14 +210,14 @@ export function AdminDashboardPage() {
               <div key={item.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-950">{item.user_name || item.user_email || 'Unknown user'}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{item.feature || 'AI request'}</p>
+                    <p className="truncate text-sm font-bold text-[#17120f]">{item.user_name || item.user_email || 'Unknown user'}</p>
+                    <p className="mt-1 truncate text-xs text-[#6f625b]">{item.feature || 'AI request'}</p>
                   </div>
                   <Badge tone={item.status === 'success' ? 'green' : item.status === 'failed' ? 'red' : 'amber'}>
                     {item.status}
                   </Badge>
                 </div>
-                <p className="mt-3 text-xs text-slate-500">{formatDateTime(item.created_at)}</p>
+                <p className="mt-3 text-xs text-[#6f625b]">{formatDateTime(item.created_at)}</p>
               </div>
             ))}
           </div>
@@ -237,10 +237,10 @@ export function AdminDashboardPage() {
             {lastActivity.map((item) => (
               <div key={item.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-slate-950">{item.label}</p>
-                  <p className="mt-1 truncate text-xs text-slate-500">{item.meta}</p>
+                  <p className="truncate text-sm font-bold text-[#17120f]">{item.label}</p>
+                  <p className="mt-1 truncate text-xs text-[#6f625b]">{item.meta}</p>
                 </div>
-                <span className="shrink-0 text-xs font-semibold text-slate-400">{formatDateTime(item.at)}</span>
+                <span className="shrink-0 text-xs font-semibold text-[#9b8f88]">{formatDateTime(item.at)}</span>
               </div>
             ))}
           </div>
@@ -256,7 +256,7 @@ function ActiveUsersList({
   users: Array<{ id: string; name: string; email: string; lastLogin?: string | null; online: boolean }>
 }) {
   if (users.length === 0) {
-    return <p className="rounded-2xl bg-slate-50 px-4 py-6 text-center text-sm font-medium text-slate-400">No recent login activity yet.</p>
+    return <p className="rounded-2xl bg-[#f6eee8] px-4 py-6 text-center text-sm font-medium text-[#9b8f88]">No recent login activity yet.</p>
   }
   return (
     <div className="divide-y divide-slate-100">
@@ -267,12 +267,12 @@ function ActiveUsersList({
             <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white ${item.online ? 'bg-emerald-500' : 'bg-slate-300'}`} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-slate-950">{item.name}</p>
-            <p className="truncate text-xs text-slate-500">{item.email}</p>
+            <p className="truncate text-sm font-bold text-[#17120f]">{item.name}</p>
+            <p className="truncate text-xs text-[#6f625b]">{item.email}</p>
           </div>
           <div className="text-right">
             <Badge tone={item.online ? 'green' : 'gray'}>{item.online ? 'Online' : 'Recent'}</Badge>
-            <p className="mt-1 text-[10px] font-semibold text-slate-400">{item.lastLogin ? formatDateTime(item.lastLogin) : '-'}</p>
+            <p className="mt-1 text-[10px] font-semibold text-[#9b8f88]">{item.lastLogin ? formatDateTime(item.lastLogin) : '-'}</p>
           </div>
         </div>
       ))}
@@ -294,7 +294,7 @@ function MiniBarChart({ series, tone = 'blue' }: { series: Array<{ label: string
               title={`${item.label}: ${item.value}`}
             />
           </div>
-          <span className="text-[10px] font-bold text-slate-400">{item.label}</span>
+          <span className="text-[10px] font-bold text-[#9b8f88]">{item.label}</span>
         </div>
       ))}
     </div>

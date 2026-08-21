@@ -102,7 +102,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <label className="block">
       {label ? (
-        <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+        <span className="mb-1.5 block text-xs font-semibold text-[#4f4540]">
           {label}
         </span>
       ) : null}
@@ -110,7 +110,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         className={cn(
-          'w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 shadow-sm backdrop-blur-xl transition-all duration-150 placeholder:text-slate-400',
+          'w-full rounded-xl border px-3 py-2.5 text-sm text-[#17120f] shadow-sm backdrop-blur-xl transition-all duration-150 placeholder:text-[#9b8f88]',
           'bg-[#fffaf6] hover:bg-white focus:outline-none',
           error
             ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
@@ -123,7 +123,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {error ? (
         <span className="mt-1 block text-xs text-rose-600">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-slate-500">{hint}</span>
+        <span className="mt-1 block text-xs text-[#6f625b]">{hint}</span>
       ) : null}
     </label>
   )
@@ -142,7 +142,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <label className="block">
       {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+        <span className="mb-1 block text-sm font-medium text-[#4f4540]">{label}</span>
       ) : null}
       <select
         ref={ref}
@@ -178,7 +178,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <label className="block">
         {label ? (
-          <span className="mb-1.5 block text-xs font-semibold text-slate-700">
+          <span className="mb-1.5 block text-xs font-semibold text-[#4f4540]">
             {label}
           </span>
         ) : null}
@@ -194,12 +194,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             px-3
             py-2.5
             text-sm
-            text-slate-900
+            text-[#17120f]
             shadow-sm
             transition-all
             duration-150
 
-            placeholder:text-slate-400
+            placeholder:text-[#9b8f88]
 
             hover:bg-white
 
@@ -299,8 +299,8 @@ export function EmptyState({
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#17120f]/15 bg-brand-100 text-[#17120f]">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
       </div>
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+      <h3 className="text-base font-semibold text-[#17120f]">{title}</h3>
+      {description ? <p className="mt-1 text-sm text-[#6f625b]">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   )
@@ -320,7 +320,7 @@ export function PageHeader({
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="text-2xl font-black tracking-tight text-[#17120f]">{title}</h1>
-        {subtitle ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#6f625b]">{subtitle}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
     </div>
@@ -374,7 +374,7 @@ export function Modal({
       )}
     >
       <div
-        className="animate-overlay-in absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+        className="animate-overlay-in absolute inset-0 bg-[#17120f]/50 backdrop-blur-[2px]"
         onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
@@ -389,14 +389,14 @@ export function Modal({
         {title ? (
           <div className="flex items-start justify-between gap-4 border-b border-[#17120f]/10 px-6 py-4">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+              <h3 className="text-base font-semibold text-[#17120f]">{title}</h3>
               {description ? (
-                <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+                <p className="mt-0.5 text-xs text-[#6f625b]">{description}</p>
               ) : null}
             </div>
             <button
               onClick={onClose}
-              className="-m-1 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              className="-m-1 rounded-md p-1 text-[#6f625b]/70 transition hover:bg-[#f6eee8] hover:text-[#17120f]"
               aria-label="Close"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -453,16 +453,16 @@ export function Pagination({
   const pages = buildPaginationPages(safePage, totalPages)
 
   return (
-    <div className="mt-4 flex flex-col gap-3 px-1 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 flex flex-col gap-3 px-1 text-sm text-[#4f4540] sm:flex-row sm:items-center sm:justify-between">
       <span>
         Page <strong>{safePage}</strong> / {totalPages}
       </span>
-      <div className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-200/70 bg-white/45 p-1 shadow-sm shadow-slate-200/40 backdrop-blur-md sm:w-auto sm:flex-wrap sm:overflow-visible">
+      <div className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-[#17120f]/12 bg-[#fffaf6]/70 p-1 shadow-sm shadow-[#17120f]/5 backdrop-blur-md sm:w-auto sm:flex-wrap sm:overflow-visible">
         <button
           type="button"
           disabled={safePage <= 1}
           onClick={() => onChange(1)}
-          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-[#4f4540] transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#4f4540] disabled:hover:shadow-none"
         >
           <span className="sm:hidden">First</span>
           <span className="hidden sm:inline">First page</span>
@@ -471,13 +471,13 @@ export function Pagination({
           type="button"
           disabled={safePage <= 1}
           onClick={() => onChange(safePage - 1)}
-          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-[#4f4540] transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#4f4540] disabled:hover:shadow-none"
         >
           Prev
         </button>
         {pages.map((item, index) =>
           item === '...' ? (
-            <span key={`gap-${index}`} className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-slate-400" aria-hidden>
+            <span key={`gap-${index}`} className="inline-flex h-8 shrink-0 items-center rounded-lg px-2 text-xs font-bold text-[#9b8f88]" aria-hidden>
               ...
             </span>
           ) : (
@@ -490,7 +490,7 @@ export function Pagination({
                 'h-8 min-w-8 shrink-0 rounded-lg border px-2 text-xs font-semibold transition-all duration-200 ease-out',
                 item === safePage
                   ? 'border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-200/50'
-                  : 'border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
+                  : 'border-transparent bg-transparent text-[#4f4540] hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm',
                 item !== safePage && 'max-sm:hidden',
               )}
             >
@@ -502,7 +502,7 @@ export function Pagination({
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => onChange(safePage + 1)}
-          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-[#4f4540] transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#4f4540] disabled:hover:shadow-none"
         >
           Next
         </button>
@@ -510,7 +510,7 @@ export function Pagination({
           type="button"
           disabled={safePage >= totalPages}
           onClick={() => onChange(totalPages)}
-          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-slate-600 transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-600 disabled:hover:shadow-none"
+          className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-xs font-semibold text-[#4f4540] transition-all duration-200 ease-out hover:border-white/70 hover:bg-white/70 hover:text-brand-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#4f4540] disabled:hover:shadow-none"
         >
           <span className="sm:hidden">Last</span>
           <span className="hidden sm:inline">Last page</span>
@@ -575,19 +575,19 @@ export function CurrencyInput({
   return (
     <label className="block">
       {label ? (
-        <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+        <span className="mb-1 block text-sm font-medium text-[#4f4540]">{label}</span>
       ) : null}
       <div
         className={cn(
           'flex w-full items-stretch overflow-hidden rounded-lg border bg-white shadow-sm transition focus-within:ring-2',
           error
             ? 'border-rose-300 focus-within:border-rose-500 focus-within:ring-rose-500/30'
-            : 'border-slate-300 focus-within:border-brand-500 focus-within:ring-brand-500/30',
+            : 'border-[#17120f]/18 focus-within:border-brand-500 focus-within:ring-brand-500/30',
           disabled && 'opacity-60',
           className,
         )}
       >
-        <span className="flex select-none items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
+        <span className="flex select-none items-center border-r border-[#17120f]/12 bg-[#f6eee8] px-3 text-sm font-semibold text-[#4f4540]">
           Rp
         </span>
         <input
@@ -598,13 +598,13 @@ export function CurrencyInput({
           value={display}
           placeholder={placeholder}
           onChange={(e) => onChange(parseRupiah(e.target.value))}
-          className="w-full bg-transparent px-3 py-2 text-left text-sm text-slate-900 outline-none placeholder:text-slate-400"
+          className="w-full bg-transparent px-3 py-2 text-left text-sm text-[#17120f] outline-none placeholder:text-[#9b8f88]"
         />
       </div>
       {error ? (
         <span className="mt-1 block text-xs text-rose-600">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-slate-500">{hint}</span>
+        <span className="mt-1 block text-xs text-[#6f625b]">{hint}</span>
       ) : null}
     </label>
   )
