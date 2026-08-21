@@ -212,7 +212,7 @@ export function AppLayout() {
             type="button"
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
-              'group inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-all duration-300 active:scale-95',
+              'group inline-flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-[#6f625b] transition-all duration-300 active:scale-95',
               collapsed && 'mt-1',
             )}
             style={{
@@ -224,9 +224,9 @@ export function AppLayout() {
             title={collapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
           >
             {collapsed ? (
-              <LuPanelLeftOpen className="h-4 w-4 text-slate-600" />
+              <LuPanelLeftOpen className="h-4 w-4 text-[#4f4540]" />
             ) : (
-              <LuPanelLeftClose className="h-4 w-4 text-slate-600" />
+              <LuPanelLeftClose className="h-4 w-4 text-[#4f4540]" />
             )}
           </button>
         </div>
@@ -248,7 +248,7 @@ export function AppLayout() {
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
               <Logo size="sm" withText={false} />
-              <span className="truncate text-sm font-black tracking-tight text-slate-950">SAKU</span>
+              <span className="truncate text-sm font-black tracking-tight text-[#17120f]">SAKU</span>
             </div>
           </div>
 
@@ -339,7 +339,7 @@ function BottomNavigation({
   return (
     <>
       {moreOpen ? (
-        <div className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[2px] lg:hidden" onClick={() => setMoreOpen(false)} />
+        <div className="fixed inset-0 z-30 bg-[#17120f]/20 backdrop-blur-[2px] lg:hidden" onClick={() => setMoreOpen(false)} />
       ) : null}
       {moreOpen ? <MobileMoreSheet items={moreItems} pathname={pathname} onClose={() => setMoreOpen(false)} /> : null}
 
@@ -427,7 +427,7 @@ function MobileMoreSheet({
     <div className="fixed inset-x-0 bottom-[calc(4.9rem+env(safe-area-inset-bottom))] z-40 px-3 lg:hidden">
       <div className="mx-auto max-w-md overflow-hidden rounded-[1.5rem] border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-2xl shadow-[#17120f]/12 backdrop-blur-2xl">
         <div className="px-3 pb-2 pt-2">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">More menu</p>
+          <p className="text-xs font-black uppercase tracking-wide text-[#6f625b]">More menu</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {items.map((item) => {
@@ -517,7 +517,7 @@ function NotificationsBell({
       {open ? (
         <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-2xl border border-[#17120f]/10 bg-[#fffaf6] p-2 shadow-xl shadow-[#17120f]/10">
           <div className="flex items-center justify-between px-2 py-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{copy.notifications}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6f625b]">{copy.notifications}</p>
             {unread > 0 ? (
               <button type="button" onClick={onMarkAllRead} className="text-xs font-semibold text-brand-700">
                 {copy.markRead}
@@ -525,7 +525,7 @@ function NotificationsBell({
             ) : null}
           </div>
           {items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-slate-400">{copy.empty}</p>
+            <p className="px-3 py-6 text-center text-sm text-[#6f625b]/70">{copy.empty}</p>
           ) : (
             <div className="max-h-96 overflow-y-auto">
               {items.map((item) => (
@@ -533,8 +533,8 @@ function NotificationsBell({
                   <div className="flex gap-2">
                     {!item.read_at ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-400" /> : null}
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500">{formatNotificationMessage(item.message)}</p>
+                      <p className="text-sm font-bold text-[#17120f]">{item.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[#6f625b]">{formatNotificationMessage(item.message)}</p>
                     </div>
                   </div>
                 </div>
@@ -819,15 +819,15 @@ function UserDropdown({
       >
         <Avatar user={user} />
         <div className="hidden flex-col text-left md:flex">
-          <span className="text-sm font-semibold leading-tight text-slate-900">
+          <span className="text-sm font-semibold leading-tight text-[#17120f]">
             {user?.name}
           </span>
-          <span className="text-[11px] text-slate-500">{user?.email}</span>
+          <span className="text-[11px] text-[#6f625b]">{user?.email}</span>
         </div>
         <HiOutlineChevronDown
           className={cn(
-            'h-4 w-4 text-slate-400 transition-transform duration-300',
-            open && 'rotate-180 text-slate-600',
+            'h-4 w-4 text-[#6f625b]/70 transition-transform duration-300',
+            open && 'rotate-180 text-[#4f4540]',
           )}
         />
       </button>
@@ -840,10 +840,10 @@ function UserDropdown({
           <div className="flex items-center gap-3 border-b border-[#17120f]/10 bg-white/62 px-4 py-3">
             <Avatar user={user} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold text-slate-900">
+              <div className="truncate text-sm font-bold text-[#17120f]">
                 {user?.name ?? 'User'}
               </div>
-              <div className="truncate text-xs text-slate-500">{user?.email ?? ''}</div>
+              <div className="truncate text-xs text-[#6f625b]">{user?.email ?? ''}</div>
             </div>
           </div>
 

@@ -4,8 +4,48 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProRoute } from '@/components/ProRoute'
 import { useAuthStore } from '@/stores/authStore'
 
+/**
+ * After a new deploy, previously-loaded pages reference old chunk file
+ * hashes that no longer exist on the CDN/server (old assets get replaced).
+ * When a user has the app open across a deploy and then navigates to a
+ * route whose chunk hasn't been fetched yet, the dynamic `import()` 404s
+ * with "Failed to fetch dynamically imported module" — this crashes the
+ * route and only shows a generic ErrorBoundary (this is the error seen in
+ * Sentry). The fix: detect that specific failure and hard-reload the page
+ * once so the browser picks up the fresh index.html + current chunk
+ * manifest. A sessionStorage guard prevents an infinite reload loop if the
+ * network is genuinely down or the deploy is broken.
+ */
+const CHUNK_RELOAD_KEY = 'saku_chunk_reload_at'
+const CHUNK_RELOAD_COOLDOWN_MS = 10_000
+
+function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|dynamically imported module/i.test(
+    message,
+  )
+}
+
 const lazyRoute = (loader: () => Promise<Record<string, unknown>>, exportName: string): ComponentType<any> =>
-  lazy(async () => ({ default: (await loader())[exportName] as ComponentType<any> }))
+  lazy(async () => {
+    try {
+      const module = await loader()
+      return { default: module[exportName] as ComponentType<any> }
+    } catch (error) {
+      if (isChunkLoadError(error) && typeof window !== 'undefined') {
+        const lastReload = Number(window.sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0)
+        const now = Date.now()
+        if (now - lastReload > CHUNK_RELOAD_COOLDOWN_MS) {
+          window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now))
+          window.location.reload()
+          // Suspend forever while the hard reload takes over — avoids
+          // flashing the ErrorBoundary right before the page navigates away.
+          return new Promise<never>(() => undefined)
+        }
+      }
+      throw error
+    }
+  })
 
 const HomePage = lazyRoute(() => import('@/features/home/pages/HomePage'), 'HomePage')
 const ForgotPasswordPage = lazyRoute(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage')
