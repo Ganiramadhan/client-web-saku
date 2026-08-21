@@ -109,6 +109,21 @@ export function getPasswordRequirements(
 }
 
 /**
+ * True only when every password rule is met (min length, uppercase,
+ * lowercase, digit). Pass `confirmPassword` to also require the two
+ * fields match. Locale-independent — checks the same regexes
+ * `getPasswordRequirements` uses to render the checklist, so submit
+ * buttons stay disabled in lockstep with what the user sees.
+ */
+export function isPasswordValid(password: string, confirmPassword?: string): boolean {
+  const meetsBaseRules =
+    password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password)
+  if (!meetsBaseRules) return false
+  if (confirmPassword === undefined) return true
+  return Boolean(password) && password === confirmPassword
+}
+
+/**
  * Live checklist shown WHILE the user types their password, so every rule
  * (min length, uppercase, lowercase, digit, and optionally "passwords
  * match") is visible and updates in real time — before they ever hit

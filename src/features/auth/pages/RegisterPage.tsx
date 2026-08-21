@@ -14,6 +14,7 @@ import {
   OtpInput,
   PasswordRequirementsChecklist,
   formatCountdown,
+  isPasswordValid,
   sanitizeDisplayName,
   sanitizeEmail,
 } from '@/features/auth/components/AuthFormParts'
@@ -258,7 +259,7 @@ export function RegisterPage() {
             type="submit"
             className="h-12 w-full rounded-xl border border-[#17120f]/25 !bg-brand-300 text-sm font-black !text-[#17120f] shadow-sm shadow-[#17120f]/10 hover:-translate-y-px hover:!bg-brand-200 focus:ring-brand-500/30"
             loading={m.isPending}
-            disabled={!privacyAccepted || (isTurnstileEnabled() && !turnstileToken)}
+            disabled={!privacyAccepted || !isPasswordValid(password) || (isTurnstileEnabled() && !turnstileToken)}
             rightIcon={<HiOutlineArrowRight className="h-4 w-4" />}
           >
             {t.auth.submitRegister}
