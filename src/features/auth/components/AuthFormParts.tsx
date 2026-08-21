@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ComponentType, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  HiCheckCircle,
   HiOutlineEnvelope,
   HiOutlineEye,
   HiOutlineEyeSlash,
@@ -8,6 +9,7 @@ import {
   HiOutlineLockClosed,
   HiOutlineShieldCheck,
   HiOutlineSparkles,
+  HiXCircle,
 } from 'react-icons/hi2'
 import { useT } from '@/i18n'
 import type { Dict } from '@/i18n/dictionaries'
@@ -79,12 +81,88 @@ export function PasswordStrengthMeter({ score }: { score: number }) {
   )
 }
 
+export type PasswordRequirement = {
+  key: string
+  label: string
+  met: boolean
+}
+
+export function getPasswordRequirements(
+  t: Dict,
+  password: string,
+  confirmPassword?: string,
+): PasswordRequirement[] {
+  const requirements: PasswordRequirement[] = [
+    { key: 'minLength', label: t.auth.passwordReqMinLength, met: password.length >= 8 },
+    { key: 'uppercase', label: t.auth.passwordReqUppercase, met: /[A-Z]/.test(password) },
+    { key: 'lowercase', label: t.auth.passwordReqLowercase, met: /[a-z]/.test(password) },
+    { key: 'number', label: t.auth.passwordReqNumber, met: /\d/.test(password) },
+  ]
+  if (confirmPassword !== undefined) {
+    requirements.push({
+      key: 'match',
+      label: t.auth.passwordReqMatch,
+      met: Boolean(password) && password === confirmPassword,
+    })
+  }
+  return requirements
+}
+
+/**
+ * Live checklist shown WHILE the user types their password, so every rule
+ * (min length, uppercase, lowercase, digit, and optionally "passwords
+ * match") is visible and updates in real time — before they ever hit
+ * submit. Only renders once the user has started typing.
+ */
+export function PasswordRequirementsChecklist({
+  password,
+  confirmPassword,
+}: {
+  password: string
+  confirmPassword?: string
+}) {
+  const t = useT()
+  if (!password) return null
+
+  const requirements = getPasswordRequirements(t, password, confirmPassword)
+
+  return (
+    <div className="mt-2 rounded-xl border border-slate-200/80 bg-white/70 p-3">
+      <p className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+        {t.auth.passwordReqTitle}
+      </p>
+      <ul className="grid gap-1 sm:grid-cols-2">
+        {requirements.map((req) => (
+          <li
+            key={req.key}
+            className={cn(
+              'flex items-center gap-1.5 text-xs font-semibold transition-colors',
+              req.met ? 'text-emerald-600' : 'text-slate-400',
+            )}
+          >
+            {req.met ? (
+              <HiCheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />
+            ) : (
+              <HiXCircle className="h-4 w-4 shrink-0 text-slate-300" />
+            )}
+            <span>{req.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export function PasswordPolicyPanel({
   score,
   onGenerate,
+  password,
+  confirmPassword,
 }: {
   score: number
   onGenerate: () => void
+  password?: string
+  confirmPassword?: string
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/75 shadow-sm backdrop-blur-xl">
@@ -102,6 +180,11 @@ export function PasswordPolicyPanel({
           Generate
         </button>
       </div>
+      {password !== undefined ? (
+        <div className="p-3 pt-0">
+          <PasswordRequirementsChecklist password={password} confirmPassword={confirmPassword} />
+        </div>
+      ) : null}
     </div>
   )
 }
