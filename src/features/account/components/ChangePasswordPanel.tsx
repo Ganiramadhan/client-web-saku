@@ -9,7 +9,7 @@ import {
 } from 'react-icons/hi2'
 import { Button, Card, Input, PageHeader } from '@/components/ui'
 import { changePassword } from '@/features/auth/api'
-import { PasswordRequirementsChecklist } from '@/features/auth/components/AuthFormParts'
+import { PasswordRequirementsChecklist, isPasswordValid } from '@/features/auth/components/AuthFormParts'
 import { useLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { toErrorMessage } from '@/lib/api'
@@ -252,7 +252,7 @@ export function ChangePasswordPanel({
             >
               {copy.reset}
             </Button>
-            <Button type="submit" loading={change.isPending}>
+            <Button type="submit" loading={change.isPending} disabled={!isPasswordValid(next, confirm) || (!isGoogleOnly && !current)}>
               {copy.save}
             </Button>
           </div>

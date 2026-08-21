@@ -13,6 +13,7 @@ import {
   formatCountdown,
   generateStrongPassword,
   getPasswordValidationError,
+  isPasswordValid,
   scorePasswordStrength,
 } from '@/features/auth/components/AuthFormParts'
 import { useLocale, useT } from '@/i18n'
@@ -89,7 +90,10 @@ export function ForgotPasswordPage() {
   const otpRemaining = otpExpiresAt ? Math.max(0, Math.ceil((otpExpiresAt - now) / 1000)) : 0
   const resendRemaining = resendAt ? Math.max(0, Math.ceil((resendAt - now) / 1000)) : 0
   const isSubmitting = m.isPending || verifyM.isPending || resetM.isPending
-  const submitDisabled = isSubmitting || (otpSent && !otpVerified && otp.trim().length !== 6)
+  const submitDisabled =
+    isSubmitting ||
+    (otpSent && !otpVerified && otp.trim().length !== 6) ||
+    (otpVerified && !isPasswordValid(newPassword, confirmPassword))
 
   const generatePassword = () => {
     const password = generateStrongPassword()
