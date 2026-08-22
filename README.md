@@ -40,6 +40,8 @@ VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
 
 Do not commit real `.env` files. Values prefixed with `VITE_` are baked into the browser bundle, so they must not contain private secrets.
 
+`VITE_SENTRY_DSN` must be the DSN for the `saku-finance-client` Sentry project (frontend), not `saku-finance-api` (Go backend). Using the wrong project's DSN mixes frontend errors into the backend project.
+
 ## Development
 
 ```bash
