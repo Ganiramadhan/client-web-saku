@@ -133,11 +133,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const qc = useQueryClient()
   const navigate = useNavigate()
 
-  const proLaunchPromoLabel =
-    locale === 'id' ? 'Promo launching 30%' : 'Launch promo 30%'
-  const proLaunchPromoHint =
-    locale === 'id' ? 'Harga promo launching' : 'Launch promo price'
-
   const [voucherCode, setVoucherCode] = useState('')
   const [voucherError, setVoucherError] = useState('')
   const [appliedVoucher, setAppliedVoucher] =
@@ -246,11 +241,11 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
       price:
         period === 'yearly'
           ? formatCurrency(278400, 'IDR')
-          : formatCurrency(20300, 'IDR'),
+          : formatCurrency(29000, 'IDR'),
       originalPrice:
         period === 'yearly'
           ? formatCurrency(348000, 'IDR')
-          : formatCurrency(29000, 'IDR'),
+          : null,
       period:
         period === 'yearly'
           ? locale === 'id'
@@ -258,7 +253,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
             : '/year'
           : t.landing.perMonth,
       badge: locale === 'id' ? 'Paling Populer' : 'Most Popular',
-      promoLabel: period === 'monthly' ? proLaunchPromoLabel : null,
       desc:
         locale === 'id'
           ? 'Pilihan terbaik untuk pemakaian harian dengan AI, OCR, wallet, dan insight lebih lega.'
@@ -335,10 +329,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
           .map((plan) => {
             const baseCode = basePlanCode(plan.code)
             const monthlyPlan = monthlyPlansByCode.get(baseCode)
-            const isProMonthly = baseCode === 'pro' && plan.period === 'monthly'
-            const launchPromoPrice = isProMonthly
-              ? Math.round(plan.price * 0.7)
-              : plan.price
             const yearlyOriginalPrice =
               plan.period === 'yearly' && plan.price > 0 && monthlyPlan?.price
                 ? formatCurrency(monthlyPlan.price * 12, plan.currency)
@@ -349,10 +339,8 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
               price:
                 plan.price <= 0
                   ? t.landing.planFreePrice
-                  : formatCurrency(launchPromoPrice, plan.currency),
-              originalPrice: isProMonthly
-                ? formatCurrency(plan.price, plan.currency)
-                : yearlyOriginalPrice,
+                  : formatCurrency(plan.price, plan.currency),
+              originalPrice: yearlyOriginalPrice,
               period:
                 plan.price <= 0
                   ? ''
@@ -362,7 +350,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                       : '/year'
                     : t.landing.perMonth,
               badge: planCopy[baseCode]?.badge ?? null,
-              promoLabel: isProMonthly ? proLaunchPromoLabel : null,
               desc:
                 planCopy[baseCode]?.desc ??
                 (locale === 'id'
@@ -383,9 +370,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
   const hasYearly = Boolean(
     plansQ.data?.some((plan) => plan.period === 'yearly' && plan.is_active),
   )
-
-  const checkoutBaseCode = checkoutPlanCode ? basePlanCode(checkoutPlanCode) : ''
-  const isCheckoutPro = checkoutBaseCode === 'pro'
 
   const handlePlanClick = (plan: (typeof plans)[number]) => {
     if (!isAuthed) {
@@ -547,11 +531,7 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                       </span>
 
                       <span className="rounded-full border-2 border-[#17120f] bg-emerald-100 px-2.5 py-1 text-xs font-black text-[#17120f]">
-                        {'promoLabel' in plan && plan.promoLabel
-                          ? plan.promoLabel
-                          : locale === 'id'
-                            ? 'Diskon tahunan'
-                            : 'Yearly discount'}
+                        {locale === 'id' ? 'Diskon tahunan' : 'Yearly discount'}
                       </span>
                     </div>
                   ) : null}
@@ -577,12 +557,6 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
                       </span>
                     ) : null}
                   </div>
-
-                  {'promoLabel' in plan && plan.promoLabel ? (
-                    <p className="mt-2 text-xs font-black text-brand-700">
-                      {proLaunchPromoHint}
-                    </p>
-                  ) : null}
                 </div>
 
                 <ul className="relative mt-7 flex-1 space-y-3">
@@ -653,13 +627,9 @@ export function PricingSection({ isAuthed }: { isAuthed: boolean }) {
         open={Boolean(checkoutPlanCode)}
         title={locale === 'id' ? 'Kode voucher' : 'Voucher code'}
         description={
-          isCheckoutPro
-            ? locale === 'id'
-              ? 'Harga Pro sudah memakai promo launching. Kalau punya voucher tambahan, masukkan di sini. Kalau tidak, langsung lanjut pembayaran.'
-              : 'Pro already uses the launch promo price. If you have an extra voucher, enter it here. If not, continue to payment.'
-            : locale === 'id'
-              ? 'Punya kode voucher? Masukkan di sini. Kalau tidak punya, kosongkan saja dan lanjut pembayaran.'
-              : 'Have a voucher code? Enter it here. If not, leave it empty and continue to payment.'
+          locale === 'id'
+            ? 'Punya kode voucher? Masukkan di sini. Kalau tidak punya, kosongkan saja dan lanjut pembayaran.'
+            : 'Have a voucher code? Enter it here. If not, leave it empty and continue to payment.'
         }
         onClose={() => {
           if (checkoutM.isPending) return
