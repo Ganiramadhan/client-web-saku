@@ -16,7 +16,6 @@ import { toErrorMessage } from '@/lib/api'
 import { askLandingChat, type LandingChatTurn } from '../api'
 import { smoothScrollTo } from '../components/landingUtils'
 import { LandingNavbar } from '../components/LandingNavbar'
-import { PromoIndependenceBanner } from '../components/PromoIndependenceBanner'
 import { HeroSection } from '../sections/HeroSection'
 import { FeaturesSection } from '../sections/FeaturesSection'
 import { FooterSection } from '../sections/FooterSection'
@@ -175,7 +174,6 @@ export function HomePage() {
       />
 
       <main className="relative z-10 pt-[4.75rem] sm:pt-24">
-        <PromoIndependenceBanner isAuthed={isAuthed} />
         <HeroSection isAuthed={isAuthed} />
         <FeaturesSection />
         <HowItWorksSection />
