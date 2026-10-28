@@ -45,18 +45,20 @@ export function FooterSection({ onNavClick }: { onNavClick: (id: string) => void
                   : 'SAKU helps track daily transactions, manage wallets, and understand spending patterns with AI.'}
               </p>
 
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full border-2 border-[#17120f] bg-brand-100 px-3.5 py-1.5 text-xs font-black uppercase tracking-wide text-[#17120f] shadow-[3px_3px_0_#17120f]">
-                <RiSparklingLine className="h-3.5 w-3.5" />
-                {isId ? 'Asisten uang harian' : 'Daily money assistant'}
-              </span>
+              <div className="mt-5 flex flex-col items-start gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border-2 border-[#17120f] bg-brand-100 px-3.5 py-1.5 text-xs font-black uppercase tracking-wide text-[#17120f] shadow-[3px_3px_0_#17120f]">
+                  <RiSparklingLine className="h-3.5 w-3.5" />
+                  {isId ? 'Asisten uang harian' : 'Daily money assistant'}
+                </span>
 
-              <a
-                href="mailto:hello@ganipedia.com"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#17120f] transition-colors duration-200 hover:text-brand-700"
-              >
-                <RiMailLine className="h-4 w-4" />
-                hello@ganipedia.com
-              </a>
+                <a
+                  href="mailto:hello@ganipedia.com"
+                  className="inline-flex items-center gap-2 text-sm font-bold text-[#17120f] transition-colors duration-200 hover:text-brand-700"
+                >
+                  <RiMailLine className="h-4 w-4" />
+                  hello@ganipedia.com
+                </a>
+              </div>
             </div>
 
             <FooterColumn title={t.landing.footerProduct}>
